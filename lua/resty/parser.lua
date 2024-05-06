@@ -46,16 +46,20 @@ parser.parse = function(input)
 	local current_state = state_init
 
 	for nr, line in ipairs(vim.split(lines, "\n")) do
-		-- start parsing a new request
+
+		-- start parsing a new request and parse the name
 		if vim.startswith(line, delimiter) then
 			current_state = state_new
+
 			name = parse_name(line, nr)
-			result[name] = { start_at = nr, header = {} }
+			result[name] = { start_at = nr, end_at = nr, headers = {}, query = {} }
 			goto continue
 		end
 
+		-- parse method and url
 		if current_state == state_new then
 			current_state = state_call
+
 			local method, url = parse_call(line)
 			result[name]["method"] = method
 			result[name]["url"] = url
@@ -65,9 +69,23 @@ parser.parse = function(input)
 		if current_state == state_call then
 			-- set headers
 			if line:find(":") then
-				table.insert(result[name].header, vim.trim(line))
+				local parts = vim.split(line, ":")
+				assert(#parts, 2, "expected two parts: header-key and value, got: " .. line)
+				local key = parts[1]
+				local value = vim.trim(parts[2])
+				result[name].headers[key] = value
+			end
+
+			-- set query
+			local pos_eq = line:find("=")
+			if pos_eq then
+				local key = vim.trim(line:sub(1, pos_eq - 1))
+				local value = vim.trim(line:sub(pos_eq + 1, #line))
+				result[name].query[key] = value
 			end
 		end
+
+		result[name].end_at = nr
 
 		::continue::
 	end

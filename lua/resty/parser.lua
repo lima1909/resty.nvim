@@ -63,8 +63,8 @@ parser.parse = function(input)
 		if current_state == state_started then
 			current_state = state_ongoing
 			local method, url = parse_call(line)
-			result[name]["method"] = method
-			result[name]["url"] = url
+			result[name].method = method
+			result[name].url = url
 			goto continue
 		end
 

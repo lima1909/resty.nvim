@@ -2,24 +2,17 @@ describe("curl:", function()
 	-- https://github.com/nvim-lua/plenary.nvim/blob/master/tests/plenary/curl_spec.lua
 	local curl = require("plenary.curl")
 	local assert = require("luassert")
+	local p = require("resty.parser")
 
-	it("GET request", function()
-		local url = "https://httpbin.org/get"
-		url = "https://api-101.glitch.me/customer?id=1"
-		url = "https://jsonplaceholder.typicode.com/comments" -- ?postId=1"
-		-- url = "https://api.restful-api.dev/objects?id=3&id=5&id=10"
+	it("simple GET request", function()
+		local input = [[
+### simple get 
+Get https://httpbin.org/get 
 
-		local res = curl.request({
-			url = url,
-			method = "GET",
-			query = {
-				postId = 1,
-			},
-			headers = {
-				content_type = "application/xml",
-			},
-		})
-		assert.are.same(200, res.status)
-		-- print(vim.inspect(res.body))
+]]
+
+		local request = p.parse(input).simple_get
+		local response = curl.request(request)
+		assert.are.same(200, response.status)
 	end)
 end)

@@ -2,7 +2,25 @@ describe("parse:", function()
 	local p = require("resty.parser")
 	local assert = require("luassert")
 
-	it("one request definition", function()
+	it("empty request", function()
+		local input = [[
+		]]
+
+		local result = p.parse(input)
+		assert.are.same(result, {})
+	end)
+
+	it("only name for request", function()
+		local input = [[
+### test
+		]]
+
+		local status, err = pcall(p.parse, input)
+		assert(not status)
+		assert(err:find("expected two parts:"))
+	end)
+
+	it("one request", function()
 		local input = [[
 ### first test
 Get https://httpbin.org/get 

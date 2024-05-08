@@ -30,7 +30,9 @@ end
 ---@param line string
 local function parse_call(line)
 	local parts = vim.split(line, " ")
-	assert(#parts, 2, "expected two parts: method and url, got: " .. line)
+	if #parts < 2 then
+		return error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line)
+	end
 	local method = parts[1]:upper()
 	local url = parts[2]
 	return method, url
@@ -51,39 +53,33 @@ parser.parse = function(input)
 	local current_state = state_init
 
 	for nr, line in ipairs(lines) do
-		-- start parsing a new request and parse the name
-		if vim.startswith(line, start_token) then
-			current_state = state_started
-			name = parse_name(line, nr)
-			result[name] = { start_at = nr, end_at = nr, headers = {}, query = {} }
-			goto continue
-		end
-
 		-- parse method and url
 		if current_state == state_started then
 			current_state = state_ongoing
 			local method, url = parse_call(line)
 			result[name].method = method
 			result[name].url = url
-			goto continue
-		end
-
-		if current_state == state_ongoing then
-			-- set headers
-			if line:find(":") then
+		-- parse query and headers
+		elseif current_state == state_ongoing then
+			local pos_eq = line:find("=")
+			if pos_eq then
+				-- set query
+				local key = vim.trim(line:sub(1, pos_eq - 1))
+				local value = vim.trim(line:sub(pos_eq + 1, #line))
+				result[name].query[key] = value
+			elseif line:find(":") then
+				-- set headers
 				local parts = vim.split(line, ":")
 				assert(#parts, 2, "expected two parts: header-key and value, got: " .. line)
 				local key = parts[1]
 				local value = vim.trim(parts[2])
 				result[name].headers[key] = value
 			end
-			-- set query
-			local pos_eq = line:find("=")
-			if pos_eq then
-				local key = vim.trim(line:sub(1, pos_eq - 1))
-				local value = vim.trim(line:sub(pos_eq + 1, #line))
-				result[name].query[key] = value
-			end
+		-- start parsing a new request and parse the name
+		elseif vim.startswith(line, start_token) then
+			current_state = state_started
+			name = parse_name(line, nr)
+			result[name] = { start_at = nr, end_at = nr, headers = {}, query = {} }
 		end
 
 		if result[name] then
@@ -93,9 +89,9 @@ parser.parse = function(input)
 		if vim.startswith(line, end_token) then
 			break
 		end
-
-		::continue::
 	end
+
 	return result
 end
+
 return parser

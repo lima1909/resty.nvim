@@ -37,15 +37,18 @@ include = sub, *
 		assert.are.same(result.first_test, {
 			start_at = 1,
 			end_at = 10,
-			method = "GET",
-			url = "https://httpbin.org/get",
-			headers = {
-				accept = "application/json",
-				Authorization = "Bearer mytoken123",
-			},
-			query = {
-				filter = "id = 42 and age > 42",
-				include = "sub, *",
+			name = "first_test",
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
+				headers = {
+					accept = "application/json",
+					Authorization = "Bearer mytoken123",
+				},
+				query = {
+					filter = "id = 42 and age > 42",
+					include = "sub, *",
+				},
 			},
 		})
 	end)
@@ -61,10 +64,13 @@ Get https://httpbin.org/get
 		assert.are.same(result.noname_1, {
 			start_at = 1,
 			end_at = 4,
-			method = "GET",
-			url = "https://httpbin.org/get",
-			headers = {},
-			query = {},
+			name = "noname_1",
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
+				headers = {},
+				query = {},
+			},
 		})
 	end)
 
@@ -84,11 +90,14 @@ query=val
 		local result = p.parse(input)
 		assert.are.same(result.req, {
 			start_at = 1,
-			end_at = 4,
-			method = "GET",
-			url = "https://httpbin.org/get",
-			headers = {},
-			query = {},
+			end_at = 3,
+			name = "req",
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
+				headers = {},
+				query = {},
+			},
 		})
 	end)
 end)

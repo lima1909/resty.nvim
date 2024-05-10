@@ -47,8 +47,8 @@ function parser:parse_method_url(line)
 
 	self.state = state_ready
 
-	local method = parts[1]:upper()
-	local url = parts[2]
+	local method = vim.trim(parts[1]:upper())
+	local url = vim.trim(parts[2])
 	return method, url
 end
 

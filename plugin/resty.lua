@@ -1,3 +1,4 @@
 vim.api.nvim_create_user_command("Resty", function(opts)
-	require("resty").run()
+	local response = require("resty").run()
+	print(vim.inspect(response))
 end, { nargs = "*" })

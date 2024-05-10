@@ -5,7 +5,7 @@ local parser = require("resty.parser")
 
 --[[
 
-### test
+### test new
 Get https://httpbin.org/get 
 
 ---
@@ -14,16 +14,28 @@ Get https://httpbin.org/get
 
 M.run = function()
 	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
-
 	local definitions = parser.parse(lines)
-	-- print(vim.inspect(definitions))
-	local def = definitions.test -- TODO: change the name 'test' to the parsed name
 
-	local response = curl.request(def.req)
-	assert(response.status == 200, "Expect status code 200, got: " .. response.status)
-	print(vim.inspect(response))
+	local row = vim.api.nvim_win_get_cursor(0)[1]
+	local found_def
+
+	for name, def in pairs(definitions) do
+		if def.start_at <= row and def.end_at >= row then
+			found_def = name
+			break
+		end
+	end
+
+	local def = definitions[found_def]
+	assert(def, "The cursor pointed not to a valid request")
+
+	-- local response = curl.request(def.req)
+	-- assert(response.status == 200, "Expect status code 200, got: " .. response.status)
+	-- print(vim.inspect(response))
+
+	return curl.request(def.req)
 end
 
--- M.run()
+M.run()
 
 return M

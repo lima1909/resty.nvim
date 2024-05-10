@@ -40,15 +40,16 @@ end
 ---Parse the rest call (method + url)
 ---@param line string
 function parser:parse_method_url(line)
-	local parts = vim.split(line, " ")
-	if #parts < 2 then
+	self.state = state_ready
+
+	local pos_space = line:find(" ")
+
+	if not pos_space then
 		return error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line)
 	end
 
-	self.state = state_ready
-
-	local method = vim.trim(parts[1]:upper())
-	local url = vim.trim(parts[2])
+	local method = vim.trim(line:sub(1, pos_space - 1)):upper()
+	local url = vim.trim(line:sub(pos_space + 1, #line))
 	return method, url
 end
 

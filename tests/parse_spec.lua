@@ -100,4 +100,26 @@ query=val
 			},
 		})
 	end)
+
+	it("spaces between method and url", function()
+		local input = [[
+### spaces
+GET   https://jsonplaceholder.typicode.com/comments
+ 
+---
+]]
+
+		local result = p.parse(input)
+		assert.are.same(result.spaces, {
+			start_at = 1,
+			end_at = 3,
+			name = "spaces",
+			req = {
+				method = "GET",
+				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = {},
+				query = {},
+			},
+		})
+	end)
 end)

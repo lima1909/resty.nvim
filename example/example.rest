@@ -2,4 +2,7 @@
 ### test new
 GET https://jsonplaceholder.typicode.com/comments
 
----
+accept: application/json  
+
+postId = 5
+id=21

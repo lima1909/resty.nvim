@@ -5,8 +5,10 @@ local parser = require("resty.parser")
 
 --[[
 
-### test new
-Get https://httpbin.org/get 
+### test aa
+Get https://jsonplaceholder.typicode.com/comments
+
+id=2
 
 ---
 
@@ -36,6 +38,6 @@ M.run = function()
 	return curl.request(def.req)
 end
 
-M.run()
+-- M.run()
 
 return M

@@ -10,20 +10,24 @@ local print_response_to_new_buf = function(req_def, response)
 	-- vim.api.nvim_buf_set_name(buf, "Resty.http")
 	vim.api.nvim_set_option_value("filetype", "http", { buf = buf })
 
-	vim.api.nvim_buf_set_lines(
-		buf,
-		0,
-		-1,
-		false,
-		{ "Request: " .. req_def.name .. " [" .. req_def.start_at .. " - " .. req_def.end_at .. "]" }
-	)
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+		"Request: "
+			.. req_def.name
+			.. " ["
+			.. req_def.start_at
+			.. " - "
+			.. req_def.end_at
+			.. "] >> response status: "
+			.. response.status,
+		"",
+	})
 
 	local body = vim.split(response.body, "\n")
 	for _, r in ipairs(body) do
 		vim.api.nvim_buf_set_lines(buf, -1, -1, false, { r })
 	end
 
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "", "response", "state: " .. response.status, "headers:" })
+	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "" })
 	vim.api.nvim_buf_set_lines(buf, -1, -1, false, response.headers)
 
 	vim.api.nvim_win_set_buf(0, buf)

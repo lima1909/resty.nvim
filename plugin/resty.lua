@@ -1,13 +1,13 @@
 vim.api.nvim_create_user_command("Resty", function(args)
 	if args and #args.fargs > 0 then
-		print(vim.inspect(args))
 		if args.fargs[1] == "run" then
 			require("resty").run()
 			return
 		end
-
-		require("resty").last()
 	end
+
+	-- default call, if there are no arguments
+	require("resty").last()
 end, {
 	nargs = "?", -- one or none argument
 	desc = "Run a Resty requests",

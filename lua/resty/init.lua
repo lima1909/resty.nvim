@@ -50,7 +50,7 @@ M.run = function()
 	assert(def, "The cursor pointed not to a valid request definition")
 
 	local response = curl.request(def.req)
-	_Last_reqi_def = def
+	_Last_req_def = def
 
 	print_response_to_new_buf(response)
 end

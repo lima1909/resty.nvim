@@ -1,13 +1,35 @@
-local M = {}
-
 local curl = require("plenary.curl")
 local parser = require("resty.parser")
 
-local function create_buffer()
+local M = {}
+
+_Last_req_def = nil
+
+local print_response_to_new_buf = function(response)
 	local buf = vim.api.nvim_create_buf(true, true)
 	-- vim.api.nvim_buf_set_name(buf, "Resty.http")
 	vim.api.nvim_set_option_value("filetype", "http", { buf = buf })
-	return buf
+
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "STATUS: " .. response.status })
+	vim.api.nvim_buf_set_lines(buf, 1, -1, false, response.headers)
+
+	local body = vim.split(response.body, "\n")
+	local line_nr = vim.api.nvim_buf_line_count(buf)
+	for i, r in ipairs(body) do
+		vim.api.nvim_buf_set_lines(buf, line_nr + i, -1, false, { r })
+	end
+
+	vim.api.nvim_win_set_buf(0, buf)
+	vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(buf), 0 })
+end
+
+M.last = function()
+	if _Last_req_def then
+		local response = curl.request(_Last_reqi_def.req)
+		print_response_to_new_buf(response)
+	else
+		error("No last request found. Run first [Resty run]")
+	end
 end
 
 M.run = function()
@@ -28,22 +50,9 @@ M.run = function()
 	assert(def, "The cursor pointed not to a valid request definition")
 
 	local response = curl.request(def.req)
-	local body = vim.split(response.body, "\n")
-	-- print(vim.inspect(response))
+	_Last_reqi_def = def
 
-	local buf = create_buffer()
-
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "STATUS: " .. response.status })
-	vim.api.nvim_buf_set_lines(buf, 1, -1, false, response.headers)
-	-- vim.api.nvim_buf_set_lines(buf, #response.headers + 2, -1, false, { "EXIT: " .. response.exit })
-
-	local line_nr = vim.api.nvim_buf_line_count(buf)
-	for i, r in ipairs(body) do
-		vim.api.nvim_buf_set_lines(buf, line_nr + i, -1, false, { r })
-	end
-
-	vim.api.nvim_win_set_buf(0, buf)
-	vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(buf), 0 })
+	print_response_to_new_buf(response)
 end
 
 return M

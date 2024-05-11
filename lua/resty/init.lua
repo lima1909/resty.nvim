@@ -25,7 +25,7 @@ end
 
 M.last = function()
 	if _Last_req_def then
-		local response = curl.request(_Last_reqi_def.req)
+		local response = curl.request(_Last_req_def.req)
 		print_response_to_new_buf(response)
 	else
 		error("No last request found. Run first [Resty run]")

@@ -17,16 +17,15 @@ local print_response_to_new_buf = function(req_def, response)
 		false,
 		{ "Request: " .. req_def.name .. " [" .. req_def.start_at .. " - " .. req_def.end_at .. "]" }
 	)
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "Response state: " .. response.status, "" })
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "" })
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, response.headers)
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "" })
+	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "Response state: " .. response.status, "---", "" })
 
 	local body = vim.split(response.body, "\n")
-	-- local line_nr = vim.api.nvim_buf_line_count(buf)
-	for i, r in ipairs(body) do
+	for _, r in ipairs(body) do
 		vim.api.nvim_buf_set_lines(buf, -1, -1, false, { r })
 	end
+
+	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "", "---" })
+	vim.api.nvim_buf_set_lines(buf, -1, -1, false, response.headers)
 
 	vim.api.nvim_win_set_buf(0, buf)
 	vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(buf), 0 })
@@ -56,7 +55,7 @@ M.run = function()
 	end
 
 	local def = definitions[found_def]
-	assert(def, "The cursor pointed not to a valid request definition")
+	assert(def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
 
 	local response = curl.request(def.req)
 	_Last_req_def = def

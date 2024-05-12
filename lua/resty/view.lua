@@ -20,9 +20,9 @@ local output = function(req_def)
 		"# " .. req_def.name .. " [" .. req_def.start_at .. " - " .. req_def.end_at .. "]",
 		"",
 		"```lua",
-		"method: " .. req_def.method,
-		"URL: " .. req_def.url,
-		"query:" .. vim.tbl_flatten({ vim.split(vim.inspect(req_def.req.query), "\n") }),
+		"method: " .. req_def.req.method,
+		"URL: " .. req_def.req.url,
+		-- "query:" .. vim.tbl_flatten({ vim.split(vim.inspect(req_def.req.query), "\n") }),
 		"```",
 	}
 	-- return vim.tbl_flatten({ vim.split(vim.inspect(req_def), "\n") })

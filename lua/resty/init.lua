@@ -66,4 +66,18 @@ M.run = function()
 	print_response_to_new_buf(def, response)
 end
 
+M.view = function()
+	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
+	local req_defs = parser.parse(lines)
+
+	-- load the view and execute the selection
+	package.loaded["resty.view"] = nil
+	require("resty.view").view({}, req_defs, function(def)
+		local response = curl.request(def.req)
+		_Last_req_def = def
+
+		print_response_to_new_buf(def, response)
+	end)
+end
+
 return M

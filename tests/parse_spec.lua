@@ -34,7 +34,7 @@ include = sub, *
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.first_test, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 10,
 			name = "first_test",
@@ -61,7 +61,7 @@ Get https://httpbin.org/get
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.noname_1, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 4,
 			name = "noname_1",
@@ -88,7 +88,7 @@ query=val
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.req, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 3,
 			name = "req",
@@ -110,7 +110,7 @@ GET   https://jsonplaceholder.typicode.com/comments
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.spaces, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 3,
 			name = "spaces",
@@ -132,7 +132,7 @@ foo: bar=
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.eq_char, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 5,
 			name = "eq_char",
@@ -156,7 +156,7 @@ GET https://httpbin.org/get
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result.first, {
+		assert.are.same(result[1], {
 			start_at = 1,
 			end_at = 3,
 			name = "first",
@@ -167,7 +167,7 @@ GET https://httpbin.org/get
 				query = {},
 			},
 		})
-		assert.are.same(result.second, {
+		assert.are.same(result[2], {
 			start_at = 4,
 			end_at = 7,
 			name = "second",

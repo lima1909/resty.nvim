@@ -11,7 +11,7 @@ Get https://httpbin.org/get
 
 ]]
 
-		local def = p.parse(input).simple_get
+		local def = p.parse(input)[1]
 		local response = curl.request(def.req)
 		assert.are.same(200, response.status)
 	end)

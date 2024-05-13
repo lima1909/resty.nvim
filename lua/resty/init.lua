@@ -50,20 +50,19 @@ M.run = function()
 	local row = vim.api.nvim_win_get_cursor(0)[1]
 	local found_def
 
-	for name, d in pairs(definitions) do
+	for _, d in pairs(definitions) do
 		if d.start_at <= row and d.end_at >= row then
-			found_def = name
+			found_def = d
 			break
 		end
 	end
 
-	local def = definitions[found_def]
-	assert(def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
+	assert(found_def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
 
-	local response = curl.request(def.req)
-	_Last_req_def = def
+	local response = curl.request(found_def.req)
+	_Last_req_def = found_def
 
-	print_response_to_new_buf(def, response)
+	print_response_to_new_buf(found_def, response)
 end
 
 M.view = function()

@@ -71,9 +71,8 @@ M.parse = function(input)
 		lines = input
 	end
 
-	local result = {}
-	local name = ""
 	local p = new_parser()
+	local result = {}
 
 	for nr, line in ipairs(lines) do
 		-- parse the end of request
@@ -81,11 +80,11 @@ M.parse = function(input)
 			break
 		-- start parsing a new request and parse the name
 		elseif vim.startswith(line, start_token) then
-			name = p:parse_name(line, nr)
-			result[name] = req_def.new(name, nr)
+			local name = p:parse_name(line, nr)
+			table.insert(result, req_def.new(name, nr))
 		-- parse method and url
 		elseif p.state == state_started then
-			result[name]:set_method_url(p:parse_method_url(line))
+			result[#result]:set_method_url(p:parse_method_url(line))
 		-- parse query and headers
 		elseif p.state == state_ready then
 			local pos_eq = line:find("=")
@@ -96,22 +95,22 @@ M.parse = function(input)
 				-- the first finding wins
 				if pos_eq < pos_dp then
 					-- set query
-					result[name]:query(parse_key_value(line, pos_eq))
+					result[#result]:query(parse_key_value(line, pos_eq))
 				else
 					-- set headers
-					result[name]:headers(parse_key_value(line, pos_dp))
+					result[#result]:headers(parse_key_value(line, pos_dp))
 				end
 			elseif pos_eq ~= nil then
 				-- set query
-				result[name]:query(parse_key_value(line, pos_eq))
+				result[#result]:query(parse_key_value(line, pos_eq))
 			elseif pos_dp ~= nil then
 				-- set headers
-				result[name]:headers(parse_key_value(line, pos_dp))
+				result[#result]:headers(parse_key_value(line, pos_dp))
 			end
 		end
 
-		if result[name] then
-			result[name].end_at = nr
+		if result[#result] then
+			result[#result].end_at = nr
 		end
 	end
 

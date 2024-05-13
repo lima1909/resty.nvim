@@ -28,7 +28,7 @@ Get https://httpbin.org/get
 accept: application/json  
 Authorization: Bearer mytoken123
 
-filter = id = 42 and age > 42
+filter = id = "42" and age > 42
 include = sub, *  
 
 ]]
@@ -46,7 +46,7 @@ include = sub, *
 					Authorization = "Bearer mytoken123",
 				},
 				query = {
-					filter = "id = 42 and age > 42",
+					filter = 'id = "42" and age > 42',
 					include = "sub, *",
 				},
 			},
@@ -117,6 +117,63 @@ GET   https://jsonplaceholder.typicode.com/comments
 			req = {
 				method = "GET",
 				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = {},
+				query = {},
+			},
+		})
+	end)
+
+	it("header with eq char", function()
+		local input = [[
+### eq_char
+GET   https://jsonplaceholder.typicode.com/comments
+
+foo: bar=
+]]
+
+		local result = p.parse(input)
+		assert.are.same(result.eq_char, {
+			start_at = 1,
+			end_at = 5,
+			name = "eq_char",
+			req = {
+				method = "GET",
+				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = { foo = "bar=" },
+				query = {},
+			},
+		})
+	end)
+
+	it("multi reqest definitions", function()
+		local input = [[
+### first
+GET   https://jsonplaceholder.typicode.com/comments
+
+### second
+GET https://httpbin.org/get 
+
+]]
+
+		local result = p.parse(input)
+		assert.are.same(result.first, {
+			start_at = 1,
+			end_at = 3,
+			name = "first",
+			req = {
+				method = "GET",
+				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = {},
+				query = {},
+			},
+		})
+		assert.are.same(result.second, {
+			start_at = 4,
+			end_at = 7,
+			name = "second",
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
 				headers = {},
 				query = {},
 			},

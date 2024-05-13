@@ -53,15 +53,7 @@ function parser:parse_method_url(line)
 	return method, url
 end
 
-local function parse_headers(line)
-	local parts = vim.split(line, ":")
-	assert(#parts, 2, "expected two parts: header-key and value, got: " .. line)
-	local key = parts[1]
-	local value = vim.trim(parts[2])
-	return key, value
-end
-
-local function parse_query(line, pos_eq)
+local function parse_key_value(line, pos_eq)
 	local key = vim.trim(line:sub(1, pos_eq - 1))
 	local value = vim.trim(line:sub(pos_eq + 1, #line))
 	return key, value
@@ -97,12 +89,24 @@ M.parse = function(input)
 		-- parse query and headers
 		elseif p.state == state_ready then
 			local pos_eq = line:find("=")
-			-- set query
-			if pos_eq then
-				result[name]:query(parse_query(line, pos_eq))
-			-- set headers
-			elseif line:find(":") then
-				result[name]:headers(parse_headers(line))
+			local pos_dp = line:find(":")
+
+			-- contains both, = and :
+			if pos_eq ~= nil and pos_dp ~= nil then
+				-- the first finding wins
+				if pos_eq < pos_dp then
+					-- set query
+					result[name]:query(parse_key_value(line, pos_eq))
+				else
+					-- set headers
+					result[name]:headers(parse_key_value(line, pos_dp))
+				end
+			elseif pos_eq ~= nil then
+				-- set query
+				result[name]:query(parse_key_value(line, pos_eq))
+			elseif pos_dp ~= nil then
+				-- set headers
+				result[name]:headers(parse_key_value(line, pos_dp))
 			end
 		end
 

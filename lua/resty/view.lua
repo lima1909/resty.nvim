@@ -15,31 +15,48 @@ log.level = "debug"
 
 M = {}
 
+local tab_len = function(tab)
+	local len = 0
+	for _, _ in pairs(tab) do
+		len = len + 1
+	end
+	return len
+end
+
+local print_tab = function(out, name, del, tab)
+	local l = tab_len(tab)
+
+	if tab and l > 0 then
+		table.insert(out, "")
+		table.insert(out, "" .. name .. " [" .. l .. "]:")
+		table.insert(out, "--")
+		for k, v in pairs(tab) do
+			table.insert(out, "" .. k .. del .. v)
+		end
+	end
+end
+
 local output = function(req_def)
 	local out = {
-		"# " .. req_def.name .. " [" .. req_def.start_at .. " - " .. req_def.end_at .. "]",
-		"",
-		"```lua",
-		"method: " .. req_def.req.method,
-		"URL: " .. req_def.req.url,
-		-- "query:" .. vim.tbl_flatten({ vim.split(vim.inspect(req_def.req.query), "\n") }),
-		"```",
+		"# " .. req_def.req.method,
+		"" .. req_def.req.url,
 	}
-	-- return vim.tbl_flatten({ vim.split(vim.inspect(req_def), "\n") })
+
+	print_tab(out, "headers", ": ", req_def.req.headers)
+	print_tab(out, "query", " = ", req_def.req.query)
+
+	table.insert(out, "")
+	table.insert(out, "----")
+	table.insert(out, "" .. req_def.name .. " [" .. req_def.start_at .. " - " .. req_def.end_at .. "]")
+
 	return out
 end
 
 M.view = function(opts, req_defs, exec)
-	-- convert request definitions
-	local list = {}
-	for _, d in pairs(req_defs) do
-		table.insert(list, d)
-	end
-
 	pickers
 		.new(opts, {
 			finder = finders.new_table({
-				results = list,
+				results = req_defs,
 				entry_maker = function(entry)
 					return {
 						value = entry,

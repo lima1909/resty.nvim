@@ -1,8 +1,14 @@
 
-### test new
+###  one
 GET https://jsonplaceholder.typicode.com/comments
 
 accept: application/json  
 
 postId = 5
 id=21
+
+### two
+Get https://httpbin.org/get
+
+accept: application/json  
+

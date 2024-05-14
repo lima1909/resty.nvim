@@ -5,10 +5,10 @@ local M = {}
 
 _Last_req_def = nil
 
-local print_response_to_new_buf = function(req_def, response)
+local print_response_to_new_buf = function(req_def, response, duration)
 	local buf = vim.api.nvim_create_buf(true, true)
 	-- vim.api.nvim_buf_set_name(buf, "Resty.http")
-	vim.api.nvim_set_option_value("filetype", "http", { buf = buf })
+	vim.api.nvim_set_option_value("filetype", "json", { buf = buf })
 
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
 		"Request: "
@@ -17,7 +17,9 @@ local print_response_to_new_buf = function(req_def, response)
 			.. req_def.start_at
 			.. " - "
 			.. req_def.end_at
-			.. "] >> response status: "
+			.. "] duration: "
+			.. duration
+			.. " ms >> response Status: "
 			.. response.status,
 		"",
 	})
@@ -34,10 +36,22 @@ local print_response_to_new_buf = function(req_def, response)
 	vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(buf), 0 })
 end
 
+local exec_curl = function(req_def)
+	local start_time = os.clock()
+	local response = curl.request(req_def.req)
+	local duration = os.clock() - start_time
+
+	local microseconds = math.floor((duration - math.floor(duration)) * 1000000)
+	local milliseconds = math.floor(duration * 1000) + microseconds
+
+	_Last_req_def = req_def
+
+	print_response_to_new_buf(req_def, response, milliseconds)
+end
+
 M.last = function()
 	if _Last_req_def then
-		local response = curl.request(_Last_req_def.req)
-		print_response_to_new_buf(_Last_req_def, response)
+		exec_curl(_Last_req_def)
 	else
 		error("No last request found. Run first [Resty run]")
 	end
@@ -59,10 +73,7 @@ M.run = function()
 
 	assert(found_def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
 
-	local response = curl.request(found_def.req)
-	_Last_req_def = found_def
-
-	print_response_to_new_buf(found_def, response)
+	exec_curl(found_def)
 end
 
 M.view = function()
@@ -70,11 +81,8 @@ M.view = function()
 	local req_defs = parser.parse(lines)
 
 	-- load the view and execute the selection
-	package.loaded["resty.view"] = nil
 	require("resty.view").view({}, req_defs, function(def)
-		local response = curl.request(def.req)
-		_Last_req_def = def
-		print_response_to_new_buf(def, response)
+		exec_curl(def)
 	end)
 end
 

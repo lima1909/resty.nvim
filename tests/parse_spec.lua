@@ -179,4 +179,30 @@ GET https://httpbin.org/get
 			},
 		})
 	end)
+
+	it("request with comments", function()
+		local input = [[
+### with comments
+GET   https://jsonplaceholder.typicode.com/comments
+
+#foo: bar
+# foo: bar
+
+# foo = bar
+#foo = bar
+]]
+
+		local result = p.parse(input)
+		assert.are.same(result[1], {
+			start_at = 1,
+			end_at = 9,
+			name = "with_comments",
+			req = {
+				method = "GET",
+				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = {},
+				query = {},
+			},
+		})
+	end)
 end)

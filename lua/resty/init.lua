@@ -74,7 +74,6 @@ M.view = function()
 	require("resty.view").view({}, req_defs, function(def)
 		local response = curl.request(def.req)
 		_Last_req_def = def
-
 		print_response_to_new_buf(def, response)
 	end)
 end

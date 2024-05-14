@@ -1,10 +1,12 @@
 local req_def = require("resty.request")
 
----is a start_token for a new starting rest call
-local start_token = "###"
----end_token is optional, is it necessary if the buffer contains more rows
+---is a token_start for a new starting rest call
+local token_start = "###"
+---token_end is optional, is it necessary if the buffer contains more rows
 ---otherwise is the end of the buffer the end of parsing
-local end_token = "---"
+local token_end = "---"
+---is the token for comments
+local token_comment = "#"
 
 ---State-transitions: |init| -> |new| -> |call|
 local state_init = 0
@@ -25,7 +27,7 @@ end
 function parser:parse_name(line, nr)
 	self.state = state_started
 
-	local name = string.sub(line, #start_token + 1)
+	local name = string.sub(line, #token_end + 1)
 	name = vim.trim(name)
 	-- if no name set
 	if #name == 0 then
@@ -76,12 +78,15 @@ M.parse = function(input)
 
 	for nr, line in ipairs(lines) do
 		-- parse the end of request
-		if vim.startswith(line, end_token) then
+		if vim.startswith(line, token_end) then
 			break
 		-- start parsing a new request and parse the name
-		elseif vim.startswith(line, start_token) then
+		elseif vim.startswith(line, token_start) then
 			local name = p:parse_name(line, nr)
 			table.insert(result, req_def.new(name, nr))
+		--  comments
+		elseif vim.startswith(line, token_comment) then
+			goto continue
 		-- parse method and url
 		elseif p.state == state_started then
 			result[#result]:set_method_url(p:parse_method_url(line))
@@ -112,6 +117,8 @@ M.parse = function(input)
 		if result[#result] then
 			result[#result].end_at = nr
 		end
+
+		::continue::
 	end
 
 	return result

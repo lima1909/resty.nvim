@@ -7,6 +7,7 @@ _Last_req_def = nil
 
 local print_response_to_new_buf = function(req_def, response, duration)
 	local buf = vim.api.nvim_create_buf(true, true)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
 	-- vim.api.nvim_buf_set_name(buf, "Resty.http")
 	vim.api.nvim_set_option_value("filetype", "json", { buf = buf })
 

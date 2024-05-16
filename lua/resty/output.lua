@@ -33,6 +33,15 @@ local function output()
 		vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
 	end
 
+	vim.keymap.set("n", "R", function()
+		print("R is pressed ...")
+		vim.api.nvim_set_option_value("filetype", "http", { buf = bufnr })
+	end, {
+		silent = true,
+		buffer = bufnr,
+		desc = "a test for pressing an key",
+	})
+
 	local winnr = win_exist(bufnr)
 	if winnr then
 		-- vim.api.nvim_win_close(winnr, true)

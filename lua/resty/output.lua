@@ -33,13 +33,27 @@ local function output()
 		vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
 	end
 
-	vim.keymap.set("n", "R", function()
-		print("R is pressed ...")
-		vim.api.nvim_set_option_value("filetype", "http", { buf = bufnr })
+	vim.keymap.set("n", "f", function()
+		local tab = vim.api.nvim_buf_get_lines(bufnr, 0, 2, false)
+		local json = vim.inspect(tab)
+		print(json)
+		-- local cmd = { "jq", "-n", "--args", '{"bufnr" : 47, "name" : "result" }', "." }
+		local cmd = { "jq", "-n", "--args", json, "." }
+
+		vim.fn.jobstart(cmd, {
+			stdout_buffered = true,
+			on_stdout = function(_, data)
+				if data then
+					for i, row in pairs(data) do
+						vim.api.nvim_buf_set_lines(bufnr, -1, 3 + i, false, { row })
+					end
+				end
+			end,
+		})
 	end, {
 		silent = true,
 		buffer = bufnr,
-		desc = "a test for pressing an key",
+		desc = "format the json output with jq",
 	})
 
 	local winnr = win_exist(bufnr)

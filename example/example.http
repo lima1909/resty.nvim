@@ -8,7 +8,7 @@ postId = 5
 id=21
 
 ### two
-Get https://httpbin.org/get
+GET https://httpbin.org/get
 
 accept: application/json  
 

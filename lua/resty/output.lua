@@ -22,6 +22,15 @@ local function get_or_create_bufnr(name)
 	return bufnr
 end
 
+local function get_buf_context(bufnr)
+	-- read the complete buffer
+	local context = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+	-- convert the full input of the buffer into a (json) line
+	local json = table.concat(context, "")
+	return json
+end
+
 local function win_exist(bufnr)
 	for _, id in ipairs(vim.api.nvim_list_wins()) do
 		if vim.api.nvim_win_get_buf(id) == bufnr then
@@ -44,8 +53,8 @@ local function exec_jq(bufnr, json, jq_filter)
 				out = j:result()
 			else
 				out = j:stderr_result()
-				table.insert(out, 1, json)
-				table.insert(out, 2, "ERROR:")
+				table.insert(out, 1, "ERROR:")
+				table.insert(out, 2, "")
 			end
 
 			vim.schedule(function()
@@ -57,41 +66,40 @@ local function exec_jq(bufnr, json, jq_filter)
 	jq:start()
 end
 
-local function output()
+local function output(response)
 	local bufnr = get_or_create_bufnr()
 
 	local winnr = win_exist(bufnr)
-	if winnr then
+	if not winnr then
 		-- vim.api.nvim_win_close(winnr, true)
-		return
+		vim.cmd("vsplit")
+		vim.cmd(string.format("buffer %d", bufnr))
+		vim.cmd("wincmd r")
+
+		winnr = vim.api.nvim_get_current_win()
 	end
 
-	vim.cmd("vsplit")
-	vim.cmd(string.format("buffer %d", bufnr))
-	vim.cmd("wincmd r")
-	-- vim.api.nvim_win_set_option(0, "spell", false)
-	-- vim.api.nvim_win_set_option(0, "number", true)
-	-- winnr = vim.api.nvim_get_current_win()
-	-- vim.api.nvim_set_current_win(winnr)
-	vim.api.nvim_buf_set_lines(
-		bufnr,
-		0,
-		-1,
-		false,
-		{ '{"bufnr" : ' .. bufnr .. ', "person": { "name" : "' .. default_output .. '", "age": 42 }}' }
-	)
+	vim.api.nvim_set_current_win(winnr)
+	-- Delete buffer content
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+
+	-- write the new output
+	local body = vim.split(response.body, "\n")
+	for i, r in ipairs(body) do
+		vim.api.nvim_buf_set_lines(bufnr, i - 1, i, false, { r })
+	end
+
+	--[[ vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
+	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, response.headers)
+
+	vim.api.nvim_win_set_buf(0, bufnr)
+	vim.api.nvim_win_set_cursor(0, { 1, 1 }) ]]
 end
 
 local bufnr = get_or_create_bufnr()
 
 vim.keymap.set("n", "f", function()
-	-- read the complete buffer
-	local buf_context = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-	-- convert the full input of the buffer to on (json) line
-	local json = table.concat(buf_context, "")
-	-- Delete buffer content
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
-
+	local json = get_buf_context(bufnr)
 	exec_jq(bufnr, json)
 end, {
 	silent = true,
@@ -100,15 +108,12 @@ end, {
 })
 
 vim.keymap.set("n", "ff", function()
-	-- read the complete buffer
-	local buf_context = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-	-- convert the full input of the buffer to on (json) line
-	local json = table.concat(buf_context, "")
-
 	local jq_filter = vim.fn.input("Filter: ")
-	-- Delete buffer content
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+	if jq_filter == "" then
+		return
+	end
 
+	local json = get_buf_context(bufnr)
 	exec_jq(bufnr, json, jq_filter)
 end, {
 	silent = true,
@@ -116,4 +121,13 @@ end, {
 	desc = "format the json output with jq with a given query",
 })
 
-output()
+local function run(req)
+	local curl = require("plenary.curl")
+	local response = curl.request(req)
+	output(response)
+end
+
+run({
+	url = "https://jsonplaceholder.typicode.com/comments",
+	method = "GET",
+})

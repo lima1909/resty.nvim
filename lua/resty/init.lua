@@ -82,7 +82,7 @@ M.view = function()
 	local req_defs = parser.parse(lines)
 
 	-- load the view and execute the selection
-	require("resty.view").view({}, req_defs, function(def)
+	require("resty.select").view({}, req_defs, function(def)
 		exec_curl(def)
 	end)
 end

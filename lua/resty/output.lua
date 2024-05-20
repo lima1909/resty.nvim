@@ -1,5 +1,7 @@
 local default_output = "response"
 
+local M = {}
+
 local function get_or_create_bufnr(name)
 	local output = name or default_output
 	local bufnr = nil
@@ -39,33 +41,6 @@ local function win_exist(bufnr)
 	end
 end
 
-local function exec_jq(bufnr, json, jq_filter)
-	local filter = jq_filter or "."
-	local job = require("plenary.job")
-
-	local jq = job:new({
-		command = "jq",
-		args = { filter },
-		writer = json,
-		on_exit = function(j, code)
-			local out
-			if code == 0 then
-				out = j:result()
-			else
-				out = j:stderr_result()
-				table.insert(out, 1, "ERROR:")
-				table.insert(out, 2, "")
-			end
-
-			vim.schedule(function()
-				vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, out)
-			end)
-		end,
-	})
-
-	jq:start()
-end
-
 local function output(response)
 	local bufnr = get_or_create_bufnr()
 
@@ -97,10 +72,11 @@ local function output(response)
 end
 
 local bufnr = get_or_create_bufnr()
+local exec = require("resty.exec")
 
 vim.keymap.set("n", "f", function()
 	local json = get_buf_context(bufnr)
-	exec_jq(bufnr, json)
+	exec.jq(bufnr, json)
 end, {
 	silent = true,
 	buffer = bufnr,
@@ -114,7 +90,7 @@ vim.keymap.set("n", "ff", function()
 	end
 
 	local json = get_buf_context(bufnr)
-	exec_jq(bufnr, json, jq_filter)
+	exec.jq(bufnr, json, jq_filter)
 end, {
 	silent = true,
 	buffer = bufnr,
@@ -131,3 +107,5 @@ run({
 	url = "https://jsonplaceholder.typicode.com/comments",
 	method = "GET",
 })
+
+return M

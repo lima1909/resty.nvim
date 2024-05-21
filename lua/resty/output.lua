@@ -1,6 +1,10 @@
+local exec = require("resty.exec")
+
 local default_output = "response"
 
 local M = {}
+
+local _response
 
 local function get_or_create_bufnr(name)
 	local output = name or default_output
@@ -41,9 +45,7 @@ local function win_exist(bufnr)
 	end
 end
 
-local function output(response)
-	local bufnr = get_or_create_bufnr()
-
+local function show_win(bufnr)
 	local winnr = win_exist(bufnr)
 	if not winnr then
 		-- vim.api.nvim_win_close(winnr, true)
@@ -57,25 +59,43 @@ local function output(response)
 	vim.api.nvim_set_current_win(winnr)
 	-- Delete buffer content
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+end
 
-	-- write the new output
+M.show_response = function(req_def, response, duration)
+	local bufnr = get_or_create_bufnr()
+	show_win(bufnr)
+	_response = response
+
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+		"Request: "
+			.. req_def.name
+			.. " ["
+			.. req_def.start_at
+			.. " - "
+			.. req_def.end_at
+			.. "] duration: "
+			.. duration
+			.. " ms >> response Status: "
+			.. response.status,
+		"",
+	})
+
 	local body = vim.split(response.body, "\n")
-	for i, r in ipairs(body) do
-		vim.api.nvim_buf_set_lines(bufnr, i - 1, i, false, { r })
+	for _, r in ipairs(body) do
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { r })
 	end
 
-	--[[ vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
+	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
 	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, response.headers)
 
 	vim.api.nvim_win_set_buf(0, bufnr)
-	vim.api.nvim_win_set_cursor(0, { 1, 1 }) ]]
+	vim.api.nvim_win_set_cursor(0, { 1, 0 })
 end
 
 local bufnr = get_or_create_bufnr()
-local exec = require("resty.exec")
 
 vim.keymap.set("n", "f", function()
-	local json = get_buf_context(bufnr)
+	local json = _response.body --get_buf_context(bufnr)
 	exec.jq(bufnr, json)
 end, {
 	silent = true,
@@ -89,23 +109,12 @@ vim.keymap.set("n", "ff", function()
 		return
 	end
 
-	local json = get_buf_context(bufnr)
+	local json = _response.body --get_buf_context(bufnr)
 	exec.jq(bufnr, json, jq_filter)
 end, {
 	silent = true,
 	buffer = bufnr,
 	desc = "format the json output with jq with a given query",
-})
-
-local function run(req)
-	local curl = require("plenary.curl")
-	local response = curl.request(req)
-	output(response)
-end
-
-run({
-	url = "https://jsonplaceholder.typicode.com/comments",
-	method = "GET",
 })
 
 return M

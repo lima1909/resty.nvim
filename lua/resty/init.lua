@@ -1,52 +1,21 @@
 local parser = require("resty.parser")
 local exec = require("resty.exec")
+local output = require("resty.output")
 
 local M = {}
 
 _Last_req_def = nil
 
-local print_response_to_new_buf = function(req_def, response, duration)
-	local buf = vim.api.nvim_create_buf(true, true)
-	vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
-	-- vim.api.nvim_buf_set_name(buf, "Resty.http")
-	vim.api.nvim_set_option_value("filetype", "json", { buf = buf })
-
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-		"Request: "
-			.. req_def.name
-			.. " ["
-			.. req_def.start_at
-			.. " - "
-			.. req_def.end_at
-			.. "] duration: "
-			.. duration
-			.. " ms >> response Status: "
-			.. response.status,
-		"",
-	})
-
-	local body = vim.split(response.body, "\n")
-	for _, r in ipairs(body) do
-		vim.api.nvim_buf_set_lines(buf, -1, -1, false, { r })
-	end
-
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "" })
-	vim.api.nvim_buf_set_lines(buf, -1, -1, false, response.headers)
-
-	vim.api.nvim_win_set_buf(0, buf)
-	vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(buf), 0 })
-end
-
-local exec_curl = function(req_def)
+local exec_and_show_response = function(req_def)
 	local response, milliseconds = exec.curl(req_def)
 	_Last_req_def = req_def
 
-	print_response_to_new_buf(req_def, response, milliseconds)
+	output.show_response(req_def, response, milliseconds)
 end
 
 M.last = function()
 	if _Last_req_def then
-		exec_curl(_Last_req_def)
+		exec_and_show_response(_Last_req_def)
 	else
 		error("No last request found. Run first [Resty run]")
 	end
@@ -68,7 +37,7 @@ M.run = function()
 
 	assert(found_def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
 
-	exec_curl(found_def)
+	exec_and_show_response(found_def)
 end
 
 M.view = function()
@@ -77,7 +46,7 @@ M.view = function()
 
 	-- load the view and execute the selection
 	require("resty.select").view({}, req_defs, function(def)
-		exec_curl(def)
+		exec_and_show_response(def)
 	end)
 end
 

@@ -1,5 +1,5 @@
-local curl = require("plenary.curl")
 local parser = require("resty.parser")
+local exec = require("resty.exec")
 
 local M = {}
 
@@ -38,13 +38,7 @@ local print_response_to_new_buf = function(req_def, response, duration)
 end
 
 local exec_curl = function(req_def)
-	local start_time = os.clock()
-	local response = curl.request(req_def.req)
-	local duration = os.clock() - start_time
-
-	local microseconds = math.floor((duration - math.floor(duration)) * 1000000)
-	local milliseconds = math.floor(duration * 1000) + microseconds
-
+	local response, milliseconds = exec.curl(req_def)
 	_Last_req_def = req_def
 
 	print_response_to_new_buf(req_def, response, milliseconds)

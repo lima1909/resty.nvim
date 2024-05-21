@@ -1,3 +1,5 @@
+local curl = require("plenary.curl")
+
 local M = {}
 
 ---  Create an async job for the jq commend.
@@ -30,6 +32,17 @@ M.jq = function(bufnr, json, jq_filter)
 			end,
 		})
 		:start()
+end
+
+M.curl = function(req_def)
+	local start_time = os.clock()
+	local response = curl.request(req_def.req)
+	local duration = os.clock() - start_time
+
+	local microseconds = math.floor((duration - math.floor(duration)) * 1000000)
+	local milliseconds = math.floor(duration * 1000) + microseconds
+
+	return response, milliseconds
 end
 
 return M

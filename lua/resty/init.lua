@@ -10,7 +10,7 @@ local exec_and_show_response = function(req_def)
 	local response, milliseconds = exec.curl(req_def)
 	_Last_req_def = req_def
 
-	output.show_response(req_def, response, milliseconds)
+	output.new(req_def, response, milliseconds):show()
 end
 
 M.last = function()

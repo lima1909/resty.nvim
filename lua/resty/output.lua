@@ -2,6 +2,10 @@ local exec = require("resty.exec")
 
 local M = {}
 
+local show_body = true
+local show_headers = true
+local show_meta = true
+
 local function get_or_create_buffer_with_win(name)
 	local output = name or "response"
 	local bufnr = nil
@@ -52,7 +56,7 @@ end
 end ]]
 
 function M:show_meta()
-	if M.meta then
+	if show_meta then
 		vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
 			"Request: "
 				.. self.req_def.name
@@ -70,7 +74,7 @@ function M:show_meta()
 end
 
 function M:show_body()
-	if M.body then
+	if show_body then
 		local b = vim.split(self.response.body, "\n")
 		for _, r in ipairs(b) do
 			vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, { r })
@@ -79,7 +83,7 @@ function M:show_body()
 end
 
 function M:show_headers()
-	if M.headers then
+	if show_headers then
 		vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, self.response.headers)
 	end
 end
@@ -102,17 +106,11 @@ function M:refresh()
 end
 
 M.new = function(req_def, response, duration)
-	local bufnr = get_or_create_buffer_with_win()
-
 	M.req_def = req_def
 	M.response = response
 	M.body_filtered = response.body
 	M.duration = duration
-	M.bufnr = bufnr
-
-	M.body = true
-	M.headers = true
-	M.meta = true
+	M.bufnr = get_or_create_buffer_with_win()
 
 	return M
 end
@@ -120,29 +118,29 @@ end
 -- add key-mapping for using jq for the json-body
 -- ----------------------------------------------
 vim.keymap.set("n", "b", function()
-	M.body = not M.body
+	show_body = not show_body
 	M:refresh()
 end, { silent = true, buffer = M.bufnr, desc = "toggle for body" })
 
 vim.keymap.set("n", "m", function()
-	M.meta = not M.meta
+	show_meta = not show_meta
 	M:refresh()
 end, { silent = true, buffer = M.bufnr, desc = "toggle for meta" })
 
 vim.keymap.set("n", "h", function()
-	M.headers = not M.headers
+	show_headers = not show_headers
 	M:refresh()
 end, { silent = true, buffer = M.bufnr, desc = "toggle for headers" })
 
 vim.keymap.set("n", "f", function()
-	if M.body then
+	if show_body then
 		--get_buf_context(bufnr)
 		exec.jq(M.bufnr, M.body_filtered)
 	end
 end, { silent = true, buffer = M.bufnr, desc = "format the json output with jq" })
 
 vim.keymap.set("n", "ff", function()
-	if M.body then
+	if show_body then
 		local jq_filter = vim.fn.input("Filter: ")
 		if jq_filter == "" then
 			return
@@ -154,7 +152,7 @@ vim.keymap.set("n", "ff", function()
 end, { silent = true, buffer = M.bufnr, desc = "format the json output with jq with a given query" })
 
 vim.keymap.set("n", "fr", function()
-	if M.body then
+	if show_body then
 		M.body_filtered = M.response.body
 		M:refresh()
 	end

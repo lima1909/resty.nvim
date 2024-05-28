@@ -67,7 +67,9 @@ function M:show_meta()
 				.. "] duration: "
 				.. self.duration
 				.. " ms >> response Status: "
-				.. self.response.status,
+				.. self.response.status
+				.. " "
+				.. self.response.status_str,
 			"",
 		})
 	end
@@ -169,11 +171,11 @@ local function setup_keymap()
 	end
 end
 
-M.new = function(req_def, response, duration)
+M.new = function(req_def, response)
 	M.req_def = req_def
 	M.response = response
 	M.body_filtered = response.body
-	M.duration = duration
+	M.duration = response.duration
 	M.bufnr = get_or_create_buffer_with_win()
 
 	setup_keymap()

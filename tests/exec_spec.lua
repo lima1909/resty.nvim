@@ -53,9 +53,17 @@ Get https://httpbin.org/get
 ]]
 
 			local req_def = parser.parse(input)[1]
-			local response, ms = exec.curl(req_def)
+			local response = exec.curl(req_def)
 			assert.are.same(200, response.status)
-			assert(ms > 1, "" .. ms .. " > 1")
+			assert.are.same("OK", response.status_str)
+			assert(response.duration > 1, "" .. response.duration .. " > 1")
+		end)
+
+		it("status code", function()
+			assert.are.same("OK", vim.tbl_get(exec.http_status_codes, 200))
+			assert.are.same("Created", vim.tbl_get(exec.http_status_codes, 201))
+			assert.are.same("Forbidden", vim.tbl_get(exec.http_status_codes, 403))
+			assert.are.same(nil, vim.tbl_get(exec.http_status_codes, 999))
 		end)
 	end)
 end)

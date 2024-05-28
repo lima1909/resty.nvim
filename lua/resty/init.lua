@@ -7,10 +7,10 @@ local M = {}
 _Last_req_def = nil
 
 local exec_and_show_response = function(req_def)
-	local response, milliseconds = exec.curl(req_def)
+	local response = exec.curl(req_def)
 	_Last_req_def = req_def
 
-	output.new(req_def, response, milliseconds):show()
+	output.new(req_def, response):show()
 end
 
 M.last = function()

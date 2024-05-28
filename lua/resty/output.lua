@@ -6,19 +6,19 @@ local show_body_flag = true
 local show_headers_flag = true
 local show_meta_flag = true
 
-local function get_or_create_buffer_with_win(name)
-	local output = name or "response"
+local function get_or_create_buffer_with_win()
+	local bufname = "response"
 	local bufnr = nil
 
 	for _, id in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_get_name(id):find(output) then
+		if vim.api.nvim_buf_get_name(id):find(bufname) then
 			bufnr = id
 		end
 	end
 
 	if not bufnr then
 		bufnr = vim.api.nvim_create_buf(false, false)
-		vim.api.nvim_buf_set_name(bufnr, output)
+		vim.api.nvim_buf_set_name(bufnr, bufname)
 		vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
 		vim.api.nvim_set_option_value("filetype", "json", { buf = bufnr })
 		vim.api.nvim_buf_set_option(bufnr, "swapfile", false)
@@ -44,7 +44,7 @@ local function get_or_create_buffer_with_win(name)
 	-- Delete buffer content
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
-	return bufnr
+	return bufnr, winnr
 end
 
 --[[ local function get_buf_context(bufnr)
@@ -91,6 +91,15 @@ function M:show_headers()
 end
 
 function M:show()
+	-- set high light
+	vim.api.nvim_set_hl(
+		vim.api.nvim_create_namespace("Resty"),
+		"Active",
+		{ underline = true, bold = true, italic = true }
+	)
+	-- set winbar with two menus
+	vim.wo[self.winnr].winbar = "%1@v:lua.print@|%#Active# print 1 %*|%X%7@v:lua.print@ print 2 |%X"
+
 	self:show_meta()
 	self:show_body()
 
@@ -176,7 +185,7 @@ M.new = function(req_def, response)
 	M.response = response
 	M.body_filtered = response.body
 	M.duration = response.duration
-	M.bufnr = get_or_create_buffer_with_win()
+	M.bufnr, M.winnr = get_or_create_buffer_with_win()
 
 	setup_keymap()
 

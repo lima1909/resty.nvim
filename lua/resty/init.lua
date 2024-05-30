@@ -1,6 +1,6 @@
 local parser = require("resty.parser")
 local exec = require("resty.exec")
-local output = require("resty.output")
+local output = require("resty.response")
 
 local M = {}
 
@@ -10,7 +10,8 @@ local exec_and_show_response = function(req_def)
 	local response = exec.curl(req_def)
 	_Last_req_def = req_def
 
-	output.new(req_def, response):show()
+	M.response = output.new(req_def, response)
+	M.response:show()
 end
 
 M.last = function()
@@ -48,6 +49,10 @@ M.view = function()
 	require("resty.select").view({}, req_defs, function(def)
 		exec_and_show_response(def)
 	end)
+end
+
+_G._resty_show_response = function(selection)
+	M.response:show(selection)
 end
 
 return M

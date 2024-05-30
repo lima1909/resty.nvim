@@ -27,7 +27,7 @@ M.jq = function(bufnr, json, jq_filter)
 
 				-- write the output (result or error) in buffer
 				vim.schedule(function()
-					vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, output)
+					vim.api.nvim_buf_set_lines(bufnr, 1, -1, false, output)
 				end)
 			end,
 		})

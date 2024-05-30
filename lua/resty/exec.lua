@@ -102,16 +102,35 @@ M.http_status_codes = {
 }
 
 M.curl = function(req_def)
-	local start_time = os.clock()
-	local response = curl.request(req_def.req)
-	local duration = os.clock() - start_time
-	local microseconds = math.floor((duration - math.floor(duration)) * 1000000)
-	local milliseconds = math.floor(duration * 1000) + microseconds
+	local response, duration = M.stop_time(function()
+		return curl.request(req_def.req)
+	end)
 
 	response.status_str = vim.tbl_get(M.http_status_codes, response.status) or ""
-	response.duration = milliseconds
+	response.duration = duration
+	response.duration_str = M.time_formated(duration)
 
 	return response
+end
+
+M.stop_time = function(exec_fn)
+	local start_time = os.clock()
+	local result = exec_fn()
+	local duration = os.clock() - start_time
+
+	return result, duration
+end
+
+M.time_formated = function(time)
+	local units = { "s", "ms", "µs", "ns" }
+	local current_unit_pos = 1
+
+	while time < 1 and current_unit_pos <= #units do
+		time = time * 1000
+		current_unit_pos = current_unit_pos + 1
+	end
+
+	return string.format("%.2f %s", time, units[current_unit_pos])
 end
 
 return M

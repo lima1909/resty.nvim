@@ -48,8 +48,7 @@ local M = {
 						.. " "
 						.. slf.response.status_str
 						.. "  "
-						.. slf.response.duration
-						.. " ms",
+						.. slf.response.duration_str,
 				})
 			end,
 		},
@@ -179,8 +178,8 @@ function M:create_winbar(selection)
 		.. " "
 		.. self.response.status_str
 		.. "  ("
-		.. self.response.duration
-		.. "ms)%*"
+		.. self.response.duration_str
+		.. ")%*"
 
 	return winbar
 end

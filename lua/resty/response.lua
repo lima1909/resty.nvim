@@ -139,7 +139,8 @@ end
 local function create_hl()
 	-- vim.api.nvim_create_namespace("Resty"),
 	vim.api.nvim_set_hl(0, "ActiveWin", { underdouble = true, bold = true, force = true })
-	vim.api.nvim_set_hl(0, "Status", { fg = "grey" })
+	vim.api.nvim_set_hl(0, "StatusOK", { fg = "grey" })
+	vim.api.nvim_set_hl(0, "StatusNotOK", { fg = "red" })
 end
 
 local function windows_bar_str(win)
@@ -163,9 +164,17 @@ function M:create_winbar(selection)
 		winbar = winbar .. windows_bar_str(win) .. " | "
 	end
 
+	--check the status-code is an 200er
+	local status_hl = "%#StatusOK#"
+	local first = string.sub("" .. self.response.status, 1, 1)
+	if first ~= "2" then
+		status_hl = "%#StatusNotOK#"
+	end
+
 	-- add the status with duration to the winbar
 	winbar = winbar
-		.. "%#Status# >>> "
+		.. "  "
+		.. status_hl
 		.. self.response.status
 		.. " "
 		.. self.response.status_str

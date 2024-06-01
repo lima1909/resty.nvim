@@ -3,8 +3,8 @@ GET https://jsonplaceholder.typicode.com/comments
 
 accept: application/json  
 
-postId = 5
-id=21
+# postId = 5
+# id=21
 
 ### two
 GET https://httpbin.org/get

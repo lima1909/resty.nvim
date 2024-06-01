@@ -1,12 +1,13 @@
-local req_def = require("resty.request")
-
 ---is a token_start for a new starting rest call
-local token_start = "###"
+local token_START = "###"
 ---token_end is optional, is it necessary if the buffer contains more rows
 ---otherwise is the end of the buffer the end of parsing
-local token_end = "---"
+local token_END = "---"
 ---is the token for comments
-local token_comment = "#"
+local token_COMMENT = "#"
+
+---is the token for defining a variable
+local token_VARIABLE = "@"
 
 ---State-transitions: |init| -> |new| -> |call|
 local state_init = 0
@@ -21,13 +22,28 @@ local function new_parser()
 	return setmetatable(p, parser)
 end
 
+local function parse_key_value(line, pos_eq)
+	local key = vim.trim(line:sub(1, pos_eq - 1))
+	local value = vim.trim(line:sub(pos_eq + 1, #line))
+	return key, value
+end
+
+---Parse the given variable
+---Example: @hostname = api.example.com
+---@param line string
+function parser:parse_variable(line)
+	local l = string.sub(line, #token_VARIABLE + 1)
+	local pos_eq = l:find("=")
+	return parse_key_value(l, pos_eq)
+end
+
 ---Parse the name after the start symbol '### [name]'
 ---@param line string
 ---@param nr integer
 function parser:parse_name(line, nr)
 	self.state = state_started
 
-	local name = string.sub(line, #token_end + 1)
+	local name = string.sub(line, #token_END + 1)
 	name = vim.trim(name)
 	-- if no name set
 	if #name == 0 then
@@ -55,12 +71,6 @@ function parser:parse_method_url(line)
 	return method, url
 end
 
-local function parse_key_value(line, pos_eq)
-	local key = vim.trim(line:sub(1, pos_eq - 1))
-	local value = vim.trim(line:sub(pos_eq + 1, #line))
-	return key, value
-end
-
 local M = {}
 
 ---Entry point, the parser
@@ -73,24 +83,27 @@ M.parse = function(input)
 		lines = input
 	end
 
+	local list = require("resty.request").new_req_def_list()
 	local p = new_parser()
-	local result = {}
 
 	for nr, line in ipairs(lines) do
-		-- parse the end of request
-		if vim.startswith(line, token_end) then
+		-- parse the END of request
+		if vim.startswith(line, token_END) then
 			break
-		-- start parsing a new request and parse the name
-		elseif vim.startswith(line, token_start) then
+		-- find a VARIABLE definition
+		elseif vim.startswith(line, token_VARIABLE) then
+			list:add_variables(p:parse_variable(line))
+		-- START parsing a new request and parse the name
+		elseif vim.startswith(line, token_START) then
 			local name = p:parse_name(line, nr)
-			table.insert(result, req_def.new(name, nr))
-		--  comments
-		elseif vim.startswith(line, token_comment) then
+			list:add_req_def(name, nr)
+		--  COMMENTS
+		elseif vim.startswith(line, token_COMMENT) then
 			goto continue
-		-- parse method and url
+		-- parse METHOD and URL
 		elseif p.state == state_started then
-			result[#result]:set_method_url(p:parse_method_url(line))
-		-- parse query and headers
+			list:set_method_url(p:parse_method_url(line))
+		-- parse QUERY and HEADERS
 		elseif p.state == state_ready then
 			local pos_eq = line:find("=")
 			local pos_dp = line:find(":")
@@ -100,28 +113,26 @@ M.parse = function(input)
 				-- the first finding wins
 				if pos_eq < pos_dp then
 					-- set query
-					result[#result]:query(parse_key_value(line, pos_eq))
+					list:query(parse_key_value(line, pos_eq))
 				else
 					-- set headers
-					result[#result]:headers(parse_key_value(line, pos_dp))
+					list:headers(parse_key_value(line, pos_dp))
 				end
 			elseif pos_eq ~= nil then
 				-- set query
-				result[#result]:query(parse_key_value(line, pos_eq))
+				list:query(parse_key_value(line, pos_eq))
 			elseif pos_dp ~= nil then
 				-- set headers
-				result[#result]:headers(parse_key_value(line, pos_dp))
+				list:headers(parse_key_value(line, pos_dp))
 			end
 		end
 
-		if result[#result] then
-			result[#result].end_at = nr
-		end
+		list:set_end_line_nr(nr)
 
 		::continue::
 	end
 
-	return result
+	return list
 end
 
 return M

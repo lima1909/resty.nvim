@@ -7,7 +7,7 @@ describe("parse:", function()
 		]]
 
 		local result = p.parse(input)
-		assert.are.same(result, {})
+		assert.are.same(result.definitions, {})
 	end)
 
 	it("only name for request", function()
@@ -33,8 +33,9 @@ include = sub, *
 
 ]]
 
-		local result = p.parse(input)
-		assert.are.same(result[1], {
+		local req_def_list = p.parse(input)
+		local req_def = req_def_list:get_req_def_by_row(2)
+		assert.are.same(req_def, {
 			start_at = 1,
 			end_at = 10,
 			name = "first_test",
@@ -61,7 +62,7 @@ Get https://httpbin.org/get
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result[1], {
+		assert.are.same(result.definitions[1], {
 			start_at = 1,
 			end_at = 4,
 			name = "noname_1",
@@ -88,7 +89,7 @@ query=val
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result[1], {
+		assert.are.same(result.definitions[1], {
 			start_at = 1,
 			end_at = 3,
 			name = "req",
@@ -110,7 +111,7 @@ GET   https://jsonplaceholder.typicode.com/comments
 ]]
 
 		local result = p.parse(input)
-		assert.are.same(result[1], {
+		assert.are.same(result.definitions[1], {
 			start_at = 1,
 			end_at = 3,
 			name = "spaces",
@@ -131,8 +132,9 @@ GET   https://jsonplaceholder.typicode.com/comments
 foo: bar=
 ]]
 
-		local result = p.parse(input)
-		assert.are.same(result[1], {
+		local req_def_list = p.parse(input)
+		local req_def = req_def_list:get_req_def_by_row(2)
+		assert.are.same(req_def, {
 			start_at = 1,
 			end_at = 5,
 			name = "eq_char",
@@ -155,8 +157,9 @@ GET https://httpbin.org/get
 
 ]]
 
-		local result = p.parse(input)
-		assert.are.same(result[1], {
+		local req_def_list = p.parse(input)
+		local req_def = req_def_list:get_req_def_by_row(2)
+		assert.are.same(req_def, {
 			start_at = 1,
 			end_at = 3,
 			name = "first",
@@ -167,7 +170,9 @@ GET https://httpbin.org/get
 				query = {},
 			},
 		})
-		assert.are.same(result[2], {
+
+		req_def = req_def_list:get_req_def_by_row(5)
+		assert.are.same(req_def, {
 			start_at = 4,
 			end_at = 7,
 			name = "second",
@@ -192,14 +197,76 @@ GET   https://jsonplaceholder.typicode.com/comments
 #foo = bar
 ]]
 
-		local result = p.parse(input)
-		assert.are.same(result[1], {
+		local req_def_list = p.parse(input)
+		local req_def = req_def_list:get_req_def_by_row(2)
+		assert.are.same(req_def, {
 			start_at = 1,
 			end_at = 9,
 			name = "with_comments",
 			req = {
 				method = "GET",
 				url = "https://jsonplaceholder.typicode.com/comments",
+				headers = {},
+				query = {},
+			},
+		})
+	end)
+
+	it("replace variable", function()
+		local r = require("resty.request")
+		local variables = { ["host"] = "my-host" }
+
+		local tt = {
+			-- input = output (expected)
+			{ input = "host}}" },
+			{ input = "host}" },
+			{ input = "{{host" },
+			{ input = "{host" },
+			{ input = "{host}" },
+			-- throw an error? an non known variable FOO
+			{ input = "{{FOO}}" },
+			-- valid replace cases
+			{ input = "{{host}}", expected = "my-host" },
+			{ input = "http://{{host}}", expected = "http://my-host" },
+			{ input = "{{host}}.de", expected = "my-host.de" },
+			{ input = "http://{{host}}.de", expected = "http://my-host.de" },
+		}
+
+		for _, tc in ipairs(tt) do
+			local property = r.replace_variable(variables, tc.input)
+			if tc.expected then
+				assert.are.same(tc.expected, property)
+			else
+				assert.are.same(tc.input, property)
+			end
+		end
+	end)
+
+	it("request with variable", function()
+		local input = [[
+@hostname =httpbin.org
+@port = 1234
+@host= @hostname:@port
+
+### with_var
+Get https://{{hostname}}/get
+
+]]
+
+		local req_def_list = p.parse(input)
+		assert.are.same(
+			req_def_list.variables,
+			{ ["hostname"] = "httpbin.org", ["port"] = "1234", ["host"] = "@hostname:@port" }
+		)
+
+		local req_def = req_def_list:get_req_def_by_row(7)
+		assert.are.same(req_def, {
+			start_at = 5,
+			end_at = 8,
+			name = "with_var",
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
 				headers = {},
 				query = {},
 			},

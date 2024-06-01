@@ -27,14 +27,7 @@ M.run = function()
 	local definitions = parser.parse(lines)
 
 	local row = vim.api.nvim_win_get_cursor(0)[1]
-	local found_def
-
-	for _, d in pairs(definitions) do
-		if d.start_at <= row and d.end_at >= row then
-			found_def = d
-			break
-		end
-	end
+	local found_def = definitions:get_req_def_by_row(row)
 
 	assert(found_def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
 
@@ -46,7 +39,7 @@ M.view = function()
 	local req_defs = parser.parse(lines)
 
 	-- load the view and execute the selection
-	require("resty.select").view({}, req_defs, function(def)
+	require("resty.select").view({}, req_defs.definitions, function(def)
 		exec_and_show_response(def)
 	end)
 end

@@ -1,17 +1,21 @@
 local parser = require("resty.parser")
 local exec = require("resty.exec")
-local output = require("resty.response")
+local response = require("resty.response")
 
 local M = {}
 
 _Last_req_def = nil
 
+_G._resty_show_response = function(selection)
+	M.output:show(selection)
+end
+
 local exec_and_show_response = function(req_def)
-	local response = exec.curl(req_def)
+	local result = exec.curl(req_def)
 	_Last_req_def = req_def
 
-	M.response = output.new(req_def, response)
-	M.response:show()
+	M.output = response.new(req_def, result)
+	M.output:show()
 end
 
 M.last = function()
@@ -23,18 +27,14 @@ M.last = function()
 end
 
 M.run = function()
-	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
-	local definitions = parser.parse(lines)
-
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	local row = vim.api.nvim_win_get_cursor(0)[1]
-	local found_def = definitions:get_req_def_by_row(row)
+	local req_def = parser.parse(lines, row)
 
-	assert(found_def, "The cursor position: " .. row .. " is not in a valid range for a request definition")
-
-	exec_and_show_response(found_def)
+	exec_and_show_response(req_def)
 end
 
-M.view = function()
+--[[ M.view = function()
 	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
 	local req_defs = parser.parse(lines)
 
@@ -42,10 +42,6 @@ M.view = function()
 	require("resty.select").view({}, req_defs.definitions, function(def)
 		exec_and_show_response(def)
 	end)
-end
-
-_G._resty_show_response = function(selection)
-	M.response:show(selection)
-end
+end ]]
 
 return M

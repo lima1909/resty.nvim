@@ -1,7 +1,7 @@
-local p = require("resty.parser2")
+local p = require("resty.parser")
 local assert = require("luassert")
 
-describe("parse globals:", function()
+describe("globals:", function()
 	it("global variables", function()
 		local tt = {
 			{ input = "", expected = {} },
@@ -34,7 +34,7 @@ describe("parse globals:", function()
 end)
 
 -- ----------------------------------------------
-describe("parse requests:", function()
+describe("requests:", function()
 	it("find selected requests", function()
 		local requests = [[
 ###
@@ -107,7 +107,7 @@ ignored
 end)
 
 -- ----------------------------------------------
-describe("parse requests with global variables:", function()
+describe("requests with global variables:", function()
 	it("find selected requests", function()
 		local input = [[
 
@@ -156,8 +156,8 @@ filter = id = "42"
 end)
 
 -- ----------------------------------------------
-describe("parse and create a request:", function()
-	it("parse and create request", function()
+describe("create a request:", function()
+	it("substitute global and local variables", function()
 		local input = [[
 @host= myhost
 @token =Bearer mytoken123
@@ -189,6 +189,52 @@ include = sub, *
 					accept = "application/json",
 					Authorization = "Bearer mytoken123",
 				},
+			},
+		}, result)
+	end)
+
+	it("substitute global variables", function()
+		local input = [[
+@host= myhost
+@port= 8080
+@full_name={{host}}:{{port}}
+
+###
+GET http://{{full_name}}
+
+]]
+		local result = p.parse(input, 5)
+
+		assert.are.same({
+			req = {
+				method = "GET",
+				url = "http://myhost:8080",
+				query = {},
+				headers = {},
+			},
+		}, result)
+	end)
+
+	it("substitute local variables", function()
+		local input = [[
+@host= myhost
+@port= 8080
+
+###
+
+@full_name={{host}}:{{port}}
+
+GET http://{{full_name}}
+
+]]
+		local result = p.parse(input, 5)
+
+		assert.are.same({
+			req = {
+				method = "GET",
+				url = "http://myhost:8080",
+				query = {},
+				headers = {},
 			},
 		}, result)
 	end)

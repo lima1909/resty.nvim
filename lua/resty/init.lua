@@ -34,6 +34,26 @@ M.run = function()
 	exec_and_show_response(req_def)
 end
 
+M.diagnostic = function()
+	local bufnr = 0
+	local ns = vim.api.nvim_create_namespace("resty_diagnostics")
+	local diagnostics = {
+		{
+			col = 0,
+			lnum = 5,
+			severity = vim.diagnostic.severity.WARN,
+			message = "My custom diagnostic message",
+		},
+		{
+			col = 0,
+			lnum = 6,
+			severity = vim.diagnostic.severity.INFO,
+			message = "Info from me",
+		},
+	}
+	vim.diagnostic.set(ns, bufnr, diagnostics)
+end
+
 --[[ M.view = function()
 	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
 	local req_defs = parser.parse(lines)

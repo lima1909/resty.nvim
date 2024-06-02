@@ -19,8 +19,9 @@ end
 
 local function parse_error(message, line_nr, line)
 	local err_msg = ""
+
 	if line_nr then
-		err_msg = "[" .. line_nr .. "] "
+		err_msg = "line: " .. line_nr .. ": "
 	end
 
 	err_msg = err_msg .. message
@@ -120,20 +121,20 @@ M.prepare_parse = function(input, selected)
 	local result = { readed_lines = 0, global_variables = {} }
 
 	-- parse all lines
-	for nr, line in ipairs(lines) do
+	for line_nr, line in ipairs(lines) do
 		-- END of requests
 		if vim.startswith(line, token_END) then
 			break
 
 		-- GLOBAL VARIABLE definition
 		elseif p.state == state_INIT and vim.startswith(line, token_VARIABLE) then
-			local name, value = parse_variable(line, nr)
+			local name, value = parse_variable(line, line_nr)
 			result.global_variables[name] = value
 
 		-- START new REQUEST
 		elseif vim.startswith(line, token_START) then
 			-- we can STOP here, because we are one request to far
-			if selected < nr then
+			if selected < line_nr then
 				break
 			end
 
@@ -145,12 +146,12 @@ M.prepare_parse = function(input, selected)
 			-- ignore
 			goto continue
 		elseif result.req_lines then
-			table.insert(result.req_lines, line)
+			table.insert(result.req_lines, { line_nr, line })
 		end
 
 		::continue::
 
-		result.readed_lines = nr
+		result.readed_lines = line_nr
 	end
 
 	return result
@@ -169,11 +170,14 @@ M.parse = function(input, selected)
 	local variables = req_def.global_variables or {}
 	local p = new_parser()
 
-	for idx, line in ipairs(req_def.req_lines) do
+	for _, line_def in ipairs(req_def.req_lines) do
+		local line_nr = line_def[1]
+		local line = line_def[2]
+
 		--
 		-- VARIABLE definition
 		if vim.startswith(line, token_VARIABLE) then
-			local name, value = parse_variable(line, idx)
+			local name, value = parse_variable(line, line_nr)
 			variables[name] = value
 		else
 			-- replace variables
@@ -200,20 +204,20 @@ M.parse = function(input, selected)
 					-- the first finding wins
 					if pos_eq < pos_dp then
 						-- set query
-						local key, value = split_into_key_value(line, pos_eq, idx)
+						local key, value = split_into_key_value(line, pos_eq, line_nr)
 						result.req.query[key] = value
 					else
 						-- set headers
-						local key, value = split_into_key_value(line, pos_dp, idx)
+						local key, value = split_into_key_value(line, pos_dp, line_nr)
 						result.req.headers[key] = value
 					end
 				elseif pos_eq ~= nil then
 					-- set query
-					local key, value = split_into_key_value(line, pos_eq, idx)
+					local key, value = split_into_key_value(line, pos_eq, line_nr)
 					result.req.query[key] = value
 				elseif pos_dp ~= nil then
 					-- set headers
-					local key, value = split_into_key_value(line, pos_dp, idx)
+					local key, value = split_into_key_value(line, pos_dp, line_nr)
 					result.req.headers[key] = value
 				end
 			end

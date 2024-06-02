@@ -52,14 +52,14 @@ GET https://host
 
 		local tt = {
 			{ input = "###\nGET http://host", selected = 0, result = nil, readed_lines = 0 },
-			{ input = "###\nGET http://host", selected = 2, result = { "GET http://host" }, readed_lines = 2 },
-			{ input = "###\nGET http://host", selected = 1, result = { "GET http://host" }, readed_lines = 2 },
+			{ input = "###\nGET http://host", selected = 2, result = { { 2, "GET http://host" } }, readed_lines = 2 },
+			{ input = "###\nGET http://host", selected = 1, result = { { 2, "GET http://host" } }, readed_lines = 2 },
 
 			-- more than one request
 			{ input = requests, selected = 0, result = nil, readed_lines = 0 },
-			{ input = requests, selected = 2, result = { "GET http://host" }, readed_lines = 3 },
-			{ input = requests, selected = 4, result = { "GET http://my-host" }, readed_lines = 5 },
-			{ input = requests, selected = 9, result = { "GET http://other-host" }, readed_lines = 9 },
+			{ input = requests, selected = 2, result = { { 2, "GET http://host" } }, readed_lines = 3 },
+			{ input = requests, selected = 4, result = { { 5, "GET http://my-host" } }, readed_lines = 5 },
+			{ input = requests, selected = 9, result = { { 7, "GET http://other-host" } }, readed_lines = 9 },
 		}
 
 		for _, tc in pairs(tt) do
@@ -80,7 +80,7 @@ GET http://{{host}}
 ]],
 			2
 		)
-		assert.are.same({ "@host=myhost", "GET http://{{host}}" }, result.req_lines)
+		assert.are.same({ { 3, "@host=myhost" }, { 5, "GET http://{{host}}" } }, result.req_lines)
 	end)
 
 	it("parse error, selected row to big", function()
@@ -125,7 +125,7 @@ GET http://new-host
 		local result = p.prepare_parse(input, 6)
 
 		assert.are.same({ ["host"] = "myhost", ["port"] = "8080" }, result.global_variables)
-		assert.are.same({ "GET http://{{host}}:{{port}}" }, result.req_lines)
+		assert.are.same({ { 7, "GET http://{{host}}:{{port}}" } }, result.req_lines)
 		assert.are.same(9, result.readed_lines)
 	end)
 
@@ -147,9 +147,9 @@ filter = id = "42"
 
 		assert.are.same({ ["host"] = "myhost" }, result.global_variables)
 		assert.are.same({
-			"@port= 8080",
-			"GET http://{{host}}:{{port}}",
-			'filter = id = "42" ',
+			{ 5, "@port= 8080" },
+			{ 7, "GET http://{{host}}:{{port}}" },
+			{ 10, 'filter = id = "42" ' },
 		}, result.req_lines)
 		assert.are.same(12, result.readed_lines)
 	end)

@@ -1,17 +1,18 @@
 ###  
 GET https://jsonplaceholder.typicode.com/comments
 
+# headers
 accept: application/json  
-foo: bar
 
+# query values
 postId = 5
-# id=21
+id=21
 
 ### 
 
+# variable for the hostname
 @hostname = httpbin.org
 
 GET https://{{hostname}}/get
 
 accept: application/json  
-

@@ -38,7 +38,7 @@ end
 function parser:add_error(line_nr, message)
 	table.insert(self.errors, {
 		col = 0,
-		lnum = line_nr - 1, -- TODO is this correct?!?!
+		lnum = line_nr - 1, -- NOTE is this correct?!?!
 		severity = vim.diagnostic.severity.ERROR,
 		message = message,
 	})

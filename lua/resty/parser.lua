@@ -216,6 +216,7 @@ M.parse = function(input, selected)
 				-- HEADERS AND QUERIES
 				local pos_eq = line:find("=")
 				local pos_dp = line:find(":")
+
 				-- contains both, = and :
 				if pos_eq ~= nil and pos_dp ~= nil then
 					-- the first finding wins
@@ -248,21 +249,8 @@ M.parse = function(input, selected)
 			end
 		end
 	end
+
 	return p
 end
 
 return M
---
--- ---------- --
--- Result --
--- ---------- --
--- local result = {}
--- result.__index = result
-
--- local function new_result(p)
--- local r = {
--- result = p.result,
--- errors = p.errors,
--- }
--- return setmetatable(r, result)
--- end

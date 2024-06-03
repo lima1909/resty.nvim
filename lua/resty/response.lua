@@ -31,16 +31,18 @@ local M = {
 			show = function(slf)
 				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"# Request:",
+					"Request:",
 					"",
 					"```http",
 					"",
 					slf.req_def.req.method .. " " .. slf.req_def.req.url,
 					"",
+					-- "# headers",
+					-- "" .. vim.fn.flatten(slf.req_def.headers),
 					"```",
 					"",
 					"",
-					"# Response: ",
+					"Response: ",
 					"",
 					"- state: " .. slf.response.status .. " " .. slf.response.status_str,
 					"- duration: " .. slf.response.duration_str,

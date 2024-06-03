@@ -13,7 +13,9 @@ describe("globals:", function()
 
 		for _, tc in ipairs(tt) do
 			local result = p.prepare_parse(tc.input, 1)
-			assert.are.same(result.global_variables, tc.expected)
+			assert.is_false(result:has_errors())
+			local r = result.result
+			assert.are.same(r.global_variables, tc.expected)
 		end
 	end)
 
@@ -26,9 +28,11 @@ describe("globals:", function()
 		}
 
 		for _, tc in ipairs(tt) do
-			local result, err = pcall(p.prepare_parse, tc.input, 1)
-			assert(not result)
-			assert(err:find(tc.error_msg), err)
+			local result = p.prepare_parse(tc.input, 1)
+			assert.is_true(result:has_errors())
+			assert.are.same(1, #result.errors)
+			local err_msg = result.errors[1].message
+			assert(err_msg:find(tc.error_msg), err_msg)
 		end
 	end)
 end)
@@ -64,13 +68,15 @@ GET https://host
 
 		for _, tc in pairs(tt) do
 			local result = p.prepare_parse(tc.input, tc.selected)
-			assert.are.same(tc.result, result.req_lines)
-			assert.are.same(tc.readed_lines, result.readed_lines)
+			assert.is_false(result:has_errors())
+			local r = result.result
+			assert.are.same(tc.result, r.req_lines)
+			assert.are.same(tc.readed_lines, r.readed_lines)
 		end
 	end)
 
 	it("requests with local variables", function()
-		local result = p.prepare_parse(
+		local r = p.prepare_parse(
 			[[
 ###
 
@@ -80,7 +86,8 @@ GET http://{{host}}
 ]],
 			2
 		)
-		assert.are.same({ { 3, "@host=myhost" }, { 5, "GET http://{{host}}" } }, result.req_lines)
+		assert.is_false(r:has_errors())
+		assert.are.same({ { 3, "@host=myhost" }, { 5, "GET http://{{host}}" } }, r.result.req_lines)
 	end)
 
 	it("parse error, selected row to big", function()
@@ -122,7 +129,10 @@ GET http://{{host}}:{{port}}
 ###
 GET http://new-host
 ]]
-		local result = p.prepare_parse(input, 6)
+		local r = p.prepare_parse(input, 6)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
 
 		assert.are.same({ ["host"] = "myhost", ["port"] = "8080" }, result.global_variables)
 		assert.are.same({ { 7, "GET http://{{host}}:{{port}}" } }, result.req_lines)
@@ -143,7 +153,10 @@ GET http://{{host}}:{{port}}
 filter = id = "42" 
 # comment
 ]]
-		local result = p.prepare_parse(input, 6)
+		local r = p.prepare_parse(input, 6)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
 
 		assert.are.same({ ["host"] = "myhost" }, result.global_variables)
 		assert.are.same({
@@ -175,7 +188,10 @@ Authorization: {{token}}
 filter = {{filter}}
 include = sub, *  
 ]]
-		local result = p.parse(input, 5)
+		local r = p.parse(input, 5)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
 
 		assert.are.same({
 			req = {
@@ -203,7 +219,10 @@ include = sub, *
 GET http://{{full_name}}
 
 ]]
-		local result = p.parse(input, 5)
+		local r = p.parse(input, 5)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
 
 		assert.are.same({
 			req = {
@@ -227,7 +246,10 @@ GET http://{{full_name}}
 GET http://{{full_name}}
 
 ]]
-		local result = p.parse(input, 5)
+		local r = p.parse(input, 5)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
 
 		assert.are.same({
 			req = {

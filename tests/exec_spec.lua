@@ -52,7 +52,11 @@ Get https://httpbin.org/get
 
 ]]
 
-			local req_def = parser.parse(input, 2)
+			local r = parser.parse(input, 2)
+
+			assert.is_false(r:has_errors())
+			local req_def = r.result
+
 			local response = exec.curl(req_def)
 			assert.are.same(200, response.status)
 			assert.are.same("OK", response.status_str)

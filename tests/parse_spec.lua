@@ -15,8 +15,11 @@ describe("parse:", function()
 ### 
 		]]
 
-		local _, err = pcall(p.parse, input, 1)
-		assert(err:find("expected two parts: method and url"))
+		local result = p.parse(input, 1)
+		assert.is_true(result:has_errors())
+		assert.are.same(1, #result.errors)
+		local err_msg = result.errors[1].message
+		assert(err_msg:find("expected two parts: method and url"))
 	end)
 
 	it("one request", function()
@@ -32,7 +35,11 @@ include = sub, *
 
 ]]
 
-		local result = p.parse(input, 2)
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -56,7 +63,11 @@ Get https://httpbin.org/get
 
 ]]
 
-		local result = p.parse(input, 1)
+		local r = p.parse(input, 1)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -80,7 +91,11 @@ query=val
 
 ]]
 
-		local result = p.parse(input, 1)
+		local r = p.parse(input, 1)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -99,7 +114,11 @@ GET   https://jsonplaceholder.typicode.com/comments
 ---
 ]]
 
-		local result = p.parse(input, 1)
+		local r = p.parse(input, 1)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -118,7 +137,11 @@ GET   https://jsonplaceholder.typicode.com/comments
 foo: bar=
 ]]
 
-		local result = p.parse(input, 2)
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -139,7 +162,11 @@ GET https://httpbin.org/get
 
 ]]
 
-		local result = p.parse(input, 2)
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -149,7 +176,11 @@ GET https://httpbin.org/get
 			},
 		})
 
-		result = p.parse(input, 5)
+		r = p.parse(input, 5)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",
@@ -172,7 +203,11 @@ GET   https://jsonplaceholder.typicode.com/comments
 #foo = bar
 ]]
 
-		local result = p.parse(input, 2)
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
 		assert.are.same(result, {
 			req = {
 				method = "GET",

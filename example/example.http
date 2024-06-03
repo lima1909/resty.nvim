@@ -2,12 +2,16 @@
 GET https://jsonplaceholder.typicode.com/comments
 
 accept: application/json  
+foo: bar
 
 postId = 5
 # id=21
 
 ### 
-GET https://httpbin.org/get
+
+@hostname = httpbin.org
+
+GET https://{{hostname}}/get
 
 accept: application/json  
 

@@ -40,26 +40,31 @@ vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un" })
 vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
 ```
 
+## Definitions
+
+- variables: definition: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- `###` delimiter between several rest calls
+- first row after `###` is the rest call: `[method] [space] [URL]`
+- headers: delimiter `:`
+- query: delimiter `=`
+
 ## Example
 
 ```
-###  
-GET https://jsonplaceholder.typicode.com/comments
+# global variables
+@hostname = httpbin.org
+
+### 
+GET https://{{hostname}}/get
 
 # headers
 accept: application/json  
 
-# query values
+###  
+GET https://jsonplaceholder.typicode.com/comments
+
+# query
 postId = 5
 id=21
-
-### 
-
-# variable for the hostname
-@hostname = httpbin.org
-
-GET https://{{hostname}}/get
-
-accept: application/json  
 ```
 

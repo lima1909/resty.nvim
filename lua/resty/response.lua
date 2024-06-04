@@ -43,9 +43,11 @@ local M = {
 					"",
 					"",
 					"Response: ",
-					"",
 					"- state: " .. slf.response.status .. " " .. slf.response.status_str,
 					"- duration: " .. slf.response.duration_str,
+					"",
+					"Meta",
+					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
 				})
 			end,
 		},
@@ -213,11 +215,12 @@ function M:show(selection)
 	self:activate_key_mapping_for_win(sel)
 end
 
-M.new = function(req_def, response)
+M.new = function(req_def, response, meta)
 	M.req_def = req_def
 	M.response = response
 	M.body_filtered = response.body
 	M.bufnr, M.winnr = get_or_create_buffer_with_win()
+	M.meta = meta
 
 	-- create highlighting for the winbar
 	create_hl()

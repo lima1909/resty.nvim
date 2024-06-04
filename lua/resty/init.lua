@@ -34,7 +34,11 @@ local exec_and_show_response = function(parser_result)
 
 	_Last_parser_result = parser_result
 
-	M.output = response.new(req_def, result)
+	local meta = {
+		buffer_name = vim.fn.bufname("%"),
+	}
+
+	M.output = response.new(req_def, result, meta)
 	M.output:show()
 end
 

@@ -30,7 +30,7 @@ A small http/rest client plugin for neovim
 
 ## Example
 
-```http
+```
 ###  
 GET https://jsonplaceholder.typicode.com/comments
 

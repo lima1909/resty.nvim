@@ -36,9 +36,11 @@ function parser:has_errors()
 end
 
 function parser:add_error(line_nr, message)
+	local lnr = line_nr or 1
+
 	table.insert(self.errors, {
 		col = 0,
-		lnum = line_nr - 1, -- NOTE is this correct?!?!
+		lnum = lnr - 1, -- NOTE is this correct?!?!
 		severity = vim.diagnostic.severity.ERROR,
 		message = message,
 	})

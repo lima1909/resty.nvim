@@ -16,10 +16,33 @@ describe("parse:", function()
 		]]
 
 		local result = p.parse(input, 1)
+
 		assert.is_true(result:has_errors())
 		assert.are.same(1, #result.errors)
+
 		local err_msg = result.errors[1].message
 		assert(err_msg:find("expected two parts: method and url"))
+	end)
+
+	it("error check line_nr", function()
+		local input = [[
+### 
+Get https://httpbin.org/get 
+
+# query without value
+foo=
+		]]
+
+		local result = p.parse(input, 3)
+
+		assert.is_true(result:has_errors())
+		assert.are.same(1, #result.errors)
+
+		local err_msg = result.errors[1].message
+		assert(err_msg:find("an empty value is not allowed"))
+
+		local line_nr = result.errors[1].lnum
+		assert.are.same(4, line_nr)
 	end)
 
 	it("one request", function()

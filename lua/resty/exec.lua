@@ -4,12 +4,11 @@ local M = {}
 
 ---  Create an async job for the jq commend.
 ---
----@param bufnr number the buffer number for the output from the result
 ---@param json string the JSON string
+---@param callback function callback function where to get the result
 ---@param jq_filter? string a jq filter, default is '.'
-M.jq = function(bufnr, json, jq_filter)
+M.jq = function(json, callback, jq_filter)
 	local filter = jq_filter or "."
-
 	require("plenary.job")
 		:new({
 			command = "jq",
@@ -17,17 +16,20 @@ M.jq = function(bufnr, json, jq_filter)
 			writer = json,
 			on_exit = function(job, code)
 				local output
+
 				if code == 0 then
 					output = job:result()
 				else
 					output = job:stderr_result()
 					table.insert(output, 1, "ERROR:")
 					table.insert(output, 2, "")
+					table.insert(output, "")
+					table.insert(output, "")
+					table.insert(output, ">>> press key: 'r' to get the original json string")
 				end
 
-				-- write the output (result or error) in buffer
 				vim.schedule(function()
-					vim.api.nvim_buf_set_lines(bufnr, 1, -1, false, output)
+					callback(output)
 				end)
 			end,
 		})

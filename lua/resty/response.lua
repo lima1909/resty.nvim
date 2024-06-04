@@ -9,7 +9,7 @@ local M = {
 			active = false,
 			show = function(slf)
 				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
-				local body = vim.split(slf.response.body, "\n")
+				local body = vim.split(slf.body_filtered, "\n")
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, body)
 			end,
 		},
@@ -56,7 +56,11 @@ local key_mappings = {
 	f = {
 		win_ids = { 1 },
 		rhs = function()
-			exec.jq(M.bufnr, M.body_filtered)
+			exec.jq(M.body_filtered, function(json)
+				local new_body = table.concat(json, "\n")
+				M.body_filtered = new_body
+				M:show(1)
+			end)
 		end,
 		desc = "format the json output with jq",
 	},
@@ -67,8 +71,11 @@ local key_mappings = {
 			if jq_filter == "" then
 				return
 			end
-
-			exec.jq(M.bufnr, M.body_filtered, jq_filter)
+			exec.jq(M.body_filtered, function(json)
+				local new_body = table.concat(json, "\n")
+				M.body_filtered = new_body
+				M:show(1)
+			end, jq_filter)
 		end,
 		desc = "format the json output with jq with a given query",
 	},

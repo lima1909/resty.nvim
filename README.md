@@ -28,6 +28,18 @@ A small http/rest client plugin for neovim
   },
   ```
 
+## Dependencies
+
+- `curl` execute the rest definition
+- `jq` (optional) query the body
+
+## Commands
+
+```lua
+vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un" })
+vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
+```
+
 ## Example
 
 ```
@@ -51,9 +63,3 @@ GET https://{{hostname}}/get
 accept: application/json  
 ```
 
-## Commands
-
-```lua
-vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un" })
-vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
-```

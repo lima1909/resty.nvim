@@ -101,51 +101,32 @@ function M:activate_key_mapping_for_win(win_id)
 	end
 end
 
-local function get_or_create_buffer_with_win()
+local function create_buffer_with_win(bnr)
 	local bufname = "result"
-	local bufnr = nil
 
-	for _, id in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_get_name(id):find(bufname) then
-			bufnr = id
-		end
+	if bnr then
+		vim.api.nvim_buf_delete(bnr, { force = true })
 	end
 
-	if not bufnr then
-		bufnr = vim.api.nvim_create_buf(false, false)
-		vim.api.nvim_buf_set_name(bufnr, bufname)
-		vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
-		vim.api.nvim_set_option_value("swapfile", false, { buf = bufnr })
-		vim.api.nvim_set_option_value("buflisted", false, { buf = bufnr })
-	end
+	-- buffer
+	local bufnr = vim.api.nvim_create_buf(false, false)
+	vim.api.nvim_buf_set_name(bufnr, bufname)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
+	vim.api.nvim_set_option_value("swapfile", false, { buf = bufnr })
+	vim.api.nvim_set_option_value("buflisted", false, { buf = bufnr })
+	-- end
 
 	-- window
-	local winnr
-	for _, id in ipairs(vim.api.nvim_list_wins()) do
-		if vim.api.nvim_win_get_buf(id) == bufnr then
-			winnr = id
-		end
-	end
-
-	if not winnr then
-		vim.cmd("vsplit")
-		vim.cmd(string.format("buffer %d", bufnr))
-		vim.cmd("wincmd r")
-		winnr = vim.api.nvim_get_current_win()
-	end
+	vim.cmd("vsplit")
+	vim.cmd(string.format("buffer %d", bufnr))
+	vim.cmd("wincmd r")
+	local winnr = vim.api.nvim_get_current_win()
 
 	vim.api.nvim_set_current_win(winnr)
 	-- Delete buffer content
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
 	return bufnr, winnr
-end
-
-local function create_hl()
-	-- vim.api.nvim_create_namespace("Resty"),
-	vim.api.nvim_set_hl(0, "ActiveWin", { underdouble = true, bold = true, force = true })
-	vim.api.nvim_set_hl(0, "StatusOK", { fg = "grey" })
-	vim.api.nvim_set_hl(0, "StatusNotOK", { fg = "red" })
 end
 
 local function windows_bar_str(win)
@@ -158,6 +139,11 @@ local function windows_bar_str(win)
 end
 
 function M:create_winbar(selection)
+	-- vim.api.nvim_create_namespace("Resty"),
+	vim.api.nvim_set_hl(0, "ActiveWin", { underdouble = true, bold = true, force = true })
+	vim.api.nvim_set_hl(0, "StatusOK", { fg = "grey" })
+	vim.api.nvim_set_hl(0, "StatusNotOK", { fg = "red" })
+
 	local winbar = "| "
 	for _, win in pairs(self.windows) do
 		if win.id == selection then
@@ -215,15 +201,12 @@ function M:show(selection)
 	self:activate_key_mapping_for_win(sel)
 end
 
-M.new = function(req_def, response, meta)
+M.new = function(req_def, meta)
 	M.req_def = req_def
-	M.response = response
-	M.body_filtered = response.body
-	M.bufnr, M.winnr = get_or_create_buffer_with_win()
 	M.meta = meta
+	M.bufnr, M.winnr = create_buffer_with_win(M.bufnr)
 
-	-- create highlighting for the winbar
-	create_hl()
+	vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "please wait ..." })
 
 	return M
 end

@@ -36,6 +36,19 @@ describe("exec:", function()
 	end)
 
 	describe("curl:", function()
+		local done = false
+		local response
+		local callback = function(r)
+			response = r
+			done = true
+		end
+
+		local error
+		local error_fn = function(e)
+			error = e
+			done = true
+		end
+
 		it("simple GET request", function()
 			local input = [[
 ### simple get 
@@ -44,14 +57,40 @@ Get https://httpbin.org/get
 ]]
 
 			local r = parser.parse(input, 2)
-
 			assert.is_false(r:has_errors())
-			local req_def = r.result
 
-			local response = exec.curl(req_def)
+			done = false
+			local req_def = r.result
+			exec.curl(req_def, callback, error_fn)
+			vim.wait(3000, function()
+				return done
+			end)
+
+			assert.is_nil(error)
 			assert.are.same(200, response.status)
-			assert.are.same("OK", response.status_str)
-			assert(response.duration > 0.001, "" .. response.duration .. " > 0.001")
+		end)
+
+		it("request error: bad url", function()
+			local input = [[
+### 
+Get https://.org/get 
+
+]]
+
+			local r = parser.parse(input, 2)
+			assert.is_false(r:has_errors())
+
+			done = false
+			local req_def = r.result
+			exec.curl(req_def, callback, error_fn)
+			vim.wait(3000, function()
+				return done
+			end)
+
+			assert.is_not_nil(error)
+			assert.are.same(6, error.exit)
+			local err_msg = "Could not resolve host: .org"
+			assert(error.stderr:find(err_msg), err_msg)
 		end)
 
 		it("status code", function()

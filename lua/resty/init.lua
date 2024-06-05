@@ -29,17 +29,29 @@ local exec_and_show_response = function(parser_result)
 		return
 	end
 
-	local req_def = parser_result.result
-	local result = exec.curl(req_def)
-
 	_Last_parser_result = parser_result
+	local req_def = parser_result.result
+	M.output = response.new(req_def, { buffer_name = vim.fn.bufname("%") })
 
-	local meta = {
-		buffer_name = vim.fn.bufname("%"),
-	}
+	local start_time = os.clock()
+	exec.curl(req_def, function(result)
+		M.output.response = result
+		M.output.body_filtered = result.body
 
-	M.output = response.new(req_def, result, meta)
-	M.output:show()
+		local duration = os.clock() - start_time
+		M.output.response.duration = duration
+		M.output.response.duration_str = exec.time_formated(duration)
+		M.output.response.status = result.status
+		M.output.response.status_str = vim.tbl_get(exec.http_status_codes, result.status) or ""
+
+		vim.schedule(function()
+			M.output:show()
+		end)
+	end, function(error)
+		vim.schedule(function()
+			vim.api.nvim_buf_set_lines(M.output.bufnr, 0, -1, false, { "ERROR by call 'curl':", "", error.message })
+		end)
+	end)
 end
 
 M.last = function()

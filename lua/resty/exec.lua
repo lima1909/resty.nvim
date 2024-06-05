@@ -103,24 +103,16 @@ M.http_status_codes = {
 	[511] = "Network Authentication Required",
 }
 
-M.curl = function(req_def)
-	local response, duration = M.stop_time(function()
-		return curl.request(req_def.req)
-	end)
+---  Create an async job for the curl commend.
+---
+---@param req_def table  the request definition
+---@param callback function callback function where to get the result
+---@param error function callback function to get the error result if it occured
+M.curl = function(req_def, callback, error)
+	req_def.req.callback = callback
+	req_def.req.on_error = error
 
-	response.status_str = vim.tbl_get(M.http_status_codes, response.status) or ""
-	response.duration = duration
-	response.duration_str = M.time_formated(duration)
-
-	return response
-end
-
-M.stop_time = function(exec_fn)
-	local start_time = os.clock()
-	local result = exec_fn()
-	local duration = os.clock() - start_time
-
-	return result, duration
+	curl.request(req_def.req.url, req_def.req)
 end
 
 M.time_formated = function(time)

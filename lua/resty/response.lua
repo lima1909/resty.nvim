@@ -7,8 +7,11 @@ local M = {
 			keymap = "b",
 			name = "body",
 			active = false,
-			show = function(slf)
+			show_window = function(slf)
 				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
+				-- vim.api.nvim_set_option_value("foldmethod", "expr", { buf = slf.bufnr })
+				-- set foldmethod=expr
+				-- set foldexpr=nvim_treesitter#foldexpr()
 				local body = vim.split(slf.body_filtered, "\n")
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, body)
 			end,
@@ -18,7 +21,7 @@ local M = {
 			keymap = "h",
 			name = "headers",
 			active = false,
-			show = function(slf)
+			show_window = function(slf)
 				vim.api.nvim_set_option_value("filetype", "http", { buf = slf.bufnr })
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.response.headers)
 			end,
@@ -28,7 +31,7 @@ local M = {
 			keymap = "i",
 			name = "info",
 			active = false,
-			show = function(slf)
+			show_window = function(slf)
 				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"Request:",
@@ -44,7 +47,7 @@ local M = {
 					"",
 					"Response: ",
 					"- state: " .. slf.response.status .. " " .. slf.response.status_str,
-					"- duration: " .. slf.response.duration_str,
+					"- duration: " .. slf.meta.duration_str,
 					"",
 					"Meta",
 					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
@@ -61,7 +64,7 @@ local key_mappings = {
 			exec.jq(M.body_filtered, function(json)
 				local new_body = table.concat(json, "\n")
 				M.body_filtered = new_body
-				M:show(1)
+				M:seltect_window(1)
 			end)
 		end,
 		desc = "format the json output with jq",
@@ -76,7 +79,7 @@ local key_mappings = {
 			exec.jq(M.body_filtered, function(json)
 				local new_body = table.concat(json, "\n")
 				M.body_filtered = new_body
-				M:show(1)
+				M:seltect_window(1)
 			end, jq_filter)
 		end,
 		desc = "format the json output with jq with a given query",
@@ -85,7 +88,7 @@ local key_mappings = {
 		win_ids = { 1 },
 		rhs = function()
 			M.body_filtered = M.response.body
-			M:show(1)
+			M:seltect_window(1)
 		end,
 		desc = "reset the current filtered body",
 	},
@@ -114,15 +117,15 @@ local function create_buffer_with_win(bnr)
 	vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
 	vim.api.nvim_set_option_value("swapfile", false, { buf = bufnr })
 	vim.api.nvim_set_option_value("buflisted", false, { buf = bufnr })
-	-- end
 
 	-- window
 	vim.cmd("vsplit")
 	vim.cmd(string.format("buffer %d", bufnr))
 	vim.cmd("wincmd r")
-	local winnr = vim.api.nvim_get_current_win()
 
+	local winnr = vim.api.nvim_get_current_win()
 	vim.api.nvim_set_current_win(winnr)
+
 	-- Delete buffer content
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
@@ -131,6 +134,7 @@ end
 
 local function windows_bar_str(win)
 	local win_name = win.name
+
 	if win.active == true then
 		win_name = "%#ActiveWin#" .. win_name .. "%*"
 	end
@@ -151,7 +155,6 @@ function M:create_winbar(selection)
 		else
 			win.active = false
 		end
-
 		winbar = winbar .. windows_bar_str(win) .. " | "
 	end
 
@@ -170,17 +173,15 @@ function M:create_winbar(selection)
 		.. " "
 		.. self.response.status_str
 		.. "  ("
-		.. self.response.duration_str
+		.. self.meta.duration_str
 		.. ")%*"
-
 	return winbar
 end
 
-function M:show(selection)
+function M:seltect_window(selection)
 	local sel = selection or 1
 
 	vim.wo[self.winnr].winbar = self:create_winbar(sel)
-
 	-- Delete buffer content and write an empty line
 	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, { "" })
 	vim.api.nvim_win_set_buf(0, self.bufnr)
@@ -188,12 +189,11 @@ function M:show(selection)
 
 	for _, win in pairs(self.windows) do
 		if win.id == sel then
-			win.show(self)
+			win.show_window(self)
 		end
-
 		-- create keymaps for the given window
 		vim.keymap.set("n", win.keymap, function()
-			self:show(win.id)
+			self:seltect_window(win.id)
 		end, { buffer = self.bufnr, silent = true })
 	end
 
@@ -201,13 +201,37 @@ function M:show(selection)
 	self:activate_key_mapping_for_win(sel)
 end
 
-M.new = function(req_def, meta)
+function M:show(req_def, response, meta)
 	M.req_def = req_def
+	M.response = response
+	M.body_filtered = response.body
+	M.response.status_str = vim.tbl_get(exec.http_status_codes, response.status) or ""
 	M.meta = meta
+	M.meta.duration_str = exec.time_formated(meta.duration)
+
+	self:seltect_window()
+end
+
+function M:show_error(error)
+	local err_msg = error.message
+	local method_url_pos = err_msg:find("-")
+
+	local new_err_msg = ""
+	if method_url_pos then
+		new_err_msg = new_err_msg .. vim.trim(string.sub(err_msg, 1, method_url_pos - 1))
+	end
+
+	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {
+		"ERROR:",
+		"",
+		new_err_msg,
+		"",
+		"" .. error.stderr:sub(4, -4),
+	})
+end
+
+function M.new()
 	M.bufnr, M.winnr = create_buffer_with_win(M.bufnr)
-
-	vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "please wait ..." })
-
 	return M
 end
 

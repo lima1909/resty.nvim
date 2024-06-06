@@ -9,7 +9,7 @@ local M = {
 _Last_parser_result = nil
 
 _G._resty_show_response = function(selection)
-	M.output:show(selection)
+	M.output:seltect_window(selection)
 end
 
 local show_diagnostic_if_occurs = function(parser_result)
@@ -29,27 +29,25 @@ local exec_and_show_response = function(parser_result)
 		return
 	end
 
+	local meta = { buffer_name = vim.fn.bufname("%") }
+
+	-- save the parse result for the Resty last call
 	_Last_parser_result = parser_result
-	local req_def = parser_result.result
-	M.output = response.new(req_def, { buffer_name = vim.fn.bufname("%") })
+	M.output = response.new()
+	vim.api.nvim_buf_set_lines(M.output.bufnr, -1, -1, false, { "please wait ..." })
 
+	-- start the stop time
 	local start_time = os.clock()
-	exec.curl(req_def, function(result)
-		M.output.response = result
-		M.output.body_filtered = result.body
 
-		local duration = os.clock() - start_time
-		M.output.response.duration = duration
-		M.output.response.duration_str = exec.time_formated(duration)
-		M.output.response.status = result.status
-		M.output.response.status_str = vim.tbl_get(exec.http_status_codes, result.status) or ""
+	exec.curl(parser_result.result, function(result)
+		meta.duration = os.clock() - start_time
 
 		vim.schedule(function()
-			M.output:show()
+			M.output:show(parser_result.result, result, meta)
 		end)
 	end, function(error)
 		vim.schedule(function()
-			vim.api.nvim_buf_set_lines(M.output.bufnr, 0, -1, false, { "ERROR by call 'curl':", "", error.message })
+			M.output:show_error(error)
 		end)
 	end)
 end

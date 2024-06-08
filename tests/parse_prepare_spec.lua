@@ -2,7 +2,7 @@ local p = require("resty.parser")
 local assert = require("luassert")
 
 describe("globals:", function()
-	it("global variables", function()
+	it("variables", function()
 		local tt = {
 			{ input = "", expected = {} },
 			{ input = "@host= myhost", expected = { ["host"] = "myhost" } },
@@ -25,6 +25,7 @@ describe("globals:", function()
 			{ input = "@", error_msg = "expected char '='" },
 			{ input = "@=my-host", error_msg = "an empty key" },
 			{ input = "@host=", error_msg = "an empty value" },
+			{ input = "@host=my\n@host=other", error_msg = "already exist" },
 		}
 
 		for _, tc in ipairs(tt) do
@@ -259,5 +260,37 @@ GET http://{{full_name}}
 				headers = {},
 			},
 		}, result)
+	end)
+
+	it("define double query", function()
+		local input = [[
+###
+GET http://host
+
+foo=bar
+foo=baz
+]]
+		local r = p.parse(input, 3)
+
+		assert.is_true(r:has_errors())
+		assert.are.same(1, #r.errors)
+		local err_msg = r.errors[1].message
+		assert(err_msg:find("'foo' already exist"))
+	end)
+
+	it("define double headers", function()
+		local input = [[
+###
+GET http://host
+
+foo:bar
+foo:baz
+]]
+		local r = p.parse(input, 3)
+
+		assert.is_true(r:has_errors())
+		assert.are.same(1, #r.errors)
+		local err_msg = r.errors[1].message
+		assert(err_msg:find("'foo' already exist"))
 	end)
 end)

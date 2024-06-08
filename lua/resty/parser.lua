@@ -46,36 +46,7 @@ function parser:add_error(line_nr, message)
 	})
 end
 
-function parser:split_into_key_value(line, pos, line_nr)
-	local key = vim.trim(line:sub(1, pos - 1))
-	local value = vim.trim(line:sub(pos + 1))
-
-	if #key == 0 then
-		self:add_error(line_nr, "an empty key is not allowed")
-		return
-	end
-
-	if #value == 0 then
-		self:add_error(line_nr, "an empty value is not allowed")
-		return
-	end
-
-	return key, value
-end
-
-function parser:parse_variable(line, line_nr)
-	line = string.sub(line, #token_VARIABLE + 1)
-	local pos = line:find("=")
-	if not pos then
-		self:add_error(line_nr, "expected char '=' as delimiter between key and value")
-		return
-	end
-
-	return self:split_into_key_value(line, pos, line_nr)
-end
-
----Parse the rest call (method + url)
----@param line string
+-- parse the rest call (method + url)
 function parser:parse_method_url(line, line_nr)
 	local pos_space = line:find(" ")
 	if not pos_space then
@@ -89,6 +60,37 @@ function parser:parse_method_url(line, line_nr)
 	return method, url
 end
 
+-- parse key - values pairs
+-- query: key=value
+-- headers: key:value)
+function parser:parse_key_value(map, delimiter, line, line_nr)
+	local pos = line:find(delimiter)
+	if not pos then
+		self:add_error(line_nr, "expected char '" .. delimiter .. "' as delimiter between key and value")
+		return
+	end
+
+	local key = vim.trim(line:sub(1, pos - #delimiter))
+	local value = vim.trim(line:sub(pos + #delimiter))
+
+	if #key == 0 then
+		self:add_error(line_nr, "an empty key is not allowed")
+		return
+	end
+
+	if #value == 0 then
+		self:add_error(line_nr, "an empty value is not allowed")
+		return
+	end
+
+	if map[key] then
+		self:add_error(line_nr, "the key: '" .. key .. "' already exist")
+		return
+	end
+
+	map[key] = value
+end
+
 -- ---------------- --
 -- The Parser Modul
 -- ---------------- --
@@ -98,21 +100,26 @@ function M.replace_variable(variables, line)
 	if not variables then
 		return line
 	end
+
 	local _, start_pos = string.find(line, "{{")
 	if not start_pos then
 		return line
 	end
+
 	local end_pos, _ = string.find(line, "}}")
 	if not end_pos then
 		return line
 	end
+
 	local before = string.sub(line, 1, start_pos - 2)
 	local name = string.sub(line, start_pos + 1, end_pos - 1)
 	local after = string.sub(line, end_pos + 2)
+
 	name = variables[name]
 	if not name then
 		return line
 	end
+
 	local new_line = before .. name .. after
 	return M.replace_variable(variables, new_line)
 end
@@ -143,10 +150,8 @@ M.prepare_parse = function(input, selected)
 			break
 		-- GLOBAL VARIABLE definition
 		elseif p:is_in_init_state() and vim.startswith(line, token_VARIABLE) then
-			local key, value = p:parse_variable(line, line_nr)
-			if key then
-				p.result.global_variables[key] = value
-			end
+			local l = string.sub(line, #token_VARIABLE + 1)
+			p:parse_key_value(p.result.global_variables, "=", l, line_nr)
 		-- START new REQUEST
 		elseif vim.startswith(line, token_START) then
 			-- we can STOP here, because we are one request to far
@@ -195,10 +200,8 @@ M.parse = function(input, selected)
 		--
 		-- VARIABLE definition
 		if vim.startswith(line, token_VARIABLE) then
-			local key, value = p:parse_variable(line, line_nr)
-			if key then
-				variables[key] = value
-			end
+			local l = string.sub(line, #token_VARIABLE + 1)
+			p:parse_key_value(variables, "=", l, line_nr)
 		else
 			-- replace variables
 			line = M.replace_variable(variables, line)
@@ -224,29 +227,17 @@ M.parse = function(input, selected)
 					-- the first finding wins
 					if pos_eq < pos_dp then
 						-- set query
-						local key, value = p:split_into_key_value(line, pos_eq, line_nr)
-						if key then
-							p.result.req.query[key] = value
-						end
+						p:parse_key_value(p.result.req.query, "=", line, line_nr)
 					else
 						-- set headers
-						local key, value = p:split_into_key_value(line, pos_dp, line_nr)
-						if key then
-							p.result.req.headers[key] = value
-						end
+						p:parse_key_value(p.result.req.headers, ":", line, line_nr)
 					end
 				elseif pos_eq ~= nil then
 					-- set query
-					local key, value = p:split_into_key_value(line, pos_eq, line_nr)
-					if key then
-						p.result.req.query[key] = value
-					end
+					p:parse_key_value(p.result.req.query, "=", line, line_nr)
 				elseif pos_dp ~= nil then
 					-- set headers
-					local key, value = p:split_into_key_value(line, pos_dp, line_nr)
-					if key then
-						p.result.req.headers[key] = value
-					end
+					p:parse_key_value(p.result.req.headers, ":", line, line_nr)
 				end
 			end
 		end

@@ -98,29 +98,33 @@ local M = {}
 
 function M.replace_variable(variables, line)
 	if not variables then
-		return line
+		return line, nil
 	end
 
 	local _, start_pos = string.find(line, "{{")
-	if not start_pos then
-		return line
-	end
-
 	local end_pos, _ = string.find(line, "}}")
-	if not end_pos then
-		return line
+
+	if not start_pos and not end_pos then
+		-- no variable found
+		return line, nil
+	elseif start_pos and not end_pos then
+		-- error
+		return nil, "missing closing brackets: '}}'"
+	elseif not start_pos and end_pos then
+		-- error
+		return nil, "missing open brackets: '{{'"
 	end
 
 	local before = string.sub(line, 1, start_pos - 2)
 	local name = string.sub(line, start_pos + 1, end_pos - 1)
 	local after = string.sub(line, end_pos + 2)
 
-	name = variables[name]
-	if not name then
-		return line
+	local value = variables[name]
+	if not value then
+		return nil, "no variable found with name: '" .. name .. "'"
 	end
 
-	local new_line = before .. name .. after
+	local new_line = before .. value .. after
 	return M.replace_variable(variables, new_line)
 end
 
@@ -197,6 +201,7 @@ M.parse = function(input, selected)
 	for _, line_def in ipairs(req_def.req_lines) do
 		local line_nr = line_def[1]
 		local line = line_def[2]
+
 		--
 		-- VARIABLE definition
 		if vim.startswith(line, token_VARIABLE) then
@@ -204,7 +209,13 @@ M.parse = function(input, selected)
 			p:parse_key_value(variables, "=", l, line_nr)
 		else
 			-- replace variables
-			line = M.replace_variable(variables, line)
+			local l, err = M.replace_variable(variables, line)
+			if not err then
+				line = l
+			else
+				p:add_error(line_nr, err)
+			end
+
 			-- METHOD and URL
 			if p:is_in_init_state() then
 				p:set_parse_state()
@@ -219,7 +230,9 @@ M.parse = function(input, selected)
 				end
 			else
 				-- HEADERS AND QUERIES
+				---@diagnostic disable-next-line: need-check-nil
 				local pos_eq = line:find("=")
+				---@diagnostic disable-next-line: need-check-nil
 				local pos_dp = line:find(":")
 
 				-- contains both, = and :

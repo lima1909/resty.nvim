@@ -246,14 +246,15 @@ GET   https://jsonplaceholder.typicode.com/comments
 
 		local tt = {
 			-- input = output (expected)
-			{ input = "host}}" },
-			{ input = "host}" },
-			{ input = "{{host" },
-			{ input = "{host" },
-			{ input = "{host}" },
-			-- throw an error? an non known variable FOO
-			{ input = "{{FOO}}" },
-			-- valid replace cases
+			{ input = "host}}", err_msg = "missing open brackets: '{{'" },
+			{ input = "{{host}}.port}}", err_msg = "missing open brackets: '{{'" },
+			{ input = "{{host", err_msg = "missing closing brackets: '}}'" },
+			{ input = "{{host}}.{{port", err_msg = "missing closing brackets: '}}'" },
+			{ input = "{{FOO}}", err_msg = "no variable found with name: 'FOO'" },
+
+			{ input = "host}", expected = "host}" },
+			{ input = "{host", expected = "{host" },
+			{ input = "{host}", expected = "{host}" },
 			{ input = "{{host}}", expected = "my-host" },
 			{ input = "http://{{host}}", expected = "http://my-host" },
 			{ input = "{{host}}.de", expected = "my-host.de" },
@@ -261,11 +262,11 @@ GET   https://jsonplaceholder.typicode.com/comments
 		}
 
 		for _, tc in ipairs(tt) do
-			local property = p.replace_variable(variables, tc.input)
-			if tc.expected then
-				assert.are.same(tc.expected, property)
+			local line, err = p.replace_variable(variables, tc.input)
+			if err then
+				assert.are.same(tc.err_msg, err)
 			else
-				assert.are.same(tc.input, property)
+				assert.are.same(tc.expected, line)
 			end
 		end
 	end)

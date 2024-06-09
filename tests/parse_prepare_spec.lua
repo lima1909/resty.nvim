@@ -293,4 +293,23 @@ foo:baz
 		local err_msg = r.errors[1].message
 		assert(err_msg:find("'foo' already exist"))
 	end)
+
+	it("define double errors", function()
+		local input = [[
+###
+
+@host=myhost
+
+GET http://{{host}
+
+foo=bar
+foo=baz
+]]
+		local r = p.parse(input, 3)
+
+		assert.is_true(r:has_errors())
+		assert.are.same(2, #r.errors)
+		assert(r.errors[1].message:find("missing closing brackets: '}}'"), r.errors[1].message)
+		assert(r.errors[2].message:find("'foo' already exist"), r.errors[2].message)
+	end)
 end)

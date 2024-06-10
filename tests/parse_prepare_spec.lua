@@ -186,7 +186,7 @@ GET http://{{host}}:{{port}}
 accept: application/json  
 Authorization: {{token}} 
 
-filter = {{filter}}
+filter = {{filter}} # a comment
 include = sub, *  
 ]]
 		local r = p.parse(input, 5)

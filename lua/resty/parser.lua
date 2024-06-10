@@ -96,6 +96,14 @@ end
 -- ---------------- --
 local M = {}
 
+function M.cut_comment(line)
+	local pos = string.find(line, "#")
+	if not pos then
+		return line
+	end
+	return line:sub(1, pos - 1)
+end
+
 function M.replace_variable(variables, line)
 	if not variables then
 		return line, nil
@@ -200,7 +208,7 @@ M.parse = function(input, selected)
 
 	for _, line_def in ipairs(req_def.req_lines) do
 		local line_nr = line_def[1]
-		local line = line_def[2]
+		local line = M.cut_comment(line_def[2])
 
 		--
 		-- VARIABLE definition

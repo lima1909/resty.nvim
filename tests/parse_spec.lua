@@ -270,4 +270,18 @@ GET   https://jsonplaceholder.typicode.com/comments
 			end
 		end
 	end)
+
+	it("comment in line", function()
+		local tt = {
+			{ input = "host ", expected = "host " },
+			{ input = "host # comment", expected = "host " },
+			{ input = "host# comment", expected = "host" },
+			{ input = "host#", expected = "host" },
+			{ input = "# host# comment", expected = "" },
+		}
+		for _, tc in ipairs(tt) do
+			local line = p.cut_comment(tc.input)
+			assert.are.same(tc.expected, line)
+		end
+	end)
 end)

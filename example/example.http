@@ -1,4 +1,4 @@
-###  
+### GET to jsonplaceholder 
 GET https://jsonplaceholder.typicode.com/comments
 
 # headers
@@ -8,7 +8,7 @@ accept: application/json
 postId = 5
 id=21
 
-### 
+### GET httpbin
 
 # variable for the hostname
 @hostname = httpbin.org

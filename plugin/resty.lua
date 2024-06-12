@@ -22,3 +22,14 @@ end, {
 -- no arg (or [last]) - call the last saved request
 -- [run] - run the request where the cursor is located
 -- [view] - show a list (with telescope) of possible request
+
+-- fold expression definition for folding the individual rest calls
+_G.foldexpr = function(lnum)
+	local line = vim.fn.getline(lnum)
+
+	if line:find("###") then
+		return "0"
+	end
+
+	return "1"
+end

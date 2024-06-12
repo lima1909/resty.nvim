@@ -92,6 +92,20 @@ local key_mappings = {
 		end,
 		desc = "reset the current filtered body",
 	},
+	zz = {
+
+		win_ids = { 1 },
+		rhs = function()
+			if vim.opt.foldmethod._value ~= "expr" then
+				vim.cmd("setlocal foldmethod=expr")
+				vim.cmd("setlocal foldexpr=v:lua.vim.treesitter.foldexpr()")
+			else
+				vim.cmd("setlocal foldmethod=manual")
+				vim.cmd("normal zE")
+			end
+		end,
+		desc = "toggle folding",
+	},
 }
 
 function M:activate_key_mapping_for_win(win_id)

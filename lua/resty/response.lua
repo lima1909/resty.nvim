@@ -9,9 +9,6 @@ local M = {
 			active = false,
 			show_window = function(slf)
 				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
-				-- vim.api.nvim_set_option_value("foldmethod", "expr", { buf = slf.bufnr })
-				-- set foldmethod=expr
-				-- set foldexpr=nvim_treesitter#foldexpr()
 				local body = vim.split(slf.body_filtered, "\n")
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, body)
 			end,
@@ -57,8 +54,20 @@ local M = {
 	},
 }
 
+M.set_folding = function()
+	if M.config.with_folding then
+		vim.cmd("setlocal foldmethod=expr")
+		vim.cmd("setlocal foldexpr=v:lua.vim.treesitter.foldexpr()")
+		vim.cmd("setlocal foldlevel=2")
+	else
+		vim.cmd("setlocal foldmethod=manual")
+		vim.cmd("normal zE")
+	end
+end
+
 local key_mappings = {
-	f = {
+	-- p: pretty print
+	p = {
 		win_ids = { 1 },
 		rhs = function()
 			exec.jq(M.body_filtered, function(json)
@@ -67,9 +76,10 @@ local key_mappings = {
 				M:seltect_window(1)
 			end)
 		end,
-		desc = "format the json output with jq",
+		desc = "pretty print with jq",
 	},
-	ff = {
+	-- q: jq query
+	q = {
 		win_ids = { 1 },
 		rhs = function()
 			local jq_filter = vim.fn.input("Filter: ")
@@ -82,7 +92,7 @@ local key_mappings = {
 				M:seltect_window(1)
 			end, jq_filter)
 		end,
-		desc = "format the json output with jq with a given query",
+		desc = "querying with jq",
 	},
 	r = {
 		win_ids = { 1 },
@@ -90,21 +100,16 @@ local key_mappings = {
 			M.body_filtered = M.response.body
 			M:seltect_window(1)
 		end,
-		desc = "reset the current filtered body",
+		desc = "reset to the original responsne body",
 	},
 	zz = {
 
 		win_ids = { 1 },
 		rhs = function()
-			if vim.opt.foldmethod._value ~= "expr" then
-				vim.cmd("setlocal foldmethod=expr")
-				vim.cmd("setlocal foldexpr=v:lua.vim.treesitter.foldexpr()")
-			else
-				vim.cmd("setlocal foldmethod=manual")
-				vim.cmd("normal zE")
-			end
+			M.config.with_folding = not M.config.with_folding
+			M.set_folding()
 		end,
-		desc = "toggle folding",
+		desc = "toggle folding, if activated",
 	},
 }
 
@@ -244,8 +249,12 @@ function M:show_error(error)
 	})
 end
 
-function M.new()
+function M.new(config)
+	M.config = config
 	M.bufnr, M.winnr = create_buffer_with_win(M.bufnr)
+	-- set global config values
+	M.set_folding()
+
 	return M
 end
 

@@ -6,6 +6,16 @@ local M = {
 	ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics"),
 }
 
+_G.resty_config = {
+	response = {
+		with_folding = true,
+	},
+}
+
+M.setup = function(user_configs)
+	_G.resty_config = vim.tbl_deep_extend("force", _G.resty_config, user_configs)
+end
+
 _Last_parser_result = nil
 
 _G._resty_show_response = function(selection)
@@ -33,7 +43,7 @@ local exec_and_show_response = function(parser_result)
 
 	-- save the parse result for the Resty last call
 	_Last_parser_result = parser_result
-	M.output = response.new()
+	M.output = response.new(_G.resty_config.response)
 	vim.api.nvim_buf_set_lines(M.output.bufnr, -1, -1, false, { "please wait ..." })
 
 	-- start the stop time

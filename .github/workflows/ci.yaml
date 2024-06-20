@@ -1,0 +1,36 @@
+---
+name: run unit tests
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: run unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        neovim_version: ['nightly', 'v0.9.5', 'v0.10.0']
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: neovim 
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim_version }}
+
+      - name: lua
+        uses: leso-kn/gh-actions-lua@master
+        with:
+          luaVersion: "5.1"
+
+      - name: luarocks
+        uses: hishamhm/gh-actions-luarocks@master
+        with:
+          luarocksVersion: "3.11.0"
+
+      - name: run tests
+        run: |
+          luarocks test --local

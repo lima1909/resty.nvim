@@ -1,3 +1,4 @@
+rockspec_format = "3.0"
 package = "resty.nvim"
 version = "scm-1"
 
@@ -24,6 +25,19 @@ build = {
 		"spec",
 	},
 }
+
+test_dependencies = {
+	"plenary.nvim",
+}
+
 test = {
 	type = "busted",
+	platforms = {
+		windows = {
+			flags = { "--exclude-tags=ssh,git,unix", "-Xhelper", "lua_dir=$(LUA_DIR)", "-Xhelper", "lua=$(LUA)" },
+		},
+		unix = {
+			flags = { "--exclude-tags=ssh,git", "-Xhelper", "lua_dir=$(LUA_DIR)", "-Xhelper", "lua=$(LUA)" },
+		},
+	},
 }

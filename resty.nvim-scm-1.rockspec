@@ -16,7 +16,7 @@ dependencies = {
 }
 
 source = {
-	url = "git://github.com/lima1909/resty.nvim",
+	url = "git+https://github.com/lima1909/resty.nvim.git",
 }
 
 build = {
@@ -32,5 +32,10 @@ build = {
 		["resty.output.format"] = "lua/resty/output/format.lua",
 		["resty.output.statuscode"] = "lua/resty/output/statuscode.lua",
 		["resty.output.winbar"] = "lua/resty/output/winbar.lua",
+	},
+	install = {
+		bin = {
+			["resty"] = "./resty",
+		},
 	},
 }

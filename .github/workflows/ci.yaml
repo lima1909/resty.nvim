@@ -33,4 +33,4 @@ jobs:
 
       - name: run tests
         run: |
-          luarocks test --test-type busted
+          luarocks test 

@@ -26,6 +26,11 @@ build = {
 		"plugin",
 	},
 	modules = {
-		main = "lua/resty/init.lua",
+		["resty.exec"] = "lua/resty/exec.lua",
+		["resty.parser"] = "lua/resty/parster.lua",
+		["resty.output"] = "lua/resty/output/init.lua",
+		["resty.output.format"] = "lua/resty/output/format.lua",
+		["resty.output.statuscode"] = "lua/resty/output/statuscode.lua",
+		["resty.output.winbar"] = "lua/resty/output/winbar.lua",
 	},
 }

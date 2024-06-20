@@ -1,8 +1,10 @@
+local MODREV, SPECREV = "scm", "-1"
 rockspec_format = "3.0"
 package = "resty.nvim"
-version = "scm-1"
+version = MODREV .. SPECREV
 
 description = {
+	homepage = "https://github.com/lima1909/resty.nvim",
 	labels = { "neovim" },
 	license = "MIT",
 }
@@ -23,9 +25,7 @@ build = {
 		"ftdetect",
 		"plugin",
 	},
-}
-
-test_dependencies = {
-	"plenary.nvim",
-	"luassert",
+	modules = {
+		["resty"] = "lua/resty/init.lua",
+	},
 }

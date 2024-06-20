@@ -26,6 +26,6 @@ build = {
 		"plugin",
 	},
 	modules = {
-		["resty"] = "lua/resty/init.lua",
+		main = "lua/resty/init.lua",
 	},
 }

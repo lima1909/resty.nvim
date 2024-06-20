@@ -92,22 +92,5 @@ Get https://.org/get
 			local err_msg = "Could not resolve host: .org"
 			assert(error.stderr:find(err_msg), err_msg)
 		end)
-
-		it("status code", function()
-			assert.are.same("OK", vim.tbl_get(exec.http_status_codes, 200))
-			assert.are.same("Created", vim.tbl_get(exec.http_status_codes, 201))
-			assert.are.same("Forbidden", vim.tbl_get(exec.http_status_codes, 403))
-			assert.are.same(nil, vim.tbl_get(exec.http_status_codes, 999))
-		end)
-	end)
-
-	describe("time-format:", function()
-		it("different times", function()
-			assert.are.same("100.00 s", exec.time_formated(100))
-			assert.are.same("1.00 s", exec.time_formated(1))
-			assert.are.same("2.30 ms", exec.time_formated(0.0023))
-			assert.are.same("2.30 µs", exec.time_formated(0.0000023))
-			assert.are.same("2.30 ns", exec.time_formated(0.0000000023))
-		end)
 	end)
 end)

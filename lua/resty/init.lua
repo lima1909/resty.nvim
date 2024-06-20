@@ -1,25 +1,28 @@
 local parser = require("resty.parser")
 local exec = require("resty.exec")
-local response = require("resty.response")
-
-local M = {
-	ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics"),
-}
+local output = require("resty.output")
 
 _G.resty_config = {
 	response = {
 		with_folding = true,
+		bufname = "resty_response",
 	},
+}
+
+local M = {
+	ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics"),
+	-- new output with default values
+	output = output.new(_G.resty_config),
+	last_parser_result = nil,
 }
 
 M.setup = function(user_configs)
 	_G.resty_config = vim.tbl_deep_extend("force", _G.resty_config, user_configs)
+	M.output = output.new(_G.resty_config)
 end
 
-_Last_parser_result = nil
-
-_G._resty_show_response = function(selection)
-	M.output:seltect_window(selection)
+_G._resty_select_window = function(win_id)
+	M.output:select_window(win_id)
 end
 
 local show_diagnostic_if_occurs = function(parser_result)
@@ -42,9 +45,8 @@ local exec_and_show_response = function(parser_result)
 	local meta = { buffer_name = vim.fn.bufname("%") }
 
 	-- save the parse result for the Resty last call
-	_Last_parser_result = parser_result
-	M.output = response.new(_G.resty_config.response)
-	vim.api.nvim_buf_set_lines(M.output.bufnr, -1, -1, false, { "please wait ..." })
+	M.last_parser_result = parser_result
+	M.output:activate()
 
 	-- start the stop time
 	local start_time = os.clock()
@@ -63,8 +65,14 @@ local exec_and_show_response = function(parser_result)
 end
 
 M.last = function()
-	if _Last_parser_result then
-		exec_and_show_response(_Last_parser_result)
+	-- package.loaded["resty"] = nil
+	-- package.loaded["resty.output"] = nil
+	-- package.loaded["resty.output.winbar"] = nil
+	--
+	-- M.new_output = new_output.new({})
+
+	if M.last_parser_result then
+		exec_and_show_response(M.last_parser_result)
 	else
 		error("No last request found. Run first [Resty run]")
 	end

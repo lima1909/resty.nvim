@@ -8,7 +8,8 @@ description = {
 }
 
 dependencies = {
-	"lua >= 5.1, < 5.4",
+	"lua == 5.1",
+	"plenary.nvim",
 	"luassert",
 }
 
@@ -21,23 +22,10 @@ build = {
 	copy_directories = {
 		"ftdetect",
 		"plugin",
-		"lua",
-		"spec",
 	},
 }
 
 test_dependencies = {
 	"plenary.nvim",
-}
-
-test = {
-	type = "busted",
-	platforms = {
-		windows = {
-			flags = { "--exclude-tags=ssh,git,unix", "-Xhelper", "lua_dir=$(LUA_DIR)", "-Xhelper", "lua=$(LUA)" },
-		},
-		unix = {
-			flags = { "--exclude-tags=ssh,git", "-Xhelper", "lua_dir=$(LUA_DIR)", "-Xhelper", "lua=$(LUA)" },
-		},
-	},
+	"luassert",
 }

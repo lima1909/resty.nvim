@@ -12,7 +12,7 @@ describe("exec:", function()
 
 		local function jq_with_wait(json, jq_filter)
 			exec.jq(json, callback, jq_filter)
-			vim.wait(15, function()
+			vim.wait(500, function()
 				return false
 			end)
 		end

@@ -20,10 +20,10 @@ jobs:
         with:
           neovim: true
           version: ${{ matrix.neovim_version }}
-      - name: install jq
+      - name: check jq
         run: |
-          sudo apt update
-          sudo apt-get install jq
+          # sudo apt update
+          # sudo apt-get install jq
           jq --version
       - name: run tests
         run: |

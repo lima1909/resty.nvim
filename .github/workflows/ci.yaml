@@ -15,16 +15,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
-      - name: neovim 
+      - name: install neovim 
         uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: ${{ matrix.neovim_version }}
-      - name: check jq
+      - name: check version of curl and jq
         run: |
-          # sudo apt update
-          # sudo apt-get install jq
           jq --version
+          curl --version
       - name: run tests
         run: |
           nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {minimal_init = 'spec/minimal_init.lua'}"

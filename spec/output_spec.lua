@@ -144,7 +144,7 @@ describe("output:", function()
 
 		-- format json with jq
 		vim.cmd("normal p")
-		vim.wait(15, function()
+		vim.wait(3000, function()
 			return false
 		end)
 		assert.are.same(

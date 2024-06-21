@@ -11,7 +11,8 @@ jobs:
         neovim_version: ['nightly', 'v0.9.5', 'v0.10.0']
 
     steps:
-      - uses: actions/checkout@v4
+      - name: git checkout
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
       - name: neovim 
@@ -19,6 +20,8 @@ jobs:
         with:
           neovim: true
           version: ${{ matrix.neovim_version }}
+      - name: install jq
+        uses: dcarbone/install-jq-action@v2
       - name: run tests
         run: |
           nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {minimal_init = 'spec/minimal_init.lua'}"

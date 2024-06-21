@@ -1,10 +1,10 @@
 ---
-name: run unit tests
+name: run ci
 on: [push, pull_request]
 
 jobs:
   build:
-    name: run unit tests
+    name: unit tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -14,23 +14,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
-
       - name: neovim 
         uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: ${{ matrix.neovim_version }}
-
-      - name: lua
-        uses: leso-kn/gh-actions-lua@master
-        with:
-          luaVersion: "5.1"
-
-      - name: luarocks
-        uses: hishamhm/gh-actions-luarocks@master
-        with:
-          luarocksVersion: "3.11.0"
-
       - name: run tests
         run: |
-          luarocks test --test-type busted
+          nvim --headless --noplugin -u spec/_minimal_init.lua -c "PlenaryBustedDirectory spec/ {sequential = true}"

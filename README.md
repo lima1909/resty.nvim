@@ -1,4 +1,7 @@
-# resty.nvim [![Build Status]][Build Action]
+# resty.nvim
+
+
+[![Build Status]][Build Action]
 
 [Build Status]: https://github.com/lima1909/resty.nvim/actions/workflows/ci.yaml/badge.svg
 [Build Action]: https://github.com/lima1909/resty.nvim/actions
@@ -11,6 +14,11 @@ A small http/rest client plugin for neovim
 ![image](https://github.com/lima1909/resty.nvim/blob/main/pic/resty.png)
 
 </div>
+
+## Supported Neovim versions:
+
+- Latest nightly
+- 0.10.x
 
 ## Installation
 

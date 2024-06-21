@@ -22,6 +22,19 @@ jobs:
           version: ${{ matrix.neovim_version }}
       - name: install jq
         uses: dcarbone/install-jq-action@v2
+        with:
+          version:
+            required: true
+            description: "Version of jq to install"
+            default: "1.7"
+          force:
+            required: false
+            description: "If 'true', does not check for existing jq installation before continuing."
+            default: 'false'
+      - name: 'Check jq'
+        run: |
+          which jq
+          jq --version
       - name: run tests
         run: |
           nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {minimal_init = 'spec/minimal_init.lua'}"

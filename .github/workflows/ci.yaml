@@ -21,19 +21,9 @@ jobs:
           neovim: true
           version: ${{ matrix.neovim_version }}
       - name: install jq
-        uses: dcarbone/install-jq-action@v2
-        with:
-          version:
-            required: true
-            description: "Version of jq to install"
-            default: "1.7"
-          force:
-            required: false
-            description: "If 'true', does not check for existing jq installation before continuing."
-            default: 'false'
-      - name: 'Check jq'
         run: |
-          which jq
+          sudo apt update
+          sudo apt-get install jq
           jq --version
       - name: run tests
         run: |

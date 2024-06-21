@@ -1,4 +1,8 @@
-# resty.nvim
+# resty.nvim [![Build Status]][Build Action]
+
+[Build Status]: https://github.com/lima1909/resty.nvim/actions/workflows/ci.yaml/badge.svg
+[Build Action]: https://github.com/lima1909/resty.nvim/actions
+
 
 A small http/rest client plugin for neovim
 

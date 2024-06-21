@@ -1,6 +1,6 @@
 --
 -- vim.api.nvim_create_namespace("Resty"),
-vim.api.nvim_set_hl(0, "ActiveWin", { underdouble = true, bold = true, force = true })
+vim.api.nvim_set_hl(0, "ActiveWin", { underdouble = true, bold = true }) -- NOTE: doesn't work with nvim 9: force = true
 vim.api.nvim_set_hl(0, "StatusOK", { fg = "grey" })
 vim.api.nvim_set_hl(0, "StatusNotOK", { fg = "red" })
 

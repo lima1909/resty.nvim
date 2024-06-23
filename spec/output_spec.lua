@@ -1,7 +1,15 @@
 local output = require("resty.output")
 local assert = require("luassert")
+local stub = require("luassert.stub")
 
 describe("output:", function()
+	local press_key = function(key)
+		vim.cmd("normal " .. key)
+		vim.wait(200, function()
+			return false
+		end)
+	end
+
 	it("new", function()
 		local o = output.new()
 
@@ -143,13 +151,29 @@ describe("output:", function()
 		assert.are.same({ "", '{"name": "foo", "valid": true}' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 
 		-- format json with jq
-		vim.cmd("normal p")
-		vim.wait(3000, function()
-			return false
-		end)
+		press_key("p")
 		assert.are.same(
 			{ "", "{", '  "name": "foo",', '  "valid": true', "}" },
 			vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false)
 		)
+	end)
+
+	it("jq query and then reset to the original", function()
+		local input = stub.new(vim.fn, "input")
+		input.invokes(function(_)
+			return ".name"
+		end)
+
+		local o = output.new():activate()
+		local response = { body = '{"name": "foo", "valid": true}', status = 200 }
+		o:show({}, response)
+
+		-- query jq
+		press_key("q")
+		assert.are.same({ "", '"foo"' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
+
+		-- reset
+		press_key("r")
+		assert.are.same({ "", '{"name": "foo", "valid": true}' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 	end)
 end)

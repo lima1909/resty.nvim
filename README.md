@@ -54,11 +54,12 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 
 ## Definitions
 
-- variables: definition: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
-- `###` delimiter between several rest calls
+- `variables`: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- `###` delimiter and starting point of the rest-call-definition
 - first row after `###` is the rest call: `[method] [space] [URL]`
-- headers: delimiter `:`
-- query: delimiter `=`
+- `headers`: delimiter `:`
+- `query`: delimiter `=`
+- `#` starting character for comments
 
 ## Example
 
@@ -79,4 +80,25 @@ GET https://jsonplaceholder.typicode.com/comments
 postId = 5
 id=21
 ```
+
+## Response|Result view
+
+There are three views for the result (the rest-call-response)
+
+| view      | short cut | hint                                         |
+|-----------|-----------|----------------------------------------------|
+| `body`    |   `b`     | response body                                |
+| `headers` |   `h`     | response headers                             |
+| `info`    |   `i`     | shows information from the call and response |
+
+
+### Short cuts for the body-view
+
+Hint: `jq` must be installed
+
+| key | description                   | command  |
+|-----|-------------------------------|----------|
+| `p` | json pretty print             | `jq .`   |
+| `q` | jq query                      | `jq .id` |
+| `r` | reset to the origininal json  | -        |
 

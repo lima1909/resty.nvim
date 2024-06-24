@@ -99,6 +99,20 @@ local window_key_mappings = {
 	},
 }
 
+function M.new(config)
+	M.cfg = config or {}
+	M.bufname = M.cfg.bufname or "resty_response"
+	M.current_window_id = 0
+
+	-- reset buffer
+	if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) and vim.api.nvim_buf_is_loaded(M.bufnr) then
+		vim.api.nvim_buf_delete(M.bufnr, { force = true })
+	end
+	M.bufnr = nil
+
+	return M
+end
+
 function M:activate_key_mapping_for_win(winid)
 	for key, def in pairs(window_key_mappings) do
 		if def.win_ids[winid] then
@@ -206,18 +220,24 @@ function M:show_error(error)
 	})
 end
 
-function M.new(config)
-	M.cfg = config or {}
-	M.bufname = M.cfg.bufname or "resty_response"
-	M.current_window_id = 0
+function M:exec_and_show_response(parser_result)
+	M.meta = { buffer_name = vim.fn.bufname("%") }
+	M:activate()
 
-	-- reset buffer
-	if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) and vim.api.nvim_buf_is_loaded(M.bufnr) then
-		vim.api.nvim_buf_delete(M.bufnr, { force = true })
-	end
-	M.bufnr = nil
+	-- start the stop time
+	local start_time = os.clock()
 
-	return M
+	exec.curl(parser_result.result, function(result)
+		M.meta.duration = os.clock() - start_time
+
+		vim.schedule(function()
+			M:show(parser_result.result, result, M.meta)
+		end)
+	end, function(error)
+		vim.schedule(function()
+			M:show_error(error)
+		end)
+	end)
 end
 
 return M

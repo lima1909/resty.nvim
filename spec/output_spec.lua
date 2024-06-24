@@ -1,4 +1,5 @@
 local output = require("resty.output")
+local parser = require("resty.parser")
 local assert = require("luassert")
 local stub = require("luassert.stub")
 
@@ -175,5 +176,61 @@ describe("output:", function()
 		-- reset
 		press_key("r")
 		assert.are.same({ "", '{"name": "foo", "valid": true}' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
+	end)
+
+	it("show error", function()
+		local o = output.new():activate()
+
+		local error = {
+			exit = 1,
+			message = "GET ttps://jsonplaceholder.typicode.com/comments - curl error exit_code=1 stderr={ 'curl: (1) Protocol \"ttps\" not supported' }",
+			stderr = "{ 'curl: (1) Protocol \"ttps\" not supported' }",
+		}
+
+		o:show_error(error)
+		assert.are.same({
+			"ERROR:",
+			"",
+			"GET ttps://jsonplaceholder.typicode.com/comments",
+			"",
+			'curl: (1) Protocol "ttps" not supported',
+		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
+	end)
+
+	it("integration: exec_and_show_response", function()
+		local input = [[
+### simple get 
+Get https://httpbin.org/get 
+
+]]
+
+		local r = parser.parse(input, 2)
+
+		local o = output.new()
+		o:exec_and_show_response(r)
+		-- wait of curl response
+		vim.wait(2000, function()
+			return false
+		end)
+
+		assert.is_true(o.meta.duration > 0, o.meta.duration)
+		assert.are.same(o.meta.status_str, "200 OK")
+
+		-- show response body
+		assert.are.same(1, o.current_window_id)
+		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
+
+		-- headers window
+		press_key("h")
+		assert.are.same(2, o.current_window_id)
+
+		assert.are.same("http", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
+		assert.are.same({ "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 1, false))
+
+		-- info window
+		press_key("i")
+		assert.are.same(3, o.current_window_id)
+		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
+		assert.are.same({ "", "Request:" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 end)

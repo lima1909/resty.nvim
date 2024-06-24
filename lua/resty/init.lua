@@ -42,35 +42,12 @@ local exec_and_show_response = function(parser_result)
 		return
 	end
 
-	local meta = { buffer_name = vim.fn.bufname("%") }
-
 	-- save the parse result for the Resty last call
 	M.last_parser_result = parser_result
-	M.output:activate()
-
-	-- start the stop time
-	local start_time = os.clock()
-
-	exec.curl(parser_result.result, function(result)
-		meta.duration = os.clock() - start_time
-
-		vim.schedule(function()
-			M.output:show(parser_result.result, result, meta)
-		end)
-	end, function(error)
-		vim.schedule(function()
-			M.output:show_error(error)
-		end)
-	end)
+	M.output:exec_and_show_response(parser_result)
 end
 
 M.last = function()
-	-- package.loaded["resty"] = nil
-	-- package.loaded["resty.output"] = nil
-	-- package.loaded["resty.output.winbar"] = nil
-	--
-	-- M.new_output = new_output.new({})
-
 	if M.last_parser_result then
 		exec_and_show_response(M.last_parser_result)
 	else
@@ -106,6 +83,14 @@ end
 	require("resty.select").view({}, req_defs.definitions, function(def)
 		exec_and_show_response(def)
 	end)
-end ]]
+end 
+
+
+
+package.loaded["resty"] = nil
+package.loaded["resty.output"] = nil
+package.loaded["resty.output.winbar"] = nil
+	
+]]
 
 return M

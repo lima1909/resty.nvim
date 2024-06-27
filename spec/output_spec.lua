@@ -120,8 +120,8 @@ describe("output:", function()
 
 		local req_def = {}
 		local response = { body = '{"name": "foo"}', headers = { "accept: application/json" }, status = 200 }
-		local meta = { duration = 10 }
-		o:show(req_def, response, meta)
+		o.meta.duration = 10
+		o:show(req_def, response)
 
 		assert.are.same("200 OK", o.meta.status_str)
 		assert.are.same("10.00 s", o.meta.duration_str)
@@ -209,7 +209,7 @@ Get https://httpbin.org/get
 		local o = output.new()
 		o:exec_and_show_response(r)
 		-- wait of curl response
-		vim.wait(2000, function()
+		vim.wait(1000, function()
 			return false
 		end)
 

@@ -101,6 +101,7 @@ local window_key_mappings = {
 
 function M.new(config)
 	M.cfg = config or {}
+	M.meta = {}
 	M.bufname = M.cfg.bufname or "resty_response"
 	M.current_window_id = 0
 
@@ -155,12 +156,12 @@ end
 
 function M:select_window(selected_id)
 	self.current_window_id = selected_id
-	if not M.windows[self.current_window_id] then
+	if not self.windows[self.current_window_id] then
 		-- if selected_id out of range, set to window id = 1
 		self.current_window_id = 1
 	end
 
-	self.winbar:select(self.current_window_id, M.meta.statusdef, M.meta.duration_str)
+	self.winbar:select(self.current_window_id, self.meta.statusdef, self.meta.duration_str)
 
 	-- Delete buffer content and write an empty line
 	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, { "" })
@@ -169,37 +170,38 @@ function M:select_window(selected_id)
 	vim.api.nvim_win_set_cursor(self.winnr, { 1, 0 })
 
 	-- show current window content
-	M.windows[self.current_window_id].show_window_content(self)
+	self.windows[self.current_window_id].show_window_content(self)
 	-- create keymaps only for the active window
-	self:activate_key_mapping_for_win(M.current_window_id)
+	self:activate_key_mapping_for_win(self.current_window_id)
+
+	return self.current_window_id
 end
 
 function M:activate()
-	M.bufnr, M.winnr = create_buf_with_win(M.bufnr, M.bufname)
-	M.winbar = winbar.new(self)
+	self.bufnr, self.winnr = create_buf_with_win(self.bufnr, self.bufname)
+	self.winbar = winbar.new(self)
 
-	M.set_folding(M.cfg.with_folding)
+	self.set_folding(self.cfg.with_folding)
 
 	-- activate the window
-	vim.api.nvim_set_current_win(M.winnr)
+	vim.api.nvim_set_current_win(self.winnr)
 	-- Delete buffer content
-	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
-	vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "please wait ..." })
+	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
+	vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, { "please wait ..." })
 
 	return self
 end
 
-function M:show(req_def, response, meta)
-	M.req_def = req_def
-	M.response = response
-	M.current_body = response.body
-	M.meta = meta or {}
+function M:show(req_def, response)
+	self.req_def = req_def
+	self.response = response
+	self.current_body = response.body
 
-	M.meta.statusdef = statuscode.get_status_def(M.response.status)
-	M.meta.status_str = M.meta.statusdef.code .. " " .. M.meta.statusdef.text
-	M.meta.duration_str = format.duration(M.meta.duration)
+	self.meta.statusdef = statuscode.get_status_def(self.response.status)
+	self.meta.status_str = self.meta.statusdef.code .. " " .. self.meta.statusdef.text
+	self.meta.duration_str = format.duration(self.meta.duration)
 
-	self:select_window(M.current_window_id)
+	self.current_window_id = self:select_window(self.current_window_id)
 end
 
 function M:show_error(error)
@@ -211,7 +213,7 @@ function M:show_error(error)
 		new_err_msg = new_err_msg .. vim.trim(string.sub(err_msg, 1, method_url_pos - 1))
 	end
 
-	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {
+	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
 		"ERROR:",
 		"",
 		new_err_msg,
@@ -221,21 +223,21 @@ function M:show_error(error)
 end
 
 function M:exec_and_show_response(parser_result)
-	M.meta = { buffer_name = vim.fn.bufname("%") }
-	M:activate()
+	self.meta = { buffer_name = vim.fn.bufname("%") }
+	self:activate()
 
 	-- start the stop time
 	local start_time = os.clock()
 
 	exec.curl(parser_result.result, function(result)
-		M.meta.duration = os.clock() - start_time
+		self.meta.duration = os.clock() - start_time
 
 		vim.schedule(function()
-			M:show(parser_result.result, result, M.meta)
+			self:show(parser_result.result, result)
 		end)
 	end, function(error)
 		vim.schedule(function()
-			M:show_error(error)
+			self:show_error(error)
 		end)
 	end)
 end

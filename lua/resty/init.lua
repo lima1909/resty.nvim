@@ -36,12 +36,13 @@ M.run = function(bufnr)
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
 	local winnr = vim.api.nvim_get_current_win()
 	local row = vim.api.nvim_win_get_cursor(winnr)[1]
-	local parser_result = parser.parse(lines, row)
 
+	local parser_result = parser.parse(lines, row)
 	if diagnostic.show(bufnr, parser_result) then
 		return
 	end
 
+	-- save the last result
 	M.last_parser_result = parser_result
 	M.output:exec_and_show_response(M.last_parser_result)
 end

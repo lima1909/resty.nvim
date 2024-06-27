@@ -173,8 +173,6 @@ function M:select_window(selected_id)
 	self.windows[self.current_window_id].show_window_content(self)
 	-- create keymaps only for the active window
 	self:activate_key_mapping_for_win(self.current_window_id)
-
-	return self.current_window_id
 end
 
 function M:activate()
@@ -201,7 +199,7 @@ function M:show(req_def, response)
 	self.meta.status_str = self.meta.statusdef.code .. " " .. self.meta.statusdef.text
 	self.meta.duration_str = format.duration(self.meta.duration)
 
-	self.current_window_id = self:select_window(self.current_window_id)
+	self:select_window(self.current_window_id)
 end
 
 function M:show_error(error)

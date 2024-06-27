@@ -16,7 +16,8 @@ describe("resty:", function()
 		assert.are.same("foo", resty.config.response.bufname)
 	end)
 
-	--[[ it("run and run_last", function()
+	it("run and run_last", function()
+		-- create an curl stub
 		local curl = stub.new(exec, "curl")
 		curl.invokes(function(_, callback, _)
 			callback({
@@ -26,6 +27,7 @@ describe("resty:", function()
 			})
 		end)
 
+		-- simulate an http buffer for creating a request
 		local bufnr = vim.api.nvim_create_buf(false, false)
 		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
 			"###",
@@ -36,24 +38,31 @@ describe("resty:", function()
 		local winnr = vim.api.nvim_get_current_win()
 		vim.api.nvim_win_set_cursor(winnr, { 1, 1 })
 
+		-- call resty command RUN
 		assert.are.same(0, resty.output.current_window_id)
 		resty.run(bufnr)
+		vim.wait(50, function()
+			return false
+		end)
 
 		assert.is_true(resty.output.meta.duration > 0)
-
-		-- print(vim.inspect(resty.output))
 
 		-- show response body
 		assert.are.same(1, resty.output.current_window_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
+		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
 
-		-- LAST call --
+		-- call resty command LAST
 		resty.last()
+		vim.wait(50, function()
+			return false
+		end)
 
 		assert.is_true(resty.output.meta.duration > 0)
 
 		-- show response body
 		assert.are.same(1, resty.output.current_window_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
-	end) ]]
+		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
+	end)
 end)

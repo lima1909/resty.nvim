@@ -36,6 +36,13 @@ M.jq = function(json, callback, jq_filter)
 		:start()
 end
 
+M.jq_wait = function(json, callback, cfg, jq_filter)
+	M.jq(json, callback, jq_filter)
+	vim.wait(cfg.wait, function()
+		return cfg.ready
+	end)
+end
+
 ---  Create an async job for the curl commend.
 ---
 ---@param req_def table  the request definition

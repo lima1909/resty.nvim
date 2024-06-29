@@ -45,40 +45,6 @@ foo=
 		assert.are.same(4, line_nr)
 	end)
 
-	it("one request", function()
-		local input = [[
-### 
-Get https://httpbin.org/get 
-
-accept: application/json  
-Authorization: Bearer mytoken123
-
-filter = id = "42" and age > 42
-include = sub, *  
-
-]]
-
-		local r = p.parse(input, 2)
-
-		assert.is_false(r:has_errors())
-		local result = r.result
-
-		assert.are.same(result, {
-			req = {
-				method = "GET",
-				url = "https://httpbin.org/get",
-				headers = {
-					accept = "application/json",
-					Authorization = "Bearer mytoken123",
-				},
-				query = {
-					filter = 'id = "42" and age > 42',
-					include = "sub, *",
-				},
-			},
-		})
-	end)
-
 	it("no name request", function()
 		local input = [[
 ### 
@@ -202,7 +168,7 @@ GET https://httpbin.org/get
 		r = p.parse(input, 5)
 
 		assert.is_false(r:has_errors())
-		local result = r.result
+		result = r.result
 
 		assert.are.same(result, {
 			req = {
@@ -283,5 +249,72 @@ GET   https://jsonplaceholder.typicode.com/comments
 			local line = p.cut_comment(tc.input)
 			assert.are.same(tc.expected, line)
 		end
+	end)
+
+	it("request with headers and queries", function()
+		local input = [[
+### 
+Get https://httpbin.org/get 
+
+accept: application/json  
+Authorization: Bearer mytoken123
+
+filter = id = "42" and age > 42
+include = sub, *  
+
+]]
+
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
+		assert.are.same(result, {
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
+				headers = {
+					accept = "application/json",
+					Authorization = "Bearer mytoken123",
+				},
+				query = {
+					filter = 'id = "42" and age > 42',
+					include = "sub, *",
+				},
+			},
+		})
+	end)
+
+	it("request with headers and queries and body", function()
+		local input = [[
+### 
+Get https://httpbin.org/get 
+accept: application/json 
+filter = id = "42" and age > 42
+
+{
+	"name": "foo",
+	"valid" : true
+}
+]]
+
+		local r = p.parse(input, 2)
+
+		assert.is_false(r:has_errors())
+		local result = r.result
+
+		assert.are.same(result, {
+			req = {
+				method = "GET",
+				url = "https://httpbin.org/get",
+				headers = {
+					accept = "application/json",
+				},
+				query = {
+					filter = 'id = "42" and age > 42',
+				},
+				body = [[{	"name": "foo",	"valid" : true}]],
+			},
+		})
 	end)
 end)

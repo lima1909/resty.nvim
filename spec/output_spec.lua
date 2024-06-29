@@ -94,7 +94,7 @@ describe("output:", function()
 			end,
 		}
 
-		o:show({}, { body = "{}", status = 200, headers = {} }, { duration = 1 })
+		o:show({}, { body = "{}", status = 200, headers = {} })
 
 		o:select_window(1)
 		assert.are.same(1, o.current_window_id)
@@ -210,7 +210,7 @@ Get https://httpbin.org/get
 		o:exec_and_show_response(r)
 		-- wait of curl response
 		vim.wait(1000, function()
-			return false
+			return 1 == o.current_window_id
 		end)
 
 		assert.is_true(o.meta.duration > 0, o.meta.duration)

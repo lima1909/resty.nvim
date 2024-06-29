@@ -31,6 +31,14 @@ function parser:set_parse_state()
 	self.state = 1
 end
 
+function parser:is_in_body_state()
+	return self.state == 99
+end
+
+function parser:set_body_state()
+	self.state = 99
+end
+
 function parser:has_errors()
 	return self.errors ~= nil and #self.errors > 0
 end
@@ -236,8 +244,21 @@ M.parse = function(input, selected)
 						query = {},
 					}
 				end
+			--
+			-- START BODY
+			---@diagnostic disable-next-line: need-check-nil
+			elseif line:sub(1, 2) == "{" or p:is_in_body_state() then
+				p:set_body_state()
+				p.result.req.body = (p.result.req.body or "") .. line
+			-- END BODY
+			---@diagnostic disable-next-line: need-check-nil
+			elseif line:sub(1, 2) == "}" and p:is_in_body_state() then
+				p:set_parse_state()
+				p.result.req.body = p.result.req.body + line
+
+			--
+			-- HEADERS AND QUERIES
 			else
-				-- HEADERS AND QUERIES
 				---@diagnostic disable-next-line: need-check-nil
 				local pos_eq = line:find("=")
 				---@diagnostic disable-next-line: need-check-nil

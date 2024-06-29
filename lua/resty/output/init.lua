@@ -27,17 +27,34 @@ local M = {
 			name = "info",
 			show_window_content = function(slf)
 				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
+				-- "# headers",
+				-- "" .. vim.fn.flatten(slf.req_def.headers),
+
+				local req = slf.req_def.req
+				-- REQUEST
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"Request:",
 					"",
 					"```http",
 					"",
-					slf.req_def.req.method .. " " .. slf.req_def.req.url,
+					req.method .. " " .. req.url,
 					"",
-					-- "# headers",
-					-- "" .. vim.fn.flatten(slf.req_def.headers),
+				})
+
+				-- BODY
+				if req.body then
+					local cfg = { wait = 9000, ready = false }
+					exec.jq_wait(req.body, function(json)
+						for _, l in ipairs(json) do
+							vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { l })
+						end
+						cfg.ready = true
+					end, cfg)
+				end
+
+				-- RESPONSE AND META
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"```",
-					"",
 					"",
 					"Response: ",
 					"- state: " .. slf.meta.status_str,

@@ -10,25 +10,18 @@ describe("exec:", function()
 			output = content
 		end
 
-		local function jq_with_wait(json, jq_filter)
-			exec.jq(json, callback, jq_filter)
-			vim.wait(2000, function()
-				return false
-			end)
-		end
-
 		it("with default filter", function()
-			jq_with_wait('{"value":true}')
+			exec.jq_wait(2000, '{"value":true}', callback)
 			assert.are.same({ "{", '  "value": true', "}" }, output)
 		end)
 
 		it("with filter: .value", function()
-			jq_with_wait('{"value":true}', ".value")
+			exec.jq_wait(2000, '{"value":true}', callback, ".value")
 			assert.are.same({ "true" }, output)
 		end)
 
 		it("error in json", function()
-			jq_with_wait('{"value":')
+			exec.jq_wait(2000, '{"value":', callback)
 			assert(output[1]:find("ERROR:"), output[1])
 			assert(output[2]:find(""), output[2])
 			assert(output[3]:find("Unfinished JSON term at EOF at line 1, column 9"), output[3])
@@ -36,17 +29,14 @@ describe("exec:", function()
 	end)
 
 	describe("curl:", function()
-		local done = false
 		local response
 		local callback = function(r)
 			response = r
-			done = true
 		end
 
 		local error
 		local error_fn = function(e)
 			error = e
-			done = true
 		end
 
 		it("simple GET request", function()
@@ -59,12 +49,8 @@ Get https://httpbin.org/get
 			local r = parser.parse(input, 2)
 			assert.is_false(r:has_errors())
 
-			done = false
 			local req_def = r.result
-			exec.curl(req_def, callback, error_fn)
-			vim.wait(3000, function()
-				return done
-			end)
+			exec.curl_wait(3000, req_def, callback, error_fn)
 
 			assert.is_nil(error)
 			assert.are.same(200, response.status)
@@ -80,12 +66,8 @@ Get https://.org/get
 			local r = parser.parse(input, 2)
 			assert.is_false(r:has_errors())
 
-			done = false
 			local req_def = r.result
-			exec.curl(req_def, callback, error_fn)
-			vim.wait(3000, function()
-				return done
-			end)
+			exec.curl_wait(3000, req_def, callback, error_fn)
 
 			assert.is_not_nil(error)
 			assert.are.same(6, error.exit)

@@ -2,57 +2,101 @@ local curl = require("plenary.curl")
 
 local M = {}
 
+-- --------- JQ -------------------
+M._create_jq_job = function(json, callback, jq_filter)
+	local filter = jq_filter or "."
+	return require("plenary.job"):new({
+		command = "jq",
+		args = { filter },
+		writer = json,
+		on_exit = function(job, code)
+			local output
+
+			if code == 0 then
+				output = job:result()
+			else
+				output = job:stderr_result()
+				table.insert(output, 1, "ERROR:")
+				table.insert(output, 2, "")
+				table.insert(output, "")
+				table.insert(output, "")
+				table.insert(output, ">>> press key: 'r' to get the original json string")
+			end
+
+			vim.schedule(function()
+				job.is_finished = true
+				callback(output)
+			end)
+		end,
+	})
+end
+
 ---  Create an async job for the jq commend.
 ---
 ---@param json string the JSON string
 ---@param callback function callback function where to get the result
 ---@param jq_filter? string a jq filter, default is '.'
 M.jq = function(json, callback, jq_filter)
-	local filter = jq_filter or "."
-	require("plenary.job")
-		:new({
-			command = "jq",
-			args = { filter },
-			writer = json,
-			on_exit = function(job, code)
-				local output
-
-				if code == 0 then
-					output = job:result()
-				else
-					output = job:stderr_result()
-					table.insert(output, 1, "ERROR:")
-					table.insert(output, 2, "")
-					table.insert(output, "")
-					table.insert(output, "")
-					table.insert(output, ">>> press key: 'r' to get the original json string")
-				end
-
-				vim.schedule(function()
-					callback(output)
-				end)
-			end,
-		})
-		:start()
+	M._create_jq_job(json, callback, jq_filter):start()
 end
 
-M.jq_wait = function(json, callback, cfg, jq_filter)
-	M.jq(json, callback, jq_filter)
-	vim.wait(cfg.wait, function()
-		return cfg.ready
+---  Create an sync job for the jq commend.
+---
+---@param timeout number  the timeout value in ms
+---@param json string the JSON string
+---@param callback function callback function where to get the result
+---@param jq_filter? string a jq filter, default is '.'
+M.jq_wait = function(timeout, json, callback, jq_filter)
+	local job = M._create_jq_job(json, callback, jq_filter)
+	job:start()
+
+	vim.wait(timeout, function()
+		return job.is_finished
 	end)
+
+	job:shutdown()
+end
+
+-- --------- CURL -------------------
+M._create_curl_job = function(req_def, callback, error)
+	local job
+	req_def.req.callback = function(result)
+		job.is_finished = true
+		callback(result)
+	end
+	req_def.req.on_error = function(result)
+		job.is_finished = true
+		error(result)
+	end
+
+	-- return the created job
+	-- Note: the job is already stated
+	job = curl.request(req_def.req.url, req_def.req)
+	return job
 end
 
 ---  Create an async job for the curl commend.
 ---
 ---@param req_def table  the request definition
 ---@param callback function callback function where to get the result
----@param error function callback function to get the error result if it occured
+---@param error function callback function to get the error result if it occurred
 M.curl = function(req_def, callback, error)
-	req_def.req.callback = callback
-	req_def.req.on_error = error
+	M._create_curl_job(req_def, callback, error)
+end
 
-	curl.request(req_def.req.url, req_def.req)
+---  Create an sync job for the curl commend.
+---
+---@param timeout number  the timeout value in ms
+---@param req_def table  the request definition
+---@param callback function callback function where to get the result
+---@param error function callback function to get the error result if it occurred
+M.curl_wait = function(timeout, req_def, callback, error)
+	local job = M._create_curl_job(req_def, callback, error)
+	vim.wait(timeout, function()
+		return job.is_finished
+	end)
+
+	job:shutdown()
 end
 
 return M

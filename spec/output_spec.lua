@@ -233,4 +233,21 @@ Get https://httpbin.org/get
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 		assert.are.same({ "", "Request:" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
+
+	it("integration: cancel exec_and_show_response", function()
+		local input = [[
+### simple get 
+Get https://httpbin.org/get 
+
+]]
+
+		local r = parser.parse(input, 2)
+
+		local o = output.new()
+		o:exec_and_show_response(r)
+
+		-- cancel curl call
+		press_key("cc")
+		assert.are.same({ "", "curl is canceled ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
+	end)
 end)

@@ -190,6 +190,18 @@ end
 
 function M:activate()
 	self.bufnr, self.winnr = create_buf_with_win(self.bufnr, self.bufname)
+	-- activate curl cancel
+	vim.keymap.set("n", "cc", function()
+		if M.curl then
+			M.curl:shutdown()
+			M.curl = nil
+
+			-- Delete buffer content
+			vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
+			vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "curl is canceled ..." })
+		end
+	end, { buffer = M.bufnr, silent = true, desc = "cancel curl request" })
+	-- set winbar
 	self.winbar = winbar.new(self)
 
 	self.set_folding(self.cfg.with_folding)
@@ -240,7 +252,7 @@ function M:exec_and_show_response(parser_result)
 	-- start the stop time
 	local start_time = os.clock()
 
-	exec.curl(parser_result.result, function(result)
+	self.curl = exec.curl(parser_result.result, function(result)
 		self.meta.duration = os.clock() - start_time
 
 		vim.schedule(function()
@@ -248,7 +260,10 @@ function M:exec_and_show_response(parser_result)
 		end)
 	end, function(error)
 		vim.schedule(function()
-			self:show_error(error)
+			-- if curl canceled, dont print an error
+			if M.curl then
+				self:show_error(error)
+			end
 		end)
 	end)
 end

@@ -81,7 +81,7 @@ end
 ---@param callback function callback function where to get the result
 ---@param error function callback function to get the error result if it occurred
 M.curl = function(req_def, callback, error)
-	M._create_curl_job(req_def, callback, error)
+	return M._create_curl_job(req_def, callback, error)
 end
 
 ---  Create an sync job for the curl commend.

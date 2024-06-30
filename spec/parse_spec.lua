@@ -24,6 +24,41 @@ describe("parse:", function()
 		assert(err_msg:find("expected two parts: method and url"))
 	end)
 
+	it("error missing method and url", function()
+		local input = [[
+###
+# POST https://api.restful-api.dev/objects
+
+accept: application/json  
+
+]]
+
+		local result = p.parse(input, 1)
+
+		assert.is_true(result:has_errors())
+		assert.are.same(1, #result.errors)
+
+		local err_msg = result.errors[1].message
+		assert(err_msg:find("invalid method name: 'accept:'. Only letters are allowed"))
+	end)
+
+	it("error body without method and url", function()
+		local input = [[
+### 
+{
+"name": "foo"
+}
+]]
+
+		local r = p.parse(input, 2)
+
+		assert.is_true(r:has_errors())
+		assert.are.same(1, #r.errors)
+
+		local err_msg = r.errors[1].message
+		assert(err_msg:find("expected two parts: method and url"))
+	end)
+
 	it("error check line_nr", function()
 		local input = [[
 ### 
@@ -39,7 +74,7 @@ foo=
 		assert.are.same(1, #result.errors)
 
 		local err_msg = result.errors[1].message
-		assert(err_msg:find("an empty value is not allowed"))
+		assert(err_msg:find("an empty value is not allowed"), err_msg)
 
 		local line_nr = result.errors[1].lnum
 		assert.are.same(4, line_nr)
@@ -314,6 +349,27 @@ filter = id = "42" and age > 42
 					filter = 'id = "42" and age > 42',
 				},
 				body = [[{	"name": "foo",	"valid" : true}]],
+			},
+		})
+	end)
+
+	it("body, simple", function()
+		local input = [[
+### 
+Get https://host
+{
+"name": "foo"
+}
+]]
+
+		local r = p.parse(input, 2)
+		assert.are.same(r.result, {
+			req = {
+				method = "GET",
+				url = "https://host",
+				headers = {},
+				query = {},
+				body = '{"name": "foo"}',
 			},
 		})
 	end)

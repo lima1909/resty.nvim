@@ -62,7 +62,13 @@ function parser:parse_method_url(line, line_nr)
 		return
 	end
 
-	local method = vim.trim(line:sub(1, pos_space - 1)):upper()
+	local method = vim.trim(line:sub(1, pos_space - 1))
+	if not method:match("^[%aZ]+$") then
+		self:add_error(line_nr, "invalid method name: '" .. method .. "'. Only letters are allowed")
+		return
+	end
+	method = method:upper()
+
 	local url = vim.trim(line:sub(pos_space + 1, #line))
 
 	return method, url
@@ -234,16 +240,19 @@ M.parse = function(input, selected)
 
 			-- METHOD and URL
 			if p:is_in_init_state() then
-				p:set_parse_state()
 				local method, url = p:parse_method_url(line)
-				if method then
-					p.result.req = {
-						method = method,
-						url = url,
-						headers = {},
-						query = {},
-					}
+				-- an error is occurred
+				if not method then
+					return p
 				end
+
+				p:set_parse_state()
+				p.result.req = {
+					method = method,
+					url = url,
+					headers = {},
+					query = {},
+				}
 			--
 			-- START BODY
 			---@diagnostic disable-next-line: need-check-nil

@@ -54,8 +54,11 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 
 ## Definitions
 
-- `variables`: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- (global) `variables`: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
 - `###` delimiter and starting point of the rest-call-definition
+- after the starting point **must** follow:  
+    - _optional_: `variables` (local) 
+    - **mandatory**: `[method] [url]`
 - first row after `###` is the rest call: `[method] [space] [URL]`
 - `headers`: delimiter `:`
 - `query`: delimiter `=`

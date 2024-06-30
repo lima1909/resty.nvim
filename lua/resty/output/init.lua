@@ -44,13 +44,7 @@ local M = {
 				-- BODY
 				if req.body then
 					exec.jq_wait(2000, req.body, function(json)
-						for i, l in ipairs(json) do
-							if i == 1 and l:sub(1, 5) == "ERROR" then
-								vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { req.body })
-								return
-							end
-							vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { l })
-						end
+						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, json)
 					end)
 				end
 

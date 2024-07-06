@@ -15,13 +15,11 @@ local function split_key_value(p, line, delimiter, pos)
 	value = vim.trim(value)
 
 	if #key == 0 then
-		p:add_error("an empty key is not allowed")
-		return
+		return p:add_error("an empty key is not allowed")
 	end
 
 	if #value == 0 then
-		p:add_error("an empty value is not allowed")
-		return
+		return p:add_error("an empty value is not allowed")
 	end
 
 	-- CHECK duplicate

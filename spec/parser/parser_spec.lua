@@ -2,6 +2,23 @@ local assert = require("luassert")
 local p = require("resty.parser2")
 local d = require("resty.parser2.delimiter")
 
+describe("cut comments", function()
+	it("# comment", function()
+		local line = p.cut_comment("# comment")
+		assert.are.same("", line)
+	end)
+
+	it("abc # comment", function()
+		local line = p.cut_comment("abc # comment")
+		assert.are.same("abc ", line)
+	end)
+
+	it("### comment", function()
+		local line = p.cut_comment("### comment")
+		assert.are.same("### comment", line)
+	end)
+end)
+
 describe("find request definition:", function()
 	local s, e, input
 
@@ -130,6 +147,15 @@ describe("parser:", function()
 		})
 	end)
 
+	it("method url with comment in the same line", function()
+		check("GET http://host # with comment in the same line", 1, {
+			readed_lines = 1,
+			global_variables = {},
+			state = p.STATE_METHOD_URL,
+			request = { method = "GET", url = "http://host" },
+		})
+	end)
+
 	it("one variable and method url", function()
 		check({ "@key=value", "###", "GET http://host" }, 3, {
 			readed_lines = 3,
@@ -140,7 +166,7 @@ describe("parser:", function()
 	end)
 
 	it("two variables and method url", function()
-		check({ "@key1=value1", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
+		check({ "@key1=value1 #comment", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
 			readed_lines = 7,
 			global_variables = { key1 = "value1", key2 = "value2" },
 			state = p.STATE_METHOD_URL,
@@ -176,7 +202,7 @@ describe("parser:", function()
 	end)
 
 	it("method url and header", function()
-		check({ "GET http://host", "", "accept: application/json", "" }, 4, {
+		check({ "GET http://host", "", "accept: application/json # comment", "" }, 4, {
 			readed_lines = 4,
 			global_variables = {},
 			state = p.STATE_HEADERS_QUERY,
@@ -204,7 +230,7 @@ describe("parser:", function()
 	end)
 
 	it("method url and query", function()
-		check({ "GET http://host", "", "id=42", "" }, 2, {
+		check({ "GET http://host", "", "id=42# comment", "" }, 2, {
 			readed_lines = 4,
 			global_variables = {},
 			state = p.STATE_HEADERS_QUERY,

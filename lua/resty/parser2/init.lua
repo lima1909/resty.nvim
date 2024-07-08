@@ -151,6 +151,19 @@ function M:add_error(message)
 	return self
 end
 
+function M.cut_comment(line)
+	if line:sub(1, 3) == "###" then
+		return line
+	end
+
+	local pos = string.find(line, "#")
+	if not pos then
+		return line
+	end
+
+	return line:sub(1, pos - 1)
+end
+
 ---Entry point, the parser
 ---@param input string | { }
 ---@param selected number
@@ -167,6 +180,7 @@ function M:parse(input, selected)
 
 	while true do
 		local line = lines[self.readed_lines]
+		line = M.cut_comment(line)
 
 		local current_state_before = self.current_state
 		if not ignore_line(line) and not state_machine[self.current_state].to(self, line) then

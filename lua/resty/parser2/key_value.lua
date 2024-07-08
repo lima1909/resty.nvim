@@ -45,7 +45,7 @@ local function parse_variable(p, line, state)
 	local pos_eq = l:find("=")
 	local k, v = split_key_value(p, l, "=", pos_eq)
 	if k then
-		p.global_variables[k] = v
+		p.variables[k] = v
 	end
 
 	p.current_state = state

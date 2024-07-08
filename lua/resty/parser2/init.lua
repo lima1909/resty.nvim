@@ -114,23 +114,13 @@ local state_machine = {
 	},
 }
 
-local function input_to_lines(input)
-	if type(input) == "table" then
-		return input
-	elseif type(input) == "string" then
-		return vim.split(input, "\n")
-	else
-		error("only string or string array are supported as input. Got: " .. type(input))
-	end
-end
-
 M.new = function()
 	local p = {
 		current_state = M.STATE_START,
 		readed_lines = 0,
 		duration = 0,
 		body_is_ready = false,
-		global_variables = {},
+		variables = {},
 		request = {},
 		errors = {},
 	}
@@ -164,6 +154,48 @@ function M.cut_comment(line)
 	return line:sub(1, pos - 1)
 end
 
+function M.replace_variable(variables, line)
+	if not variables then
+		return line, nil
+	end
+
+	local _, start_pos = string.find(line, "{{")
+	local end_pos, _ = string.find(line, "}}")
+
+	if not start_pos and not end_pos then
+		-- no variable found
+		return line, nil
+	elseif start_pos and not end_pos then
+		-- error
+		return nil, "missing closing brackets: '}}'"
+	elseif not start_pos and end_pos then
+		-- error
+		return nil, "missing open brackets: '{{'"
+	end
+
+	local before = string.sub(line, 1, start_pos - 2)
+	local name = string.sub(line, start_pos + 1, end_pos - 1)
+	local after = string.sub(line, end_pos + 2)
+
+	local value = variables[name]
+	if not value then
+		return nil, "no variable found with name: '" .. name .. "'"
+	end
+
+	local new_line = before .. value .. after
+	return M.replace_variable(variables, new_line)
+end
+
+local function input_to_lines(input)
+	if type(input) == "table" then
+		return input
+	elseif type(input) == "string" then
+		return vim.split(input, "\n")
+	else
+		error("only string or string array are supported as input. Got: " .. type(input))
+	end
+end
+
 ---Entry point, the parser
 ---@param input string | { }
 ---@param selected number
@@ -181,6 +213,15 @@ function M:parse(input, selected)
 	while true do
 		local line = lines[self.readed_lines]
 		line = M.cut_comment(line)
+
+		if self.current_state ~= M.STATE_GLOBAL_VARIABLE then
+			local l, err = M.replace_variable(self.variables, line)
+			if not err then
+				line = l
+			else
+				self:add_error(err)
+			end
+		end
 
 		local current_state_before = self.current_state
 		if not ignore_line(line) and not state_machine[self.current_state].to(self, line) then

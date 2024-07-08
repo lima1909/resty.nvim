@@ -17,6 +17,52 @@ describe("cut comments", function()
 		local line = p.cut_comment("### comment")
 		assert.are.same("### comment", line)
 	end)
+
+	it("comment in line", function()
+		local tt = {
+			{ input = "host ", expected = "host " },
+			{ input = "host # comment", expected = "host " },
+			{ input = "host# comment", expected = "host" },
+			{ input = "host#", expected = "host" },
+			{ input = "# host# comment", expected = "" },
+		}
+		for _, tc in ipairs(tt) do
+			local line = p.cut_comment(tc.input)
+			assert.are.same(tc.expected, line)
+		end
+	end)
+end)
+
+describe("variables", function()
+	it("replace variable", function()
+		local variables = { ["host"] = "my-host" }
+
+		local tt = {
+			-- input = output (expected)
+			{ input = "host}}", err_msg = "missing open brackets: '{{'" },
+			{ input = "{{host}}.port}}", err_msg = "missing open brackets: '{{'" },
+			{ input = "{{host", err_msg = "missing closing brackets: '}}'" },
+			{ input = "{{host}}.{{port", err_msg = "missing closing brackets: '}}'" },
+			{ input = "{{FOO}}", err_msg = "no variable found with name: 'FOO'" },
+
+			{ input = "host}", expected = "host}" },
+			{ input = "{host", expected = "{host" },
+			{ input = "{host}", expected = "{host}" },
+			{ input = "{{host}}", expected = "my-host" },
+			{ input = "http://{{host}}", expected = "http://my-host" },
+			{ input = "{{host}}.de", expected = "my-host.de" },
+			{ input = "http://{{host}}.de", expected = "http://my-host.de" },
+		}
+
+		for _, tc in ipairs(tt) do
+			local line, err = p.replace_variable(variables, tc.input)
+			if err then
+				assert.are.same(tc.err_msg, err)
+			else
+				assert.are.same(tc.expected, line)
+			end
+		end
+	end)
 end)
 
 describe("find request definition:", function()
@@ -133,7 +179,7 @@ describe("parser:", function()
 
 		assert.is_false(r:has_errors(), vim.inspect(r.errors), "has error")
 		assert.are.same(r.readed_lines, expected.readed_lines, "compare readed_lines")
-		assert.are.same(r.global_variables, expected.global_variables, "compare global_variables")
+		assert.are.same(r.variables, expected.variables, "compare global_variables")
 		assert.are.same(r.current_state, expected.state, "compare state")
 		assert.are.same(r.request, expected.request or {}, "compare request")
 	end
@@ -141,7 +187,7 @@ describe("parser:", function()
 	it("method url", function()
 		check("GET http://host", 1, {
 			readed_lines = 1,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -150,16 +196,25 @@ describe("parser:", function()
 	it("method url with comment in the same line", function()
 		check("GET http://host # with comment in the same line", 1, {
 			readed_lines = 1,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
+		})
+	end)
+
+	it("method url with variable", function()
+		check({ "@host=my-host", "###", "GET http://{{host}}" }, 3, {
+			readed_lines = 3,
+			variables = { host = "my-host" },
+			state = p.STATE_METHOD_URL,
+			request = { method = "GET", url = "http://my-host" },
 		})
 	end)
 
 	it("one variable and method url", function()
 		check({ "@key=value", "###", "GET http://host" }, 3, {
 			readed_lines = 3,
-			global_variables = { key = "value" },
+			variables = { key = "value" },
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -168,7 +223,7 @@ describe("parser:", function()
 	it("two variables and method url", function()
 		check({ "@key1=value1 #comment", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
 			readed_lines = 7,
-			global_variables = { key1 = "value1", key2 = "value2" },
+			variables = { key1 = "value1", key2 = "value2" },
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -177,7 +232,7 @@ describe("parser:", function()
 	it("delimiter and method url", function()
 		check("###\nGET http://host", 1, {
 			readed_lines = 2,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -186,7 +241,7 @@ describe("parser:", function()
 	it("delimiter and one variable and method url", function()
 		check({ "###", "@key=value", "# comment", "GET http://host" }, 2, {
 			readed_lines = 4,
-			global_variables = { key = "value" },
+			variables = { key = "value" },
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -195,7 +250,7 @@ describe("parser:", function()
 	it("delimiter and two variable and method url", function()
 		check({ "@key=value", "# comment", "###", "@key2=value2", "GET http://host" }, 3, {
 			readed_lines = 5,
-			global_variables = { key = "value", key2 = "value2" },
+			variables = { key = "value", key2 = "value2" },
 			state = p.STATE_METHOD_URL,
 			request = { method = "GET", url = "http://host" },
 		})
@@ -204,7 +259,7 @@ describe("parser:", function()
 	it("method url and header", function()
 		check({ "GET http://host", "", "accept: application/json # comment", "" }, 4, {
 			readed_lines = 4,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_HEADERS_QUERY,
 			request = {
 				method = "GET",
@@ -218,7 +273,7 @@ describe("parser:", function()
 	it("one variable and method url and header", function()
 		check({ "@key=value", "###", "GET http://host", "", "accept: application/json", "" }, 4, {
 			readed_lines = 6,
-			global_variables = { key = "value" },
+			variables = { key = "value" },
 			state = p.STATE_HEADERS_QUERY,
 			request = {
 				method = "GET",
@@ -232,7 +287,7 @@ describe("parser:", function()
 	it("method url and query", function()
 		check({ "GET http://host", "", "id=42# comment", "" }, 2, {
 			readed_lines = 4,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_HEADERS_QUERY,
 			request = {
 				method = "GET",
@@ -246,7 +301,7 @@ describe("parser:", function()
 	it("method url and header query", function()
 		check({ "GET http://host", "", "accept: application/json", "", "id=42" }, 1, {
 			readed_lines = 5,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_HEADERS_QUERY,
 			request = {
 				method = "GET",
@@ -260,7 +315,7 @@ describe("parser:", function()
 	it("method url with body", function()
 		check({ "GET http://host", "  ", "{", "\t'name': 'John'", "}" }, 1, {
 			readed_lines = 5,
-			global_variables = {},
+			variables = {},
 			state = p.STATE_BODY,
 			request = { method = "GET", url = "http://host", body = { "{", "\t'name': 'John'", "}" } },
 		})
@@ -272,7 +327,7 @@ describe("parser:", function()
 			9,
 			{
 				readed_lines = 9,
-				global_variables = {},
+				variables = {},
 				state = p.STATE_BODY,
 				request = {
 					method = "GET",
@@ -305,7 +360,7 @@ describe("parser:", function()
 			9,
 			{
 				readed_lines = 13,
-				global_variables = { k = "v" },
+				variables = { k = "v" },
 				state = p.STATE_BODY,
 				request = {
 					method = "GET",
@@ -331,7 +386,7 @@ describe("parser:", function()
 			3,
 			{
 				readed_lines = 4,
-				global_variables = { k = "v" },
+				variables = { k = "v" },
 				state = p.STATE_HEADERS_QUERY,
 				request = {
 					method = "GET",

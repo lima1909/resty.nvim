@@ -75,4 +75,18 @@ Get https://.org/get
 			assert(error.stderr:find(err_msg), err_msg)
 		end)
 	end)
+
+	describe("stop time:", function()
+		local nix = function(a, b, c)
+			return a, b, c
+		end
+
+		it("exec_with_stop_time", function()
+			local one, a, b, duration = exec.exec_with_stop_time(nix, 1, "a", true)
+			assert.are.same(1, one)
+			assert.are.same("a", a)
+			assert.are.same(true, b)
+			assert.is_true(duration > 0, duration)
+		end)
+	end)
 end)

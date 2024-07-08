@@ -99,4 +99,11 @@ M.curl_wait = function(timeout, req_def, callback, error)
 	job:shutdown()
 end
 
+M.exec_with_stop_time = function(fn, ...)
+	local start_time = os.clock()
+	local results = { fn(...) }
+	table.insert(results, os.clock() - start_time)
+	return unpack(results)
+end
+
 return M

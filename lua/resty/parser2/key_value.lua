@@ -5,8 +5,9 @@
 --
 local M = {}
 
-M.STATE_VARIABLE = 2
-M.STATE_HEADERS_QUERY = 5
+M.STATE_GLOBAL_VARIABLE = 2
+M.STATE_LOCAL_VARIABLE = 3
+M.STATE_HEADERS_QUERY = 6
 
 local function split_key_value(p, line, delimiter, pos)
 	local key = line:sub(1, pos - #delimiter)
@@ -34,7 +35,7 @@ end
 ---is the token for defining a variable
 local token_VARIABLE = "@"
 
-function M.parse_variable(p, line)
+local function parse_variable(p, line, state)
 	if not vim.startswith(line, token_VARIABLE) then
 		return nil
 	end
@@ -47,8 +48,16 @@ function M.parse_variable(p, line)
 		p.global_variables[k] = v
 	end
 
-	p.current_state = M.STATE_VARIABLE
+	p.current_state = state
 	return true
+end
+
+function M.parse_global_variable(p, line)
+	return parse_variable(p, line, M.STATE_GLOBAL_VARIABLE)
+end
+
+function M.parse_local_variable(p, line)
+	return parse_variable(p, line, M.STATE_LOCAL_VARIABLE)
 end
 
 function M.parse_headers_query(p, line)

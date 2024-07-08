@@ -1,6 +1,6 @@
 local M = {}
 
-M.STATE_BODY = 6
+M.STATE_BODY = 7
 
 local function is_body_start(line)
 	if line:sub(1, 2) == "{" then

@@ -18,6 +18,12 @@ M.STATE_BODY = by.STATE_BODY -- 7
 ---otherwise is the end of the buffer the end of parsing
 -- local token_END = "---"
 
+function M:print_debug(input)
+	if self.debug then
+		print(input)
+	end
+end
+
 local function ignore_line(line)
 	-- comment
 	if vim.startswith(line, "#") and not vim.startswith(line, "###") then
@@ -64,6 +70,7 @@ body -> body				*
 
 local state_machine = {
 	[M.STATE_START] = {
+		name = "start",
 		to = function(p, line)
 			if kv.parse_global_variable(p, line) or d.parse_delimiter(p, line) or mu.parse_method_url(p, line) then
 				return true
@@ -71,6 +78,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_GLOBAL_VARIABLE] = {
+		name = "global variable",
 		to = function(p, line)
 			if kv.parse_global_variable(p, line) or d.parse_delimiter(p, line) then
 				return true
@@ -78,6 +86,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_DELIMITER] = {
+		name = "delimiter",
 		to = function(p, line)
 			if kv.parse_local_variable(p, line) or mu.parse_method_url(p, line) then
 				return true
@@ -85,6 +94,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_LOCAL_VARIABLE] = {
+		name = "local variable",
 		to = function(p, line)
 			if kv.parse_local_variable(p, line) or mu.parse_method_url(p, line) then
 				return true
@@ -92,6 +102,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_METHOD_URL] = {
+		name = "method - url",
 		to = function(p, line)
 			if kv.parse_headers_query(p, line) or by.parse_body(p, line) then
 				return true
@@ -99,6 +110,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_HEADERS_QUERY] = {
+		name = "header - query",
 		to = function(p, line)
 			if kv.parse_headers_query(p, line) or by.parse_body(p, line) then
 				return true
@@ -106,6 +118,7 @@ local state_machine = {
 		end,
 	},
 	[M.STATE_BODY] = {
+		name = "body",
 		to = function(p, line)
 			if by.parse_body(p, line) then
 				return true
@@ -141,6 +154,8 @@ function M:add_error(message)
 	return self
 end
 
+---@param line string
+---@return string
 function M.cut_comment(line)
 	if line:sub(1, 3) == "###" then
 		return line
@@ -154,6 +169,9 @@ function M.cut_comment(line)
 	return line:sub(1, pos - 1)
 end
 
+---@param variables { }
+---@param line string
+---@return string | nil, string | nil
 function M.replace_variable(variables, line)
 	if not variables then
 		return line, nil
@@ -214,9 +232,10 @@ function M:parse(input, selected)
 		local line = lines[self.readed_lines]
 		line = M.cut_comment(line)
 
-		if self.current_state ~= M.STATE_GLOBAL_VARIABLE then
+		if self.current_state ~= M.STATE_GLOBAL_VARIABLE or self.current_state ~= M.STATE_LOCAL_VARIABLE then
 			local l, err = M.replace_variable(self.variables, line)
-			if not err then
+
+			if l then
 				line = l
 			else
 				self:add_error(err)
@@ -237,6 +256,15 @@ function M:parse(input, selected)
 					.. ")"
 			)
 		end
+
+		self:print_debug(
+			"--- "
+				.. self.readed_lines
+				.. "  "
+				.. state_machine[current_state_before].name
+				.. " -> "
+				.. state_machine[self.current_state].name
+		)
 
 		if self.readed_lines == self.end_line then
 			break

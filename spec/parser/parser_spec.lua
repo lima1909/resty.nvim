@@ -21,6 +21,16 @@ describe("parser:", function()
 		})
 	end)
 
+	--Note: invalid status transition, not implemented yet
+	it("only one variable and method and url", function()
+		check({ "@key=value", "GET http://host" }, 0, {
+			readed_lines = 2,
+			variables = { key = "value" },
+			state = p.STATE_METHOD_URL,
+			request = { method = "GET", url = "http://host" },
+		})
+	end)
+
 	it("method url with comment in the same line", function()
 		check("GET http://host # with comment in the same line", 1, {
 			readed_lines = 1,
@@ -265,15 +275,6 @@ describe("errors:", function()
 			current_state = p.STATE_DELIMITER,
 		})
 	end)
-
-	--Note: invalid status transition, not implemented yet
-	-- it("only one variable and method and url", function()
-	-- 	check({ "@key=value", "GET http://host" }, 2, {
-	-- 		message = "the selected row: 1 is not in a request definition",
-	-- 		lnum = 2,
-	-- 		current_state = p.STATE_DELIMITER,
-	-- 	})
-	-- end)
 
 	it("only delimiter", function()
 		check("###", 1, {

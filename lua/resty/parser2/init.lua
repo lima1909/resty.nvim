@@ -6,35 +6,9 @@ local by = require("resty.parser2.body")
 local M = {}
 M.__index = M
 
-M.STATE_START = 1
-M.STATE_GLOBAL_VARIABLE = kv.STATE_GLOBAL_VARIABLE -- 2
-M.STATE_LOCAL_VARIABLE = kv.STATE_LOCAL_VARIABLE -- 3
-M.STATE_DELIMITER = d.STATE_DELIMITER -- 4
-M.STATE_METHOD_URL = mu.STATE_METHOD_URL -- 5
-M.STATE_HEADERS_QUERY = kv.STATE_HEADERS_QUERY -- 6
-M.STATE_BODY = by.STATE_BODY -- 7
-
 ---token_end is optional, is it necessary if the buffer contains more rows
 ---otherwise is the end of the buffer the end of parsing
 -- local token_END = "---"
-
-function M:print_debug(input)
-	if self.debug then
-		print(input)
-	end
-end
-
-local function ignore_line(line)
-	-- comment
-	if vim.startswith(line, "#") and not vim.startswith(line, "###") then
-		return true
-	-- empty line
-	elseif line == "" or vim.trim(line) == "" then
-		return true
-	else
-		return false
-	end
-end
 
 --[[ 
 
@@ -68,64 +42,99 @@ body -> body				*
 
 ]]
 
-local state_machine = {
-	[M.STATE_START] = {
+M.STATE_START = 1
+M.STATE_GLOBAL_VARIABLE = kv.STATE_GLOBAL_VARIABLE -- 2
+M.STATE_LOCAL_VARIABLE = kv.STATE_LOCAL_VARIABLE -- 3
+M.STATE_DELIMITER = d.STATE_DELIMITER -- 4
+M.STATE_METHOD_URL = mu.STATE_METHOD_URL -- 5
+M.STATE_HEADERS_QUERY = kv.STATE_HEADERS_QUERY -- 6
+M.STATE_BODY = by.STATE_BODY -- 7
+
+local states = {
+	{
+		id = M.STATE_START,
 		name = "start",
-		to = function(p, line)
-			if kv.parse_global_variable(p, line) or d.parse_delimiter(p, line) or mu.parse_method_url(p, line) then
-				return true
-			end
+		parse = function(_, _) end,
+	},
+	{
+		id = M.STATE_GLOBAL_VARIABLE,
+		name = "global variables",
+		parse = function(p, line)
+			return kv.parse_global_variable(p, line)
 		end,
 	},
-	[M.STATE_GLOBAL_VARIABLE] = {
-		name = "global variable",
-		to = function(p, line)
-			if kv.parse_global_variable(p, line) or d.parse_delimiter(p, line) then
-				return true
-			end
+	{
+		id = M.STATE_LOCAL_VARIABLE,
+		name = "local variables",
+		parse = function(p, line)
+			return kv.parse_local_variable(p, line)
 		end,
 	},
-	[M.STATE_DELIMITER] = {
+	{
+		id = M.STATE_DELIMITER,
 		name = "delimiter",
-		to = function(p, line)
-			if kv.parse_local_variable(p, line) or mu.parse_method_url(p, line) then
-				return true
-			end
+		parse = function(p, line)
+			return d.parse_delimiter(p, line)
 		end,
 	},
-	[M.STATE_LOCAL_VARIABLE] = {
-		name = "local variable",
-		to = function(p, line)
-			if kv.parse_local_variable(p, line) or mu.parse_method_url(p, line) then
-				return true
-			end
+	{
+		id = M.STATE_METHOD_URL,
+		name = "method and url",
+		parse = function(p, line)
+			return mu.parse_method_url(p, line)
 		end,
 	},
-	[M.STATE_METHOD_URL] = {
-		name = "method - url",
-		to = function(p, line)
-			if kv.parse_headers_query(p, line) or by.parse_body(p, line) then
-				return true
-			end
+	{
+		id = M.STATE_HEADERS_QUERY,
+		name = "header or query",
+		parse = function(p, line)
+			return kv.parse_headers_query(p, line)
 		end,
 	},
-	[M.STATE_HEADERS_QUERY] = {
-		name = "header - query",
-		to = function(p, line)
-			if kv.parse_headers_query(p, line) or by.parse_body(p, line) then
-				return true
-			end
-		end,
-	},
-	[M.STATE_BODY] = {
+	{
+		id = M.STATE_BODY,
 		name = "body",
-		to = function(p, line)
-			if by.parse_body(p, line) then
-				return true
-			end
+		parse = function(p, line)
+			return by.parse_body(p, line)
 		end,
 	},
 }
+
+local transitions = {
+	[M.STATE_START] = { M.STATE_GLOBAL_VARIABLE, M.STATE_DELIMITER, M.STATE_METHOD_URL },
+	[M.STATE_GLOBAL_VARIABLE] = { M.STATE_GLOBAL_VARIABLE, M.STATE_DELIMITER, M.STATE_METHOD_URL },
+	[M.STATE_DELIMITER] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
+	[M.STATE_LOCAL_VARIABLE] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
+	[M.STATE_METHOD_URL] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	[M.STATE_HEADERS_QUERY] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	[M.STATE_BODY] = { M.STATE_BODY },
+}
+
+function M:do_transition(line)
+	local ts = transitions[self.current_state]
+	-- if ts then
+	for _, t in ipairs(ts) do
+		local s = states[t]
+		-- if s then
+		if s.parse(self, line) then
+			-- self.current_state = t
+			return s.id
+		end
+		-- else
+		-- error("no state found for transition" .. t, 0)
+		-- end
+	end
+	--
+	-- no valid transition found
+	local err = "from current state: '" .. states[self.current_state].name .. "' are only possible: "
+	for _, t in ipairs(ts) do
+		err = err .. states[t].name .. ", "
+	end
+	print(err:sub(1, #err - 2))
+	-- else
+	-- error("for current state: " .. current_state .. "is no transition defiened", 0)
+	-- end
+end
 
 M.new = function()
 	local p = {
@@ -152,6 +161,18 @@ function M:add_error(message)
 		message = message,
 	})
 	return self
+end
+
+function M.ignore_line(line)
+	-- comment
+	if vim.startswith(line, "#") and not vim.startswith(line, "###") then
+		return true
+	-- empty line
+	elseif line == "" or vim.trim(line) == "" then
+		return true
+	else
+		return false
+	end
 end
 
 ---@param line string
@@ -242,29 +263,9 @@ function M:parse(input, selected)
 			end
 		end
 
-		local current_state_before = self.current_state
-		if not ignore_line(line) and not state_machine[self.current_state].to(self, line) then
-			error(
-				"unspupported transition from state: "
-					.. current_state_before
-					.. " -> "
-					.. self.current_state
-					.. " in line: "
-					.. line
-					.. " (row: "
-					.. self.readed_lines
-					.. ")"
-			)
+		if not M.ignore_line(line) then
+			self.current_state = self:do_transition(line)
 		end
-
-		self:print_debug(
-			"--- "
-				.. self.readed_lines
-				.. "  "
-				.. state_machine[current_state_before].name
-				.. " -> "
-				.. state_machine[self.current_state].name
-		)
 
 		if self.readed_lines == self.end_line then
 			break

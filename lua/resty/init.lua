@@ -1,3 +1,7 @@
+P = function(tab)
+	print(vim.inspect(tab))
+end
+
 local parser = require("resty.parser")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")

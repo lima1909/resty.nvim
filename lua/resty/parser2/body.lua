@@ -1,7 +1,5 @@
 local M = {}
 
-M.STATE_BODY = 7
-
 local function is_body_start(line)
 	if line:sub(1, 2) == "{" then
 		return true
@@ -33,7 +31,6 @@ function M.parse_body(p, line)
 		table.insert(p.request.body, line)
 	end
 
-	p.current_state = M.STATE_BODY
 	return true
 end
 

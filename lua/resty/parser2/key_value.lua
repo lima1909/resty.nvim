@@ -5,22 +5,18 @@
 --
 local M = {}
 
-M.STATE_GLOBAL_VARIABLE = 2
-M.STATE_LOCAL_VARIABLE = 3
-M.STATE_HEADERS_QUERY = 6
-
-local function split_key_value(p, line, delimiter, pos)
+local function split_key_value(line, delimiter, pos)
 	local key = line:sub(1, pos - #delimiter)
 	key = vim.trim(key)
 	local value = line:sub(pos + #delimiter)
 	value = vim.trim(value)
 
 	if #key == 0 then
-		return p:add_error("an empty key is not allowed")
+		error("an empty key is not allowed", 0)
 	end
 
 	if #value == 0 then
-		return p:add_error("an empty value is not allowed")
+		error("an empty value is not allowed", 0)
 	end
 
 	-- CHECK duplicate
@@ -35,7 +31,7 @@ end
 ---is the token for defining a variable
 local token_VARIABLE = "@"
 
-local function parse_variable(p, line, state)
+function M.parse_variable(line)
 	if not vim.startswith(line, token_VARIABLE) then
 		return nil
 	end
@@ -43,24 +39,16 @@ local function parse_variable(p, line, state)
 	-- cut the variable token
 	local l = string.sub(line, #token_VARIABLE + 1)
 	local pos_eq = l:find("=")
-	local k, v = split_key_value(p, l, "=", pos_eq)
-	if k then
-		p.variables[k] = v
-	end
 
-	p.current_state = state
-	return true
+	local k, v = split_key_value(l, "=", pos_eq)
+
+	return {
+		k = k,
+		v = v,
+	}
 end
 
-function M.parse_global_variable(p, line)
-	return parse_variable(p, line, M.STATE_GLOBAL_VARIABLE)
-end
-
-function M.parse_local_variable(p, line)
-	return parse_variable(p, line, M.STATE_LOCAL_VARIABLE)
-end
-
-function M.parse_headers_query(p, line)
+function M.parse_headers_query(line)
 	local pos_eq = line:find("=")
 	local pos_dp = line:find(":")
 
@@ -90,22 +78,13 @@ function M.parse_headers_query(p, line)
 		delimiter, pos = ":", pos_dp
 	end
 
-	local k, v = split_key_value(p, line, delimiter, pos)
-	if not k then
-		return
-	end
+	local k, v = split_key_value(line, delimiter, pos)
 
-	p.current_state = M.STATE_HEADERS_QUERY
-	p.request.headers = p.request.headers or {}
-	p.request.query = p.request.query or {}
-
-	if delimiter == "=" then
-		p.request.query[k] = v
-	else
-		p.request.headers[k] = v
-	end
-
-	return true
+	return {
+		k = k,
+		v = v,
+		delimiter = delimiter,
+	}
 end
 
 return M

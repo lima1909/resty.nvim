@@ -1,7 +1,5 @@
 local M = {}
 
-M.STATE_DELIMITER = 4
-
 ---is a token_start for a new starting rest call
 local token_DELIMITER = "###"
 
@@ -36,8 +34,6 @@ M.parse_delimiter = function(p, line)
 	if not vim.startswith(line, token_DELIMITER) then
 		return nil
 	end
-
-	p.current_state = M.STATE_DELIMITER
 
 	if p.readed_lines > p.selected then
 		p:add_error("the selected row: " .. p.selected .. " is not in a request definition")

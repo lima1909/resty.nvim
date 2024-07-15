@@ -6,9 +6,62 @@ local by = require("resty.parser2.body")
 local M = {}
 M.__index = M
 
----token_end is optional, is it necessary if the buffer contains more rows
----otherwise is the end of the buffer the end of parsing
--- local token_END = "---"
+M.new = function()
+	local p = {
+		current_state = M.STATE_START,
+		readed_lines = 0,
+		duration = 0,
+		body_is_ready = false,
+		variables = {},
+		request = {},
+		errors = {},
+	}
+	return setmetatable(p, M)
+end
+
+function M:parse_variable(line)
+	local ok, result = pcall(kv.parse_variable, line)
+
+	if not ok then
+		self:add_error(result)
+		return true
+	elseif result then
+		self.variables[result.k] = result.v
+		return true
+	end
+end
+
+function M:parse_headers_query(line)
+	local ok, result = pcall(kv.parse_headers_query, line)
+
+	if not ok then
+		self:add_error(result)
+		return true
+	elseif result then
+		self.request.headers = self.request.headers or {}
+		self.request.query = self.request.query or {}
+
+		if result.delimiter == "=" then
+			self.request.query[result.k] = result.v
+		else
+			self.request.headers[result.k] = result.v
+		end
+
+		return true
+	end
+end
+
+function M:parse_method_url(line)
+	local ok, result = pcall(mu.parse_method_url, line)
+
+	if not ok then
+		self:add_error(result)
+		return true
+	elseif result then
+		self.request = result
+		return true
+	end
+end
 
 --[[ 
 
@@ -42,33 +95,24 @@ body -> body				*
 
 ]]
 
-M.STATE_START = 1
-M.STATE_GLOBAL_VARIABLE = kv.STATE_GLOBAL_VARIABLE -- 2
-M.STATE_LOCAL_VARIABLE = kv.STATE_LOCAL_VARIABLE -- 3
-M.STATE_DELIMITER = d.STATE_DELIMITER -- 4
-M.STATE_METHOD_URL = mu.STATE_METHOD_URL -- 5
-M.STATE_HEADERS_QUERY = kv.STATE_HEADERS_QUERY -- 6
-M.STATE_BODY = by.STATE_BODY -- 7
+M.STATE_START = 0
+M.STATE_GLOBAL_VARIABLE = 1
+M.STATE_LOCAL_VARIABLE = 2
+M.STATE_DELIMITER = 3
+M.STATE_METHOD_URL = 4
+M.STATE_HEADERS_QUERY = 5
+M.STATE_BODY = 6
 
 local states = {
 	{
-		id = M.STATE_START,
-		name = "start",
-		parse = function(_, _) end,
-	},
-	{
 		id = M.STATE_GLOBAL_VARIABLE,
 		name = "global variables",
-		parse = function(p, line)
-			return kv.parse_global_variable(p, line)
-		end,
+		parse = M.parse_variable,
 	},
 	{
 		id = M.STATE_LOCAL_VARIABLE,
 		name = "local variables",
-		parse = function(p, line)
-			return kv.parse_local_variable(p, line)
-		end,
+		parse = M.parse_variable,
 	},
 	{
 		id = M.STATE_DELIMITER,
@@ -80,16 +124,12 @@ local states = {
 	{
 		id = M.STATE_METHOD_URL,
 		name = "method and url",
-		parse = function(p, line)
-			return mu.parse_method_url(p, line)
-		end,
+		parse = M.parse_method_url,
 	},
 	{
 		id = M.STATE_HEADERS_QUERY,
 		name = "header or query",
-		parse = function(p, line)
-			return kv.parse_headers_query(p, line)
-		end,
+		parse = M.parse_headers_query,
 	},
 	{
 		id = M.STATE_BODY,
@@ -117,8 +157,8 @@ function M:do_transition(line)
 		local s = states[t]
 		-- if s then
 		if s.parse(self, line) then
-			-- self.current_state = t
-			return s.id
+			self.current_state = s.id
+			return true
 		end
 		-- else
 		-- error("no state found for transition" .. t, 0)
@@ -131,22 +171,10 @@ function M:do_transition(line)
 		err = err .. states[t].name .. ", "
 	end
 	print(err:sub(1, #err - 2))
+	return false
 	-- else
 	-- error("for current state: " .. current_state .. "is no transition defiened", 0)
 	-- end
-end
-
-M.new = function()
-	local p = {
-		current_state = M.STATE_START,
-		readed_lines = 0,
-		duration = 0,
-		body_is_ready = false,
-		variables = {},
-		request = {},
-		errors = {},
-	}
-	return setmetatable(p, M)
 end
 
 function M:has_errors()
@@ -264,7 +292,7 @@ function M:parse(input, selected)
 		end
 
 		if not M.ignore_line(line) then
-			self.current_state = self:do_transition(line)
+			self:do_transition(line)
 		end
 
 		if self.readed_lines == self.end_line then

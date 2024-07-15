@@ -2,6 +2,78 @@ local assert = require("luassert")
 local p = require("resty.parser2")
 local d = require("resty.parser2.delimiter")
 
+describe("find request:", function()
+	local r, input
+
+	-- error, selected is greater then #lines
+	-- it("empty", function()
+	-- 	input = {}
+	-- 	r = d.find_request(input, 1)
+	-- 	assert.are.same(1, r.s)
+	-- 	assert.are.same(1, r.e)
+	-- 	assert.is_false(r.sw_delim)
+	-- end)
+
+	it("one", function()
+		input = { "" }
+		r = d.find_request(input, 1)
+		assert.are.same(1, r.s)
+		assert.are.same(1, r.e)
+		assert.is_false(r.sw_delim)
+	end)
+
+	it("without delimiter", function()
+		input = { "@k=v", "", "GET http://host", "" }
+		r = d.find_request(input, 2)
+		assert.are.same(1, r.s)
+		assert.are.same(4, r.e)
+		assert.is_false(r.sw_delim)
+	end)
+
+	it("with one delimiter on the start", function()
+		input = { "###", "@key=value", "GET http://host" }
+
+		r = d.find_request(input, 1)
+		assert.are.same(2, r.s)
+		assert.are.same(3, r.e)
+		assert.is_true(r.sw_delim)
+
+		r = d.find_request(input, 2)
+		assert.are.same(2, r.s)
+		assert.are.same(3, r.e)
+		assert.is_true(r.sw_delim)
+
+		r = d.find_request(input, 3)
+		assert.are.same(2, r.s)
+		assert.are.same(3, r.e)
+		assert.is_true(r.sw_delim)
+	end)
+
+	it("with one delimiter on the middle", function()
+		input = { "GET http://host2", "", "###", "GET http://host" }
+
+		r = d.find_request(input, 1)
+		assert.are.same(1, r.s)
+		assert.are.same(2, r.e)
+		assert.is_false(r.sw_delim)
+
+		r = d.find_request(input, 2)
+		assert.are.same(1, r.s)
+		assert.are.same(2, r.e)
+		assert.is_false(r.sw_delim)
+
+		r = d.find_request(input, 3)
+		assert.are.same(4, r.s)
+		assert.are.same(4, r.e)
+		assert.is_true(r.sw_delim)
+
+		r = d.find_request(input, 4)
+		assert.are.same(4, r.s)
+		assert.are.same(4, r.e)
+		assert.is_true(r.sw_delim)
+	end)
+end)
+
 describe("find request definition:", function()
 	local s, e, input
 

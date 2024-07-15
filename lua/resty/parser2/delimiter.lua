@@ -3,6 +3,35 @@ local M = {}
 ---is a token_start for a new starting rest call
 local token_DELIMITER = "###"
 
+local function find_delimiter(lines, selected, step)
+	local with_delimiter = false
+
+	while true do
+		local line = lines[selected]
+		if not line then
+			selected = selected + (step * -1)
+			break
+		elseif vim.startswith(line, token_DELIMITER) then
+			selected = selected + (step * -1)
+			with_delimiter = true
+			break
+		end
+		selected = selected + step
+	end
+
+	return with_delimiter, selected
+end
+
+function M.find_request(lines, selected)
+	local result = {}
+	result.sw_delim, result.s = find_delimiter(lines, selected, -1)
+
+	selected = selected + 1
+	result.ew_delim, result.e = find_delimiter(lines, selected, 1)
+
+	return result
+end
+
 function M.find_req_def(lines, selected)
 	local start_req_def = selected
 

@@ -4,32 +4,35 @@ local M = {}
 local token_DELIMITER = "###"
 
 local function find_delimiter(lines, selected, step)
-	local with_delimiter = false
-
 	while true do
 		local line = lines[selected]
-		if not line then
-			selected = selected + (step * -1)
+		if not line or vim.startswith(line, token_DELIMITER) then
 			break
-		elseif vim.startswith(line, token_DELIMITER) then
-			selected = selected + (step * -1)
-			with_delimiter = true
-			break
+		else
+			selected = selected + step
 		end
-		selected = selected + step
 	end
 
-	return with_delimiter, selected
+	local inverse_step = step * -1
+	return selected + inverse_step
 end
 
 function M.find_request(lines, selected)
-	local result = {}
-	result.sw_delim, result.s = find_delimiter(lines, selected, -1)
+	local len = #lines
+	if selected > len then
+		error("the selected row: " .. selected .. " is greater then the given rows: " .. len, 0)
+	elseif selected == len and vim.startswith(lines[len], token_DELIMITER) then
+		error("after the selected row: " .. selected .. " are no more input lines", 0)
+	end
 
-	selected = selected + 1
-	result.ew_delim, result.e = find_delimiter(lines, selected, 1)
+	local s = find_delimiter(lines, selected, -1)
+	local e = find_delimiter(lines, selected + 1, 1)
 
-	return result
+	if s > e then
+		error("after the selected row: " .. selected .. " are no more input lines", 0)
+	end
+
+	return s, e
 end
 
 function M.find_req_def(lines, selected)

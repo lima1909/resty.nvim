@@ -3,74 +3,110 @@ local p = require("resty.parser2")
 local d = require("resty.parser2.delimiter")
 
 describe("find request:", function()
-	local r, input
+	local s, e, input
 
-	-- error, selected is greater then #lines
-	-- it("empty", function()
-	-- 	input = {}
-	-- 	r = d.find_request(input, 1)
-	-- 	assert.are.same(1, r.s)
-	-- 	assert.are.same(1, r.e)
-	-- 	assert.is_false(r.sw_delim)
-	-- end)
+	it("empty", function()
+		input = {}
+
+		local ok, err = pcall(d.find_request, input, 1)
+		assert.is_false(ok)
+		assert.are.same("the selected row: 1 is greater then the given rows: 0", err)
+	end)
 
 	it("one", function()
 		input = { "" }
-		r = d.find_request(input, 1)
-		assert.are.same(1, r.s)
-		assert.are.same(1, r.e)
-		assert.is_false(r.sw_delim)
+
+		s, e = d.find_request(input, 1)
+		assert.are.same(1, s)
+		assert.are.same(1, e)
+	end)
+
+	it("one ###", function()
+		input = { "###" }
+
+		local ok, err = pcall(d.find_request, input, 1)
+		assert.is_false(ok)
+		assert.are.same("after the selected row: 1 are no more input lines", err)
+	end)
+
+	it("double ###", function()
+		input = { "###", "###" }
+
+		local ok, err = pcall(d.find_request, input, 1)
+		assert.is_false(ok)
+		assert.are.same("after the selected row: 1 are no more input lines", err)
+
+		ok, err = pcall(d.find_request, input, 2)
+		assert.is_false(ok)
+		assert.are.same("after the selected row: 2 are no more input lines", err)
 	end)
 
 	it("without delimiter", function()
 		input = { "@k=v", "", "GET http://host", "" }
-		r = d.find_request(input, 2)
-		assert.are.same(1, r.s)
-		assert.are.same(4, r.e)
-		assert.is_false(r.sw_delim)
+
+		s, e = d.find_request(input, 2)
+		assert.are.same(1, s)
+		assert.are.same(4, e)
 	end)
 
 	it("with one delimiter on the start", function()
 		input = { "###", "@key=value", "GET http://host" }
 
-		r = d.find_request(input, 1)
-		assert.are.same(2, r.s)
-		assert.are.same(3, r.e)
-		assert.is_true(r.sw_delim)
+		s, e = d.find_request(input, 1)
+		assert.are.same(2, s)
+		assert.are.same(3, e)
 
-		r = d.find_request(input, 2)
-		assert.are.same(2, r.s)
-		assert.are.same(3, r.e)
-		assert.is_true(r.sw_delim)
+		s, e = d.find_request(input, 2)
+		assert.are.same(2, s)
+		assert.are.same(3, e)
 
-		r = d.find_request(input, 3)
-		assert.are.same(2, r.s)
-		assert.are.same(3, r.e)
-		assert.is_true(r.sw_delim)
+		s, e = d.find_request(input, 3)
+		assert.are.same(2, s)
+		assert.are.same(3, e)
 	end)
 
 	it("with one delimiter on the middle", function()
 		input = { "GET http://host2", "", "###", "GET http://host" }
 
-		r = d.find_request(input, 1)
-		assert.are.same(1, r.s)
-		assert.are.same(2, r.e)
-		assert.is_false(r.sw_delim)
+		s, e = d.find_request(input, 1)
+		assert.are.same(1, s)
+		assert.are.same(2, e)
 
-		r = d.find_request(input, 2)
-		assert.are.same(1, r.s)
-		assert.are.same(2, r.e)
-		assert.is_false(r.sw_delim)
+		s, e = d.find_request(input, 2)
+		assert.are.same(1, s)
+		assert.are.same(2, e)
 
-		r = d.find_request(input, 3)
-		assert.are.same(4, r.s)
-		assert.are.same(4, r.e)
-		assert.is_true(r.sw_delim)
+		s, e = d.find_request(input, 3)
+		assert.are.same(4, s)
+		assert.are.same(4, e)
 
-		r = d.find_request(input, 4)
-		assert.are.same(4, r.s)
-		assert.are.same(4, r.e)
-		assert.is_true(r.sw_delim)
+		s, e = d.find_request(input, 4)
+		assert.are.same(4, s)
+		assert.are.same(4, e)
+	end)
+
+	it("with three delimiter", function()
+		input = { "@key=value", "###", "GET http://host", "###", "GET http://host2", "###" }
+
+		s, e = d.find_request(input, 1)
+		assert.are.same(1, s)
+		assert.are.same(1, e)
+
+		s, e = d.find_request(input, 2)
+		assert.are.same(3, s)
+		assert.are.same(3, e)
+
+		s, e = d.find_request(input, 3)
+		assert.are.same(3, s)
+		assert.are.same(3, e)
+
+		s, e = d.find_request(input, 4)
+		assert.are.same(5, s)
+		assert.are.same(5, e)
+
+		local ok, err = pcall(d.find_request, input, 6)
+		assert.is_false(ok)
+		assert.are.same("after the selected row: 6 are no more input lines", err)
 	end)
 end)
 

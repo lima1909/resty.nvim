@@ -205,16 +205,11 @@ Get https://httpbin.org/get
 ]]
 
 		local r = parser.parse(input, 2)
-
 		local o = output.new()
 		o:exec_and_show_response(r)
+
 		-- wait of curl response
-		vim.wait(1000, function()
-			-- wait a little bit
-			local s = ""
-			for i = 1, 10000, 1 do
-				s = s .. i
-			end
+		vim.wait(3000, function()
 			return 1 == o.current_window_id
 		end)
 

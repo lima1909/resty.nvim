@@ -21,7 +21,6 @@ describe("parser:", function()
 		})
 	end)
 
-	--Note: invalid status transition, not implemented yet
 	it("only one variable and method and url", function()
 		check({ "@key=value", "GET http://host" }, 0, {
 			readed_lines = 2,
@@ -264,23 +263,23 @@ describe("errors:", function()
 		check(
 			"@key=value",
 			1,
-			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_GLOBAL_VARIABLE }
+			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_LOCAL_VARIABLE }
 		)
 	end)
 
 	it("only one variable and delimiter", function()
 		check("@key=value\n###", 1, {
-			message = "the selected row: 1 is not in a request definition",
-			lnum = 2,
-			current_state = p.STATE_DELIMITER,
+			message = "a valid request expect at least a url",
+			lnum = 1,
+			current_state = p.STATE_LOCAL_VARIABLE,
 		})
 	end)
 
 	it("only delimiter", function()
 		check("###", 1, {
-			message = "a valid request expect at least a url",
+			message = "after the selected row: 1 are no more input lines",
 			lnum = 1,
-			current_state = p.STATE_DELIMITER,
+			current_state = p.STATE_START,
 		})
 	end)
 
@@ -288,23 +287,23 @@ describe("errors:", function()
 		check(
 			"@key=",
 			1,
-			{ message = "an empty value is not allowed", lnum = 1, current_state = p.STATE_GLOBAL_VARIABLE }
+			{ message = "an empty value is not allowed", lnum = 1, current_state = p.STATE_LOCAL_VARIABLE }
 		)
 	end)
 
 	it("wrong selection", function()
 		check("GET http://host", 2, {
 			message = "the selected row: 2 is greater then the given rows: 1",
-			lnum = 0,
+			lnum = 1,
 			current_state = p.STATE_START,
 		})
 	end)
 
 	it("selected in global variable", function()
 		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
-			message = "the selected row: 2 is not in a request definition",
-			lnum = 3,
-			current_state = p.STATE_METHOD_URL,
+			message = "a valid request expect at least a url",
+			lnum = 2,
+			current_state = p.STATE_LOCAL_VARIABLE,
 		})
 	end)
 end)

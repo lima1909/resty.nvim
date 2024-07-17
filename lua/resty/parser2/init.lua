@@ -9,7 +9,7 @@ M.__index = M
 M.new = function()
 	local p = {
 		current_state = M.STATE_START,
-		readed_lines = 0,
+		readed_lines = 1,
 		duration = 0,
 		body_is_ready = false,
 		variables = {},
@@ -96,30 +96,16 @@ body -> body				*
 ]]
 
 M.STATE_START = 0
-M.STATE_GLOBAL_VARIABLE = 1
-M.STATE_LOCAL_VARIABLE = 2
-M.STATE_DELIMITER = 3
-M.STATE_METHOD_URL = 4
-M.STATE_HEADERS_QUERY = 5
-M.STATE_BODY = 6
+M.STATE_LOCAL_VARIABLE = 1
+M.STATE_METHOD_URL = 2
+M.STATE_HEADERS_QUERY = 3
+M.STATE_BODY = 4
 
 local states = {
-	{
-		id = M.STATE_GLOBAL_VARIABLE,
-		name = "global variables",
-		parse = M.parse_variable,
-	},
 	{
 		id = M.STATE_LOCAL_VARIABLE,
 		name = "local variables",
 		parse = M.parse_variable,
-	},
-	{
-		id = M.STATE_DELIMITER,
-		name = "delimiter",
-		parse = function(p, line)
-			return d.parse_delimiter(p, line)
-		end,
 	},
 	{
 		id = M.STATE_METHOD_URL,
@@ -141,9 +127,7 @@ local states = {
 }
 
 local transitions = {
-	[M.STATE_START] = { M.STATE_GLOBAL_VARIABLE, M.STATE_DELIMITER, M.STATE_METHOD_URL },
-	[M.STATE_GLOBAL_VARIABLE] = { M.STATE_GLOBAL_VARIABLE, M.STATE_DELIMITER, M.STATE_METHOD_URL },
-	[M.STATE_DELIMITER] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
+	[M.STATE_START] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
 	[M.STATE_LOCAL_VARIABLE] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
 	[M.STATE_METHOD_URL] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
 	[M.STATE_HEADERS_QUERY] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
@@ -263,39 +247,53 @@ local function input_to_lines(input)
 	end
 end
 
+function M:read_line(line, parse)
+	if not line then
+		return true
+	end
+
+	if M.ignore_line(line) == true then
+		return false
+	end
+
+	line = M.cut_comment(line)
+	return not parse(self, line)
+end
+
 ---Entry point, the parser
 ---@param input string | { }
 ---@param selected number
 function M:parse(input, selected)
 	local lines = input_to_lines(input)
-	if selected > #lines then
-		return self:add_error("the selected row: " .. selected .. " is greater then the given rows: " .. #lines)
+
+	local ok, req_start, req_end = pcall(d.find_request, lines, selected)
+	if not ok then
+		return self:add_error(req_start)
 	end
 
-	self.selected = selected
-	self.lines = lines
-	self.readed_lines = 1
-	self.end_line = #lines
+	-- start == 1, no global variables exist
+	if req_start > 1 then
+		-- read global variables
+		while not self:read_line(lines[self.readed_lines], M.parse_variable) do
+			self.readed_lines = self.readed_lines + 1
+		end
+	end
 
+	self.readed_lines = req_start
 	while true do
 		local line = lines[self.readed_lines]
-		line = M.cut_comment(line)
 
-		if self.current_state ~= M.STATE_GLOBAL_VARIABLE or self.current_state ~= M.STATE_LOCAL_VARIABLE then
-			local l, err = M.replace_variable(self.variables, line)
-
-			if l then
-				line = l
-			else
-				self:add_error(err)
-			end
+		local l, err = M.replace_variable(self.variables, line)
+		if l then
+			line = l
+		else
+			self:add_error(err)
 		end
 
-		if not M.ignore_line(line) then
-			self:do_transition(line)
-		end
+		-- read the line and execute the state machine
+		self:read_line(line, M.do_transition)
 
-		if self.readed_lines == self.end_line then
+		if self.readed_lines == req_end then
 			break
 		end
 

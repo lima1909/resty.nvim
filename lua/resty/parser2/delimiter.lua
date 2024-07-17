@@ -8,13 +8,11 @@ local function find_delimiter(lines, selected, step)
 		local line = lines[selected]
 		if not line or vim.startswith(line, token_DELIMITER) then
 			break
-		else
-			selected = selected + step
 		end
+		selected = selected + step
 	end
 
-	local inverse_step = step * -1
-	return selected + inverse_step
+	return selected + step * -1
 end
 
 function M.find_request(lines, selected)

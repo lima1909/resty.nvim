@@ -209,7 +209,7 @@ Get https://httpbin.org/get
 		o:exec_and_show_response(r)
 
 		-- wait of curl response
-		vim.wait(3000, function()
+		vim.wait(5000, function()
 			return 1 == o.current_window_id
 		end)
 

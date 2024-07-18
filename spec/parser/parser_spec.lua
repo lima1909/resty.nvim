@@ -306,4 +306,20 @@ describe("errors:", function()
 			current_state = p.STATE_LOCAL_VARIABLE,
 		})
 	end)
+
+	it("invalid transition, is not a method", function()
+		check({ "@key=value", "accept: application/json" }, 2, {
+			message = "invalid method name: 'accept:'. Only letters are allowed",
+			lnum = 2,
+			current_state = p.STATE_METHOD_URL,
+		})
+	end)
+
+	it("invalid transition", function()
+		check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
+			message = "from current state: 'body' are only possible: body",
+			lnum = 5,
+			current_state = p.STATE_BODY,
+		})
+	end)
 end)

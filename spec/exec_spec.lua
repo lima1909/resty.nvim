@@ -50,7 +50,7 @@ Get https://httpbin.org/get
 			assert.is_false(r:has_errors())
 
 			local req_def = r.result
-			exec.curl_wait(3000, req_def, callback, error_fn)
+			exec.curl_wait(7000, req_def, callback, error_fn)
 
 			assert.is_nil(error)
 			assert.are.same(200, response.status)
@@ -67,7 +67,7 @@ Get https://.org/get
 			assert.is_false(r:has_errors())
 
 			local req_def = r.result
-			exec.curl_wait(3000, req_def, callback, error_fn)
+			exec.curl_wait(7000, req_def, callback, error_fn)
 
 			assert.is_not_nil(error)
 			assert.are.same(6, error.exit)

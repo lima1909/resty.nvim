@@ -66,17 +66,10 @@ end
 --[[ 
 
 * comment and empty line: ignore
-* states: start, global_variable, delimiter, method_url, local_variable, headers_query, body, end_req_def
+* states: start, method_url, local_variable, headers_query, body, end_req_def
 * grammar:
 
-start -> global_variable		* 
-	| delimiter			*
-	| method_url			*
-
-global_variable -> global_variable	*	
-	| delimiter			*
-
-delimiter -> local_variable		*	
+start -> local_variable			*
 	| method_url			*
 
 local_variable -> local_variable	*	
@@ -136,17 +129,12 @@ local transitions = {
 
 function M:do_transition(line)
 	local ts = transitions[self.current_state]
-	-- if ts then
 	for _, t in ipairs(ts) do
 		local s = states[t]
-		-- if s then
 		if s.parse(self, line) then
 			self.current_state = s.id
-			return true
+			return
 		end
-		-- else
-		-- error("no state found for transition" .. t, 0)
-		-- end
 	end
 	--
 	-- no valid transition found
@@ -154,11 +142,7 @@ function M:do_transition(line)
 	for _, t in ipairs(ts) do
 		err = err .. states[t].name .. ", "
 	end
-	print(err:sub(1, #err - 2))
-	return false
-	-- else
-	-- error("for current state: " .. current_state .. "is no transition defiened", 0)
-	-- end
+	self:add_error(err:sub(1, #err - 2))
 end
 
 function M:has_errors()

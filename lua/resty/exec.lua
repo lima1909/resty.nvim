@@ -103,6 +103,7 @@ M.exec_with_stop_time = function(fn, ...)
 	local start_time = os.clock()
 	local results = { fn(...) }
 	table.insert(results, os.clock() - start_time)
+	---@diagnostic disable-next-line: deprecated
 	return unpack(results)
 end
 

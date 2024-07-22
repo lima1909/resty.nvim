@@ -54,9 +54,10 @@ describe("variables", function()
 		}
 
 		for _, tc in ipairs(tt) do
-			local line, err = p.replace_variable(variables, tc.input)
-			if err then
-				assert.are.same(tc.err_msg, err)
+			local parser = p.new()
+			local line = parser:replace_variable(variables, tc.input)
+			if parser:has_errors() then
+				assert.are.same(tc.err_msg, parser.errors[1].message)
 			else
 				assert.are.same(tc.expected, line)
 			end

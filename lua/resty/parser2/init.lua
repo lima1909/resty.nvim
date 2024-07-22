@@ -152,10 +152,10 @@ end
 
 ---@param variables { }
 ---@param line string
----@return string | nil, string | nil
-function M.replace_variable(variables, line)
+---@return string
+function M:replace_variable(variables, line)
 	if not variables then
-		return line, nil
+		return line
 	end
 
 	local _, start_pos = string.find(line, "{{")
@@ -163,13 +163,15 @@ function M.replace_variable(variables, line)
 
 	if not start_pos and not end_pos then
 		-- no variable found
-		return line, nil
+		return line
 	elseif start_pos and not end_pos then
 		-- error
-		return nil, "missing closing brackets: '}}'"
+		self:add_error("missing closing brackets: '}}'")
+		return line
 	elseif not start_pos and end_pos then
 		-- error
-		return nil, "missing open brackets: '{{'"
+		self:add_error("missing open brackets: '{{'")
+		return line
 	end
 
 	local before = string.sub(line, 1, start_pos - 2)
@@ -178,11 +180,12 @@ function M.replace_variable(variables, line)
 
 	local value = variables[name]
 	if not value then
-		return nil, "no variable found with name: '" .. name .. "'"
+		self:add_error("no variable found with name: '" .. name .. "'")
+		return line
 	end
 
 	local new_line = before .. value .. after
-	return M.replace_variable(variables, new_line)
+	return self:replace_variable(variables, new_line)
 end
 
 local function input_to_lines(input)
@@ -214,6 +217,7 @@ end
 function M:parse(input, selected)
 	local lines = input_to_lines(input)
 
+	-- find request
 	local ok, req_start, req_end = pcall(d.find_request, lines, selected)
 	if not ok then
 		return self:add_error(req_start)
@@ -231,16 +235,11 @@ function M:parse(input, selected)
 		end
 	end
 
+	-- read request
 	self.readed_lines = req_start
 	while true do
 		local line = lines[self.readed_lines]
-
-		local l, err = M.replace_variable(self.variables, line)
-		if l then
-			line = l
-		else
-			self:add_error(err)
-		end
+		line = self:replace_variable(self.variables, line)
 
 		-- read the line and execute the state machine
 		self:read_line(line, M.do_transition)

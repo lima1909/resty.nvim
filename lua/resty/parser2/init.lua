@@ -13,125 +13,89 @@ M.new = function()
 		duration = 0,
 		body_is_ready = false,
 		variables = {},
-		request = {},
+		request = {
+			headers = {},
+			query = {},
+		},
 		errors = {},
 	}
+
 	return setmetatable(p, M)
 end
 
-function M:parse_variable(line)
-	local ok, result = pcall(kv.parse_variable, line)
+function M:parse_line(parser, line, set_result)
+	local no_error, result = pcall(parser, line, self)
 
-	if not ok then
+	if not no_error then
 		self:add_error(result)
 		return true
 	elseif result then
-		self.variables[result.k] = result.v
+		set_result(self, result)
 		return true
 	end
 end
-
-function M:parse_headers_query(line)
-	local ok, result = pcall(kv.parse_headers_query, line)
-
-	if not ok then
-		self:add_error(result)
-		return true
-	elseif result then
-		self.request.headers = self.request.headers or {}
-		self.request.query = self.request.query or {}
-
-		if result.delimiter == "=" then
-			self.request.query[result.k] = result.v
-		else
-			self.request.headers[result.k] = result.v
-		end
-
-		return true
-	end
-end
-
-function M:parse_method_url(line)
-	local ok, result = pcall(mu.parse_method_url, line)
-
-	if not ok then
-		self:add_error(result)
-		return true
-	elseif result then
-		self.request = result
-		return true
-	end
-end
-
---[[ 
-
-* comment and empty line: ignore
-* states: start, method_url, local_variable, headers_query, body, end_req_def
-* grammar:
-
-start -> local_variable			*
-	| method_url			*
-
-local_variable -> local_variable	*	
-	| method_url			*
-
-method_url-> headers_query		*	
-	| body				*
-	| end_req_def
-
-headers_query -> headers_query		*	
-	| body				*
-	| end_req_def
-
-body -> body				*
-	| end_req_def
-
-]]
 
 M.STATE_START = 0
-M.STATE_LOCAL_VARIABLE = 1
-M.STATE_METHOD_URL = 2
-M.STATE_HEADERS_QUERY = 3
-M.STATE_BODY = 4
+
+M.STATE_VARIABLE = {
+	id = 1,
+	name = "variables",
+	parser = kv.parse_variable,
+	set_result = function(slf, r)
+		slf.variables[r.k] = r.v
+	end,
+}
+
+M.STATE_METHOD_URL = {
+	id = 2,
+	name = "method and url",
+	parser = mu.parse_method_url,
+	set_result = function(slf, r)
+		slf.request.method = r.method
+		slf.request.url = r.url
+	end,
+}
+
+M.STATE_HEADERS_QUERY = {
+	id = 3,
+	name = "header or query",
+	parser = kv.parse_headers_query,
+	set_result = function(slf, r)
+		if r.delimiter == "=" then
+			slf.request.query[r.k] = r.v
+		else
+			slf.request.headers[r.k] = r.v
+		end
+	end,
+}
+
+M.STATE_BODY = {
+	id = 4,
+	name = "body",
+	parser = by.parse_body,
+	set_result = function() end,
+}
 
 local states = {
-	{
-		id = M.STATE_LOCAL_VARIABLE,
-		name = "local variables",
-		parse = M.parse_variable,
-	},
-	{
-		id = M.STATE_METHOD_URL,
-		name = "method and url",
-		parse = M.parse_method_url,
-	},
-	{
-		id = M.STATE_HEADERS_QUERY,
-		name = "header or query",
-		parse = M.parse_headers_query,
-	},
-	{
-		id = M.STATE_BODY,
-		name = "body",
-		parse = function(p, line)
-			return by.parse_body(p, line)
-		end,
-	},
+	M.STATE_VARIABLE,
+	M.STATE_METHOD_URL,
+	M.STATE_HEADERS_QUERY,
+	M.STATE_BODY,
 }
 
 local transitions = {
-	[M.STATE_START] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_LOCAL_VARIABLE] = { M.STATE_LOCAL_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_METHOD_URL] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
-	[M.STATE_HEADERS_QUERY] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
-	[M.STATE_BODY] = { M.STATE_BODY },
+	[M.STATE_START] = { M.STATE_VARIABLE.id, M.STATE_METHOD_URL.id },
+	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE.id, M.STATE_METHOD_URL.id },
+	[M.STATE_METHOD_URL.id] = { M.STATE_HEADERS_QUERY.id, M.STATE_BODY.id },
+	[M.STATE_HEADERS_QUERY.id] = { M.STATE_HEADERS_QUERY.id, M.STATE_BODY.id },
+	[M.STATE_BODY.id] = { M.STATE_BODY.id },
 }
 
 function M:do_transition(line)
 	local ts = transitions[self.current_state]
 	for _, t in ipairs(ts) do
 		local s = states[t]
-		if s.parse(self, line) then
+		if self:parse_line(s.parser, line, s.set_result) then
 			self.current_state = s.id
 			return
 		end
@@ -161,7 +125,7 @@ end
 
 function M.ignore_line(line)
 	-- comment
-	if vim.startswith(line, "#") and not vim.startswith(line, "###") then
+	if vim.startswith(line, "#") then
 		return true
 	-- empty line
 	elseif line == "" or vim.trim(line) == "" then
@@ -233,15 +197,15 @@ end
 
 function M:read_line(line, parse)
 	if not line then
-		return true
-	end
-
-	if M.ignore_line(line) == true then
 		return false
 	end
 
+	if M.ignore_line(line) == true then
+		return true
+	end
+
 	line = M.cut_comment(line)
-	return not parse(self, line)
+	return parse(self, line)
 end
 
 ---Entry point, the parser
@@ -258,7 +222,11 @@ function M:parse(input, selected)
 	-- start == 1, no global variables exist
 	if req_start > 1 then
 		-- read global variables
-		while not self:read_line(lines[self.readed_lines], M.parse_variable) do
+		while
+			self:read_line(lines[self.readed_lines], function(_, line)
+				return self:parse_line(kv.parse_variable, line, M.STATE_VARIABLE.set_result)
+			end)
+		do
 			self.readed_lines = self.readed_lines + 1
 		end
 	end

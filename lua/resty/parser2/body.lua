@@ -12,7 +12,7 @@ local function is_body_end(line)
 	end
 end
 
-function M.parse_body(p, line)
+function M.parse_body(line, p)
 	if p.body_is_ready then
 		return
 	end

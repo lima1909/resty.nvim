@@ -32,14 +32,14 @@ end
 local token_VARIABLE = "@"
 
 function M.parse_variable(line)
-	if not vim.startswith(line, token_VARIABLE) then
+	if not vim.startswith(line, token_VARIABLE) or (vim.startswith(line, token_VARIABLE) and #line == 1) then
+		-- is not a variable
 		return nil
 	end
 
 	-- cut the variable token
 	local l = string.sub(line, #token_VARIABLE + 1)
 	local pos_eq = l:find("=")
-
 	local k, v = split_key_value(l, "=", pos_eq)
 
 	return {

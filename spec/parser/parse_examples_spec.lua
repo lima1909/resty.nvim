@@ -54,10 +54,12 @@ filter = id = {{id}}
 		check(5, {
 			readed_lines = 9,
 			variables = { host = "myhost", port = "8080" },
-			state = p.STATE_METHOD_URL,
+			state = p.STATE_METHOD_URL.id,
 			request = {
 				method = "GET",
 				url = "http://myhost:8080",
+				headers = {},
+				query = {},
 			},
 		})
 	end)
@@ -66,10 +68,12 @@ filter = id = {{id}}
 		check(11, {
 			readed_lines = 15,
 			variables = { host = "myhost", port = "9090" },
-			state = p.STATE_METHOD_URL,
+			state = p.STATE_METHOD_URL.id,
 			request = {
 				method = "GET",
 				url = "http://myhost:9090",
+				headers = {},
+				query = {},
 			},
 		})
 	end)
@@ -78,7 +82,7 @@ filter = id = {{id}}
 		check(16, {
 			readed_lines = 30,
 			variables = { host = "myhost", port = "8080" },
-			state = p.STATE_BODY,
+			state = p.STATE_BODY.id,
 			request = {
 				method = "POST",
 				url = "http://host",
@@ -98,7 +102,7 @@ filter = id = {{id}}
 		check(31, {
 			readed_lines = 37,
 			variables = { host = "myhost", port = "8080", id = '"42"' },
-			state = p.STATE_HEADERS_QUERY,
+			state = p.STATE_HEADERS_QUERY.id,
 			request = {
 				method = "GET",
 				url = "http://host",

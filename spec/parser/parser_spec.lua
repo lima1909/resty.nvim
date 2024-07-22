@@ -16,8 +16,8 @@ describe("parser:", function()
 		check("GET http://host", 1, {
 			readed_lines = 1,
 			variables = {},
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -25,8 +25,8 @@ describe("parser:", function()
 		check({ "@key=value", "GET http://host" }, 0, {
 			readed_lines = 2,
 			variables = { key = "value" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -34,8 +34,8 @@ describe("parser:", function()
 		check("GET http://host # with comment in the same line", 1, {
 			readed_lines = 1,
 			variables = {},
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -43,8 +43,8 @@ describe("parser:", function()
 		check({ "@host=my-host", "###", "GET http://{{host}}" }, 3, {
 			readed_lines = 3,
 			variables = { host = "my-host" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://my-host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://my-host", headers = {}, query = {} },
 		})
 	end)
 
@@ -52,8 +52,8 @@ describe("parser:", function()
 		check({ "@key=value", "###", "GET http://host" }, 3, {
 			readed_lines = 3,
 			variables = { key = "value" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -61,8 +61,8 @@ describe("parser:", function()
 		check({ "@key1=value1 #comment", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
 			readed_lines = 7,
 			variables = { key1 = "value1", key2 = "value2" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -70,8 +70,8 @@ describe("parser:", function()
 		check("###\nGET http://host", 1, {
 			readed_lines = 2,
 			variables = {},
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -79,8 +79,8 @@ describe("parser:", function()
 		check({ "###", "@key=value", "# comment", "GET http://host" }, 2, {
 			readed_lines = 4,
 			variables = { key = "value" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -88,8 +88,8 @@ describe("parser:", function()
 		check({ "@key=value", "# comment", "###", "@key2=value2", "GET http://host" }, 3, {
 			readed_lines = 5,
 			variables = { key = "value", key2 = "value2" },
-			state = p.STATE_METHOD_URL,
-			request = { method = "GET", url = "http://host" },
+			state = p.STATE_METHOD_URL.id,
+			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 
@@ -97,7 +97,7 @@ describe("parser:", function()
 		check({ "GET http://host", "", "accept: application/json # comment", "" }, 4, {
 			readed_lines = 4,
 			variables = {},
-			state = p.STATE_HEADERS_QUERY,
+			state = p.STATE_HEADERS_QUERY.id,
 			request = {
 				method = "GET",
 				url = "http://host",
@@ -111,7 +111,7 @@ describe("parser:", function()
 		check({ "@key=value", "###", "GET http://host", "", "accept: application/json", "" }, 4, {
 			readed_lines = 6,
 			variables = { key = "value" },
-			state = p.STATE_HEADERS_QUERY,
+			state = p.STATE_HEADERS_QUERY.id,
 			request = {
 				method = "GET",
 				url = "http://host",
@@ -125,7 +125,7 @@ describe("parser:", function()
 		check({ "GET http://host", "", "id=42# comment", "" }, 2, {
 			readed_lines = 4,
 			variables = {},
-			state = p.STATE_HEADERS_QUERY,
+			state = p.STATE_HEADERS_QUERY.id,
 			request = {
 				method = "GET",
 				url = "http://host",
@@ -139,7 +139,7 @@ describe("parser:", function()
 		check({ "GET http://host", "", "accept: application/json", "", "id=42" }, 1, {
 			readed_lines = 5,
 			variables = {},
-			state = p.STATE_HEADERS_QUERY,
+			state = p.STATE_HEADERS_QUERY.id,
 			request = {
 				method = "GET",
 				url = "http://host",
@@ -153,8 +153,14 @@ describe("parser:", function()
 		check({ "GET http://host", "  ", "{", "\t'name': 'John'", "}" }, 1, {
 			readed_lines = 5,
 			variables = {},
-			state = p.STATE_BODY,
-			request = { method = "GET", url = "http://host", body = { "{", "\t'name': 'John'", "}" } },
+			state = p.STATE_BODY.id,
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = {},
+				query = {},
+				body = { "{", "\t'name': 'John'", "}" },
+			},
 		})
 	end)
 
@@ -165,7 +171,7 @@ describe("parser:", function()
 			{
 				readed_lines = 9,
 				variables = {},
-				state = p.STATE_BODY,
+				state = p.STATE_BODY.id,
 				request = {
 					method = "GET",
 					url = "http://host",
@@ -198,7 +204,7 @@ describe("parser:", function()
 			{
 				readed_lines = 13,
 				variables = { k = "v" },
-				state = p.STATE_BODY,
+				state = p.STATE_BODY.id,
 				request = {
 					method = "GET",
 					url = "http://host",
@@ -224,7 +230,7 @@ describe("parser:", function()
 			{
 				readed_lines = 4,
 				variables = { k = "v" },
-				state = p.STATE_HEADERS_QUERY,
+				state = p.STATE_HEADERS_QUERY.id,
 				request = {
 					method = "GET",
 					url = "http://host",
@@ -263,7 +269,7 @@ describe("errors:", function()
 		check(
 			"@key=value",
 			1,
-			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_LOCAL_VARIABLE }
+			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_VARIABLE.id }
 		)
 	end)
 
@@ -271,7 +277,7 @@ describe("errors:", function()
 		check("@key=value\n###", 1, {
 			message = "a valid request expect at least a url",
 			lnum = 1,
-			current_state = p.STATE_LOCAL_VARIABLE,
+			current_state = p.STATE_VARIABLE.id,
 		})
 	end)
 
@@ -284,11 +290,7 @@ describe("errors:", function()
 	end)
 
 	it("with variable", function()
-		check(
-			"@key=",
-			1,
-			{ message = "an empty value is not allowed", lnum = 1, current_state = p.STATE_LOCAL_VARIABLE }
-		)
+		check("@key=", 1, { message = "an empty value is not allowed", lnum = 1, current_state = p.STATE_VARIABLE.id })
 	end)
 
 	it("wrong selection", function()
@@ -303,7 +305,7 @@ describe("errors:", function()
 		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
 			message = "a valid request expect at least a url",
 			lnum = 2,
-			current_state = p.STATE_LOCAL_VARIABLE,
+			current_state = p.STATE_VARIABLE.id,
 		})
 	end)
 
@@ -311,7 +313,7 @@ describe("errors:", function()
 		check({ "@key=value", "accept: application/json" }, 2, {
 			message = "invalid method name: 'accept:'. Only letters are allowed",
 			lnum = 2,
-			current_state = p.STATE_METHOD_URL,
+			current_state = p.STATE_METHOD_URL.id,
 		})
 	end)
 
@@ -319,7 +321,7 @@ describe("errors:", function()
 		check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
 			message = "from current state: 'body' are only possible: body",
 			lnum = 5,
-			current_state = p.STATE_BODY,
+			current_state = p.STATE_BODY.id,
 		})
 	end)
 end)

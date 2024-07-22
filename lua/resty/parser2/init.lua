@@ -125,7 +125,7 @@ end
 
 function M.ignore_line(line)
 	-- comment
-	if vim.startswith(line, "#") then
+	if vim.startswith(line, "#") and line:sub(1, 3) ~= "###" then
 		return true
 	-- empty line
 	elseif line == "" or vim.trim(line) == "" then
@@ -138,10 +138,6 @@ end
 ---@param line string
 ---@return string
 function M.cut_comment(line)
-	if line:sub(1, 3) == "###" then
-		return line
-	end
-
 	local pos = string.find(line, "#")
 	if not pos then
 		return line

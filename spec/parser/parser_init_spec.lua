@@ -14,7 +14,7 @@ describe("cut comments", function()
 
 	it("### comment", function()
 		local line = p.cut_comment("### comment")
-		assert.are.same("### comment", line)
+		assert.are.same("", line)
 	end)
 
 	it("comment in line", function()
@@ -62,5 +62,22 @@ describe("variables", function()
 				assert.are.same(tc.expected, line)
 			end
 		end
+	end)
+end)
+
+describe("ignore line", function()
+	it("true", function()
+		assert.is_true(p.ignore_line("#"))
+		assert.is_true(p.ignore_line("# text"))
+		assert.is_true(p.ignore_line(""))
+		assert.is_true(p.ignore_line(" "))
+	end)
+
+	it("false", function()
+		assert.is_false(p.ignore_line("###"))
+		assert.is_false(p.ignore_line("@key=value"))
+		assert.is_false(p.ignore_line("key=value"))
+		assert.is_false(p.ignore_line("key:value"))
+		assert.is_false(p.ignore_line("GET http://host"))
 	end)
 end)

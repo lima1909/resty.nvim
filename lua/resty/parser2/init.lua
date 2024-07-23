@@ -23,19 +23,10 @@ M.new = function()
 	return setmetatable(p, M)
 end
 
-function M:parse_line(parser, line, set_result)
-	local no_error, result = pcall(parser, line, self)
-
-	if not no_error then
-		self:add_error(result)
-		return true
-	elseif result then
-		set_result(self, result)
-		return true
-	end
-end
-
-M.STATE_START = 0
+M.STATE_START = {
+	id = 0,
+	name = "start",
+}
 
 M.STATE_VARIABLE = {
 	id = 1,
@@ -76,35 +67,39 @@ M.STATE_BODY = {
 	set_result = function() end,
 }
 
-local states = {
-	M.STATE_VARIABLE,
-	M.STATE_METHOD_URL,
-	M.STATE_HEADERS_QUERY,
-	M.STATE_BODY,
+local transitions = {
+	[M.STATE_START.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
+	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
+	[M.STATE_METHOD_URL.id] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	[M.STATE_HEADERS_QUERY.id] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	[M.STATE_BODY.id] = { M.STATE_BODY },
 }
 
-local transitions = {
-	[M.STATE_START] = { M.STATE_VARIABLE.id, M.STATE_METHOD_URL.id },
-	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE.id, M.STATE_METHOD_URL.id },
-	[M.STATE_METHOD_URL.id] = { M.STATE_HEADERS_QUERY.id, M.STATE_BODY.id },
-	[M.STATE_HEADERS_QUERY.id] = { M.STATE_HEADERS_QUERY.id, M.STATE_BODY.id },
-	[M.STATE_BODY.id] = { M.STATE_BODY.id },
-}
+function M:parse_line(parser, line, set_result)
+	local no_error, result = pcall(parser, line, self)
+
+	if not no_error then
+		self:add_error(result)
+		return true
+	elseif result then
+		set_result(self, result)
+		return true
+	end
+end
 
 function M:do_transition(line)
-	local ts = transitions[self.current_state]
-	for _, t in ipairs(ts) do
-		local s = states[t]
+	local ts = transitions[self.current_state.id]
+	for _, s in ipairs(ts) do
 		if self:parse_line(s.parser, line, s.set_result) then
-			self.current_state = s.id
+			self.current_state = s
 			return
 		end
 	end
 	--
 	-- no valid transition found
-	local err = "from current state: '" .. states[self.current_state].name .. "' are only possible: "
-	for _, t in ipairs(ts) do
-		err = err .. states[t].name .. ", "
+	local err = "from current state: '" .. self.current_state.name .. "' are only possible: "
+	for _, s in ipairs(ts) do
+		err = err .. s.name .. ", "
 	end
 	self:add_error(err:sub(1, #err - 2))
 end
@@ -224,7 +219,7 @@ function M:parse(input, selected)
 		-- read global variables
 		while
 			self:read_line(lines[self.readed_lines], function(_, line)
-				return self:parse_line(kv.parse_variable, line, M.STATE_VARIABLE.set_result)
+				return self:parse_line(M.STATE_VARIABLE.parser, line, M.STATE_VARIABLE.set_result)
 			end)
 		do
 			self.readed_lines = self.readed_lines + 1

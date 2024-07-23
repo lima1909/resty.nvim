@@ -8,7 +8,7 @@ describe("parser:", function()
 		assert.is_false(r:has_errors(), vim.inspect(r.errors), "has error")
 		assert.are.same(r.readed_lines, expected.readed_lines, "compare readed_lines")
 		assert.are.same(r.variables, expected.variables, "compare global_variables")
-		assert.are.same(r.current_state, expected.state, "compare state")
+		assert.are.same(r.current_state.id, expected.state, "compare state")
 		assert.are.same(r.request, expected.request or {}, "compare request")
 	end
 
@@ -250,18 +250,18 @@ describe("errors:", function()
 		local err = r.errors[1]
 		assert.are.same(expected.message, err.message)
 		assert.are.same(expected.lnum, err.lnum)
-		assert.are.same(expected.current_state, r.current_state)
+		assert.are.same(expected.current_state, r.current_state.id)
 	end
 
 	it("empty", function()
-		check("", 1, { message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START })
+		check("", 1, { message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START.id })
 	end)
 
 	it("only comment", function()
 		check(
 			"# comment",
 			1,
-			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START }
+			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START.id }
 		)
 	end)
 
@@ -285,7 +285,7 @@ describe("errors:", function()
 		check("###", 1, {
 			message = "after the selected row: 1 are no more input lines",
 			lnum = 1,
-			current_state = p.STATE_START,
+			current_state = p.STATE_START.id,
 		})
 	end)
 
@@ -297,7 +297,7 @@ describe("errors:", function()
 		check("GET http://host", 2, {
 			message = "the selected row: 2 is greater then the given rows: 1",
 			lnum = 1,
-			current_state = p.STATE_START,
+			current_state = p.STATE_START.id,
 		})
 	end)
 

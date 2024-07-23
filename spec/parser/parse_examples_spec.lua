@@ -46,7 +46,7 @@ filter = id = {{id}}
 		assert.is_false(r:has_errors(), vim.inspect(r.errors), "has error")
 		assert.are.same(r.readed_lines, expected.readed_lines, "compare readed_lines")
 		assert.are.same(r.variables, expected.variables, "compare global_variables")
-		assert.are.same(r.current_state, expected.state, "compare state")
+		assert.are.same(r.current_state.id, expected.state, "compare state")
 		assert.are.same(r.request, expected.request or {}, "compare request")
 	end
 

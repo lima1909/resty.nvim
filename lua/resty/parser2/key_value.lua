@@ -32,7 +32,8 @@ end
 local token_VARIABLE = "@"
 
 function M.parse_variable(line)
-	if not vim.startswith(line, token_VARIABLE) or (vim.startswith(line, token_VARIABLE) and #line == 1) then
+	local is_variable = vim.startswith(line, token_VARIABLE)
+	if not is_variable or (is_variable and #line == 1) then
 		-- is not a variable
 		return nil
 	end

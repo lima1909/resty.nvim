@@ -1,5 +1,6 @@
 local assert = require("luassert")
 local p = require("resty.parser2")
+local f = require("resty.output.format")
 
 describe("examples parser:", function()
 	local input = [[
@@ -41,7 +42,8 @@ GET http://host
 filter = id = {{id}} 
 ]]
 	local function check(selected, expected)
-		local r = p.new():parse(input, selected)
+		local r = p.parse(input, selected)
+		f.duration(r.duration)
 
 		assert.is_false(r:has_errors(), vim.inspect(r.errors), "has error")
 		assert.are.same(r.readed_lines, expected.readed_lines, "compare readed_lines")

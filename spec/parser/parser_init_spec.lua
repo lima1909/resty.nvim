@@ -1,20 +1,28 @@
 local assert = require("luassert")
 local p = require("resty.parser2")
 
+local parser = function()
+	return nil
+end
+
 describe("cut comments", function()
 	it("# comment", function()
-		local line = p.cut_comment("# comment")
-		assert.are.same("", line)
+		local r = p.new():read_line("# comment", parser)
+		assert.is_true(r)
 	end)
 
 	it("abc # comment", function()
-		local line = p.cut_comment("abc # comment")
+		local line
+		local r = p.new():read_line("abc # comment", function(_, l)
+			line = l
+		end)
+		assert.is_nil(r)
 		assert.are.same("abc ", line)
 	end)
 
 	it("### comment", function()
-		local line = p.cut_comment("### comment")
-		assert.are.same("", line)
+		local r = p.new():read_line("### comment", parser)
+		assert.is_false(r)
 	end)
 
 	it("comment in line", function()
@@ -23,10 +31,14 @@ describe("cut comments", function()
 			{ input = "host # comment", expected = "host " },
 			{ input = "host# comment", expected = "host" },
 			{ input = "host#", expected = "host" },
-			{ input = "# host# comment", expected = "" },
 		}
 		for _, tc in ipairs(tt) do
-			local line = p.cut_comment(tc.input)
+			local line
+			local r = p.new():read_line(tc.input, function(_, l)
+				line = l
+			end)
+
+			assert.is_nil(r)
 			assert.are.same(tc.expected, line)
 		end
 	end)
@@ -64,20 +76,24 @@ describe("variables", function()
 		end
 	end)
 end)
-
+--
 describe("ignore line", function()
 	it("true", function()
-		assert.is_true(p.ignore_line("#"))
-		assert.is_true(p.ignore_line("# text"))
-		assert.is_true(p.ignore_line(""))
-		assert.is_true(p.ignore_line(" "))
+		assert.is_true(p.new():read_line("#"))
+		assert.is_true(p.new():read_line("# text"))
+		assert.is_true(p.new():read_line(""))
+		assert.is_true(p.new():read_line(" "))
 	end)
 
 	it("false", function()
-		assert.is_false(p.ignore_line("###"))
-		assert.is_false(p.ignore_line("@key=value"))
-		assert.is_false(p.ignore_line("key=value"))
-		assert.is_false(p.ignore_line("key:value"))
-		assert.is_false(p.ignore_line("GET http://host"))
+		assert.is_false(p.new():read_line("###"))
+		assert.is_false(p.new():read_line())
+	end)
+
+	it("nil", function()
+		assert.is_nil(p.new():read_line("@key=value", parser))
+		assert.is_nil(p.new():read_line("key=value", parser))
+		assert.is_nil(p.new():read_line("key:value", parser))
+		assert.is_nil(p.new():read_line("GET http://host", parser))
 	end)
 end)

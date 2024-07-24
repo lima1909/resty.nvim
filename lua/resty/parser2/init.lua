@@ -1,35 +1,18 @@
-local d = require("resty.parser2.delimiter")
 local kv = require("resty.parser2.key_value")
 local mu = require("resty.parser2.method_url")
-local by = require("resty.parser2.body")
+local b = require("resty.parser2.body")
+local d = require("resty.parser2.delimiter")
 
 local M = {}
 M.__index = M
 
-M.new = function()
-	local p = {
-		current_state = M.STATE_START,
-		readed_lines = 1,
-		duration = 0,
-		body_is_ready = false,
-		variables = {},
-		request = {
-			headers = {},
-			query = {},
-		},
-		errors = {},
-	}
-
-	return setmetatable(p, M)
-end
-
 M.STATE_START = {
-	id = 0,
+	id = 1,
 	name = "start",
 }
 
 M.STATE_VARIABLE = {
-	id = 1,
+	id = 2,
 	name = "variables",
 	parser = kv.parse_variable,
 	set_result = function(slf, r)
@@ -38,7 +21,7 @@ M.STATE_VARIABLE = {
 }
 
 M.STATE_METHOD_URL = {
-	id = 2,
+	id = 3,
 	name = "method and url",
 	parser = mu.parse_method_url,
 	set_result = function(slf, r)
@@ -48,7 +31,7 @@ M.STATE_METHOD_URL = {
 }
 
 M.STATE_HEADERS_QUERY = {
-	id = 3,
+	id = 4,
 	name = "header or query",
 	parser = kv.parse_headers_query,
 	set_result = function(slf, r)
@@ -61,18 +44,23 @@ M.STATE_HEADERS_QUERY = {
 }
 
 M.STATE_BODY = {
-	id = 4,
+	id = 5,
 	name = "body",
-	parser = by.parse_body,
+	parser = b.parse_body,
 	set_result = function() end,
 }
 
 local transitions = {
-	[M.STATE_START.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_METHOD_URL.id] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
-	[M.STATE_HEADERS_QUERY.id] = { M.STATE_HEADERS_QUERY, M.STATE_BODY },
-	[M.STATE_BODY.id] = { M.STATE_BODY },
+	-- [M.STATE_START.id] =
+	{ M.STATE_VARIABLE, M.STATE_METHOD_URL },
+	-- [M.STATE_VARIABLE.id] =
+	{ M.STATE_VARIABLE, M.STATE_METHOD_URL },
+	-- [M.STATE_METHOD_URL.id] =
+	{ M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	-- [M.STATE_HEADERS_QUERY.id] =
+	{ M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	-- [M.STATE_BODY.id] =
+	{ M.STATE_BODY },
 }
 
 function M:parse_line(parser, line, set_result)
@@ -118,29 +106,6 @@ function M:add_error(message)
 	return self
 end
 
-function M.ignore_line(line)
-	-- comment
-	if vim.startswith(line, "#") and line:sub(1, 3) ~= "###" then
-		return true
-	-- empty line
-	elseif line == "" or vim.trim(line) == "" then
-		return true
-	else
-		return false
-	end
-end
-
----@param line string
----@return string
-function M.cut_comment(line)
-	local pos = string.find(line, "#")
-	if not pos then
-		return line
-	end
-
-	return line:sub(1, pos - 1)
-end
-
 ---@param variables { }
 ---@param line string
 ---@return string
@@ -179,74 +144,102 @@ function M:replace_variable(variables, line)
 	return self:replace_variable(variables, new_line)
 end
 
-local function input_to_lines(input)
-	if type(input) == "table" then
-		return input
-	elseif type(input) == "string" then
-		return vim.split(input, "\n")
-	else
-		error("only string or string array are supported as input. Got: " .. type(input))
-	end
-end
-
 function M:read_line(line, parse)
-	if not line then
+	if not line or line:sub(1, 3) == "###" then
 		return false
 	end
 
-	if M.ignore_line(line) == true then
+	-- ignore comment or empty line
+	if vim.startswith(line, "#") or line == "" or vim.trim(line) == "" then
 		return true
 	end
 
-	line = M.cut_comment(line)
+	-- cut comment
+	local pos = string.find(line, "#")
+	if pos then
+		line = line:sub(1, pos - 1)
+	end
+
 	return parse(self, line)
+end
+
+function M.new()
+	local p = {
+		current_state = M.STATE_START,
+		readed_lines = 1,
+		duration = 0,
+		body_is_ready = false,
+		variables = {},
+		request = {
+			headers = {},
+			query = {},
+		},
+		errors = {},
+	}
+	return setmetatable(p, M)
 end
 
 ---Entry point, the parser
 ---@param input string | { }
 ---@param selected number
-function M:parse(input, selected)
-	local lines = input_to_lines(input)
+function M.parse(input, selected)
+	local start_time = os.clock()
 
+	local lines
+	if type(input) == "table" then
+		lines = input
+	elseif type(input) == "string" then
+		lines = vim.split(input, "\n")
+	else
+		error("only string or string array are supported as input. Got: " .. type(input), 0)
+	end
+
+	local p = M.new()
+	--
 	-- find request
 	local ok, req_start, req_end = pcall(d.find_request, lines, selected)
 	if not ok then
-		return self:add_error(req_start)
+		return p:add_error(req_start)
 	end
 
 	-- start == 1, no global variables exist
 	if req_start > 1 then
 		-- read global variables
 		while
-			self:read_line(lines[self.readed_lines], function(_, line)
-				return self:parse_line(M.STATE_VARIABLE.parser, line, M.STATE_VARIABLE.set_result)
+			p:read_line(lines[p.readed_lines], function(_, line)
+				local no_error, result = pcall(kv.parse_variable, line)
+				if not no_error then
+					p:add_error(result)
+					return true
+				elseif result then
+					p.variables[result.k] = result.v
+					return true
+				end
 			end)
 		do
-			self.readed_lines = self.readed_lines + 1
+			p.readed_lines = p.readed_lines + 1
 		end
 	end
 
 	-- read request
-	self.readed_lines = req_start
+	p.readed_lines = req_start
 	while true do
-		local line = lines[self.readed_lines]
-		line = self:replace_variable(self.variables, line)
-
+		local line = p:replace_variable(p.variables, lines[p.readed_lines])
 		-- read the line and execute the state machine
-		self:read_line(line, M.do_transition)
+		p:read_line(line, M.do_transition)
 
-		if self.readed_lines == req_end then
+		if p.readed_lines == req_end then
 			break
 		end
-
-		self.readed_lines = self.readed_lines + 1
+		p.readed_lines = p.readed_lines + 1
 	end
 
-	if not self.request.method or not self.request.url then
-		self:add_error("a valid request expect at least a url")
+	if not p.request.method or not p.request.url then
+		p:add_error("a valid request expect at least a url")
 	end
 
-	return self
+	p.duration = os.clock() - start_time
+	return p
 end
 
 return M

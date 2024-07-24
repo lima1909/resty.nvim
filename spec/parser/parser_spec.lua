@@ -3,7 +3,7 @@ local p = require("resty.parser2")
 
 describe("parser:", function()
 	local function check(input, selected, expected)
-		local r = p.new():parse(input, selected)
+		local r = p.parse(input, selected)
 
 		assert.is_false(r:has_errors(), vim.inspect(r.errors), "has error")
 		assert.are.same(r.readed_lines, expected.readed_lines, "compare readed_lines")
@@ -244,7 +244,7 @@ end)
 
 describe("errors:", function()
 	local function check(input, selected, expected)
-		local r = p.new():parse(input, selected)
+		local r = p.parse(input, selected)
 
 		assert.is_true(r:has_errors())
 		local err = r.errors[1]

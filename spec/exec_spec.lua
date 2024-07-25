@@ -49,8 +49,7 @@ Get https://httpbin.org/get
 			local r = parser.parse(input, 2)
 			assert.is_false(r:has_errors())
 
-			local req_def = r.result
-			exec.curl_wait(7000, req_def, callback, error_fn)
+			exec.curl_wait(7000, r.request, callback, error_fn)
 
 			assert.is_nil(error)
 			assert.are.same(200, response.status)
@@ -66,8 +65,7 @@ Get https://.org/get
 			local r = parser.parse(input, 2)
 			assert.is_false(r:has_errors())
 
-			local req_def = r.result
-			exec.curl_wait(7000, req_def, callback, error_fn)
+			exec.curl_wait(7000, r.request, callback, error_fn)
 
 			assert.is_not_nil(error)
 			assert.are.same(6, error.exit)

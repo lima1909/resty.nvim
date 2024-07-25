@@ -1,5 +1,5 @@
 local assert = require("luassert")
-local p = require("resty.parser2")
+local p = require("resty.parser")
 
 local parser = function()
 	return nil

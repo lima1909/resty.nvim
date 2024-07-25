@@ -1,7 +1,7 @@
-local kv = require("resty.parser2.key_value")
-local mu = require("resty.parser2.method_url")
-local b = require("resty.parser2.body")
-local d = require("resty.parser2.delimiter")
+local kv = require("resty.parser.key_value")
+local mu = require("resty.parser.method_url")
+local b = require("resty.parser.body")
+local d = require("resty.parser.delimiter")
 
 local M = {}
 M.__index = M

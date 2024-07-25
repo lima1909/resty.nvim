@@ -1,6 +1,6 @@
 local assert = require("luassert")
-local p = require("resty.parser2")
-local d = require("resty.parser2.delimiter")
+local p = require("resty.parser")
+local d = require("resty.parser.delimiter")
 
 describe("find request:", function()
 	local s, e, input

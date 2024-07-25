@@ -28,9 +28,9 @@ local M = {
 			show_window_content = function(slf)
 				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
 				-- "# headers",
-				-- "" .. vim.fn.flatten(slf.req_def.headers),
+				-- "" .. vim.fn.flatten(slf.request.headers),
 
-				local req = slf.req_def.req
+				local req = slf.parser_result.request
 				-- REQUEST
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"Request:",
@@ -54,10 +54,11 @@ local M = {
 					"",
 					"Response: ",
 					"- state: " .. slf.meta.status_str,
-					"- duration: " .. slf.meta.duration_str,
 					"",
 					"Meta",
 					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
+					"- duration rest-call: " .. slf.meta.duration_str,
+					"- duration parse-request: " .. slf.parser_result.duration_str,
 				})
 			end,
 		},
@@ -215,8 +216,9 @@ function M:activate()
 	return self
 end
 
-function M:show(req_def, response)
-	self.req_def = req_def
+function M:show(parser_result, response)
+	self.parser_result = parser_result
+	self.parser_result.duration_str = format.duration(self.parser_result.duration)
 	self.response = response
 	self.current_body = response.body
 
@@ -252,11 +254,11 @@ function M:exec_and_show_response(parser_result)
 	-- start the stop time
 	local start_time = os.clock()
 
-	self.curl = exec.curl(parser_result.result, function(result)
+	self.curl = exec.curl(parser_result.request, function(result)
 		self.meta.duration = os.clock() - start_time
 
 		vim.schedule(function()
-			self:show(parser_result.result, result)
+			self:show(parser_result, result)
 		end)
 	end, function(error)
 		vim.schedule(function()

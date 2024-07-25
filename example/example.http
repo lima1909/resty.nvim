@@ -41,7 +41,7 @@ Content-type: application/json; charset=UTF-8
 
 # -------------------------------------------------------
 ###  GET all posts
-GET https://jsonplaceholder.typicode.com/posts/101
+GET https://jsonplaceholder.typicode.com/posts/10
 
 # userId=99
 # id = 101
@@ -52,7 +52,7 @@ accept: application/json
 Content-type: application/json; charset=UTF-8
 
 {
-    title: 'foo',
-    body: 'bar',
-    userId: 99,
+    "title": "foo",
+    "body": "bar",
+    "userId": 99
 }

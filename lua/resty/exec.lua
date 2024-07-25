@@ -58,40 +58,40 @@ M.jq_wait = function(timeout, json, callback, jq_filter)
 end
 
 -- --------- CURL -------------------
-M._create_curl_job = function(req_def, callback, error)
+M._create_curl_job = function(request, callback, error)
 	local job
-	req_def.req.callback = function(result)
+	request.callback = function(result)
 		job.is_finished = true
 		callback(result)
 	end
-	req_def.req.on_error = function(result)
+	request.on_error = function(result)
 		job.is_finished = true
 		error(result)
 	end
 
 	-- return the created job
 	-- Note: the job is already stated
-	job = curl.request(req_def.req.url, req_def.req)
+	job = curl.request(request.url, request)
 	return job
 end
 
 ---  Create an async job for the curl commend.
 ---
----@param req_def table  the request definition
+---@param request table  the request definition
 ---@param callback function callback function where to get the result
 ---@param error function callback function to get the error result if it occurred
-M.curl = function(req_def, callback, error)
-	return M._create_curl_job(req_def, callback, error)
+M.curl = function(request, callback, error)
+	return M._create_curl_job(request, callback, error)
 end
 
 ---  Create an sync job for the curl commend.
 ---
 ---@param timeout number  the timeout value in ms
----@param req_def table  the request definition
+---@param request table  the request definition
 ---@param callback function callback function where to get the result
 ---@param error function callback function to get the error result if it occurred
-M.curl_wait = function(timeout, req_def, callback, error)
-	local job = M._create_curl_job(req_def, callback, error)
+M.curl_wait = function(timeout, request, callback, error)
+	local job = M._create_curl_job(request, callback, error)
 	vim.wait(timeout, function()
 		return job.is_finished
 	end)

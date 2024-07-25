@@ -1,9 +1,9 @@
 local assert = require("luassert")
-local parser = require("resty.parser2")
+local parser = require("resty.parser")
 
 describe("parse_line:", function()
 	describe("variable", function()
-		local kv = require("resty.parser2.key_value")
+		local kv = require("resty.parser.key_value")
 
 		local p = parser.new()
 		local result
@@ -55,7 +55,7 @@ describe("parse_line:", function()
 	end)
 
 	describe("method and url", function()
-		local mu = require("resty.parser2.method_url")
+		local mu = require("resty.parser.method_url")
 
 		local p = parser.new()
 		local result

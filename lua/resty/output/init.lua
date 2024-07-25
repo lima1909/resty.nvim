@@ -33,7 +33,7 @@ local M = {
 				local req = slf.parser_result.request
 				-- REQUEST
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"Request:",
+					"## Request:",
 					"",
 					"```http",
 					"",
@@ -52,13 +52,23 @@ local M = {
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"```",
 					"",
-					"Response: ",
+					"## Response: ",
 					"- state: " .. slf.meta.status_str,
 					"",
-					"Meta",
+					"## Meta:",
 					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
 					"- duration rest-call: " .. slf.meta.duration_str,
 					"- duration parse-request: " .. slf.parser_result.duration_str,
+				})
+
+				-- CURL command
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
+					"",
+					"## CURL command:",
+					"",
+					"```",
+					vim.inspect(slf.curl.args),
+					"```",
 				})
 			end,
 		},

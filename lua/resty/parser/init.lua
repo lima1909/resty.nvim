@@ -99,7 +99,7 @@ end
 function M:add_error(message)
 	table.insert(self.errors, {
 		col = 0,
-		lnum = self.readed_lines,
+		lnum = self.readed_lines - 1, -- NOTE: lnum is 0 indexed, end readed_lines starts by 1
 		severity = vim.diagnostic.severity.ERROR,
 		message = message,
 	})

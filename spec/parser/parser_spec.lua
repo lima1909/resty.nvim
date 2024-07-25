@@ -254,14 +254,14 @@ describe("errors:", function()
 	end
 
 	it("empty", function()
-		check("", 1, { message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START.id })
+		check("", 1, { message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_START.id })
 	end)
 
 	it("only comment", function()
 		check(
 			"# comment",
 			1,
-			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_START.id }
+			{ message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_START.id }
 		)
 	end)
 
@@ -269,14 +269,14 @@ describe("errors:", function()
 		check(
 			"@key=value",
 			1,
-			{ message = "a valid request expect at least a url", lnum = 1, current_state = p.STATE_VARIABLE.id }
+			{ message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_VARIABLE.id }
 		)
 	end)
 
 	it("only one variable and delimiter", function()
 		check("@key=value\n###", 1, {
 			message = "a valid request expect at least a url",
-			lnum = 1,
+			lnum = 0,
 			current_state = p.STATE_VARIABLE.id,
 		})
 	end)
@@ -284,19 +284,19 @@ describe("errors:", function()
 	it("only delimiter", function()
 		check("###", 1, {
 			message = "after the selected row: 1 are no more input lines",
-			lnum = 1,
+			lnum = 0,
 			current_state = p.STATE_START.id,
 		})
 	end)
 
 	it("with variable", function()
-		check("@key=", 1, { message = "an empty value is not allowed", lnum = 1, current_state = p.STATE_VARIABLE.id })
+		check("@key=", 1, { message = "an empty value is not allowed", lnum = 0, current_state = p.STATE_VARIABLE.id })
 	end)
 
 	it("wrong selection", function()
 		check("GET http://host", 2, {
 			message = "the selected row: 2 is greater then the given rows: 1",
-			lnum = 1,
+			lnum = 0,
 			current_state = p.STATE_START.id,
 		})
 	end)
@@ -304,7 +304,7 @@ describe("errors:", function()
 	it("selected in global variable", function()
 		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
 			message = "a valid request expect at least a url",
-			lnum = 2,
+			lnum = 1,
 			current_state = p.STATE_VARIABLE.id,
 		})
 	end)
@@ -312,7 +312,7 @@ describe("errors:", function()
 	it("invalid transition, is not a method", function()
 		check({ "@key=value", "accept: application/json" }, 2, {
 			message = "invalid method name: 'accept:'. Only letters are allowed",
-			lnum = 2,
+			lnum = 1,
 			current_state = p.STATE_METHOD_URL.id,
 		})
 	end)
@@ -320,7 +320,7 @@ describe("errors:", function()
 	it("invalid transition", function()
 		check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
 			message = "from current state: 'body' are only possible: body",
-			lnum = 5,
+			lnum = 4,
 			current_state = p.STATE_BODY.id,
 		})
 	end)

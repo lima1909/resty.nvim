@@ -231,7 +231,7 @@ Get https://httpbin.org/get
 		press_key("i")
 		assert.are.same(3, o.current_window_id)
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
-		assert.are.same({ "", "Request:" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+		assert.are.same({ "", "## Request:" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 
 	it("integration: cancel exec_and_show_response", function()

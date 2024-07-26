@@ -319,7 +319,7 @@ describe("errors:", function()
 
 	it("invalid transition", function()
 		check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
-			message = "from current state: 'body' are only possible: body",
+			message = "from current state: 'body' are only possible state(s): body",
 			lnum = 4,
 			current_state = p.STATE_BODY.id,
 		})

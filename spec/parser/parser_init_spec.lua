@@ -1,13 +1,13 @@
 local assert = require("luassert")
 local p = require("resty.parser")
 
-local parser = function()
+local do_nothing_parser = function()
 	return nil
 end
 
 describe("cut comments", function()
 	it("# comment", function()
-		local r = p.new():read_line("# comment", parser)
+		local r = p.new():read_line("# comment", do_nothing_parser)
 		assert.is_true(r)
 	end)
 
@@ -21,7 +21,7 @@ describe("cut comments", function()
 	end)
 
 	it("### comment", function()
-		local r = p.new():read_line("### comment", parser)
+		local r = p.new():read_line("### comment", do_nothing_parser)
 		assert.is_false(r)
 	end)
 
@@ -79,21 +79,21 @@ end)
 --
 describe("ignore line", function()
 	it("true", function()
-		assert.is_true(p.new():read_line("#"))
-		assert.is_true(p.new():read_line("# text"))
-		assert.is_true(p.new():read_line(""))
-		assert.is_true(p.new():read_line(" "))
+		assert.is_true(p.new():read_line("#", do_nothing_parser))
+		assert.is_true(p.new():read_line("# text", do_nothing_parser))
+		assert.is_true(p.new():read_line("", do_nothing_parser))
+		assert.is_true(p.new():read_line(" ", do_nothing_parser))
 	end)
 
 	it("false", function()
-		assert.is_false(p.new():read_line("###"))
-		assert.is_false(p.new():read_line())
+		assert.is_false(p.new():read_line("###", do_nothing_parser))
+		assert.is_false(p.new():read_line(nil, do_nothing_parser))
 	end)
 
 	it("nil", function()
-		assert.is_nil(p.new():read_line("@key=value", parser))
-		assert.is_nil(p.new():read_line("key=value", parser))
-		assert.is_nil(p.new():read_line("key:value", parser))
-		assert.is_nil(p.new():read_line("GET http://host", parser))
+		assert.is_nil(p.new():read_line("@key=value", do_nothing_parser))
+		assert.is_nil(p.new():read_line("key=value", do_nothing_parser))
+		assert.is_nil(p.new():read_line("key:value", do_nothing_parser))
+		assert.is_nil(p.new():read_line("GET http://host", do_nothing_parser))
 	end)
 end)

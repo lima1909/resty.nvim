@@ -66,6 +66,7 @@ local transitions = {
 function M:parse_line(parser, line, set_result)
 	local no_error, result = pcall(parser, line, self)
 
+	-- if has an error
 	if not no_error then
 		self:add_error(result)
 		return true
@@ -85,7 +86,7 @@ function M:do_transition(line)
 	end
 	--
 	-- no valid transition found
-	local err = "from current state: '" .. self.current_state.name .. "' are only possible: "
+	local err = "from current state: '" .. self.current_state.name .. "' are only possible state(s): "
 	for _, s in ipairs(ts) do
 		err = err .. s.name .. ", "
 	end
@@ -106,9 +107,9 @@ function M:add_error(message)
 	return self
 end
 
----@param variables { }
----@param line string
----@return string
+---@param variables { } the parsed variables
+---@param line string the input line
+---@return string the output line with replaced variables
 function M:replace_variable(variables, line)
 	if not variables then
 		return line
@@ -144,6 +145,9 @@ function M:replace_variable(variables, line)
 	return self:replace_variable(variables, new_line)
 end
 
+---@param line nil | string the readed line
+---@param parse function a parser function
+---@return boolean continue to read (true) or stop (false)
 function M:read_line(line, parse)
 	if not line or line:sub(1, 3) == "###" then
 		return false
@@ -180,8 +184,9 @@ function M.new()
 end
 
 ---Entry point, the parser
----@param input string | { }
----@param selected number
+---@param input string | { } a string with delimiter '\n' or an array with strings
+---@param selected number the selected row
+---@return self the parser with the request and possible errors
 function M.parse(input, selected)
 	local start_time = os.clock()
 

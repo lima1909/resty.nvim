@@ -159,7 +159,7 @@ describe("parser:", function()
 				url = "http://host",
 				headers = {},
 				query = {},
-				body = { "{", "\t'name': 'John'", "}" },
+				body = "{\n\t'name': 'John'\n}\n",
 			},
 		})
 	end)
@@ -177,7 +177,7 @@ describe("parser:", function()
 					url = "http://host",
 					headers = { ["accept"] = "application/json" },
 					query = { ["id"] = "42" },
-					body = { "{", "\t'name': 'John'", "}" },
+					body = "{\n\t'name': 'John'\n}\n",
 				},
 			}
 		)
@@ -210,7 +210,7 @@ describe("parser:", function()
 					url = "http://host",
 					headers = { ["accept"] = "application/json" },
 					query = { ["id"] = "42" },
-					body = { "{", "\t'name': 'John'", "}" },
+					body = "{\n\t'name': 'John'\n}\n",
 				},
 			}
 		)

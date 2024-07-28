@@ -19,16 +19,15 @@ function M.parse_body(line, p)
 
 	if not p.request.body then
 		if is_body_start(line) then
-			p.request.body = {}
-			table.insert(p.request.body, line)
+			p.request.body = line .. "\n"
 		else
 			return
 		end
 	elseif is_body_end(line) then
-		table.insert(p.request.body, line)
+		p.request.body = p.request.body .. line .. "\n"
 		p.body_is_ready = true
 	else
-		table.insert(p.request.body, line)
+		p.request.body = p.request.body .. line .. "\n"
 	end
 
 	return true

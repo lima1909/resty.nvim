@@ -26,6 +26,7 @@ GET https://api.restful-api.dev/objects
 POST https://api.restful-api.dev/objects
 accept: application/json  
 Content-type: application/json ; charset=UTF-8
+
 {
    "name": "MY Apple MacBook Pro 16",
    "data": {

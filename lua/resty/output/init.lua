@@ -46,7 +46,10 @@ local M = {
 
 				-- BODY
 				if req.body then
-					exec.jq_wait(2000, req.body, function(json)
+					exec.jq_wait(2000, req.body, function(json, code)
+						if code ~= 0 then
+							vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, vim.split(req.body, "\n"))
+						end
 						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, json)
 					end)
 				end

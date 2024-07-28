@@ -25,7 +25,7 @@ M._create_jq_job = function(json, callback, jq_filter)
 
 			vim.schedule(function()
 				job.is_finished = true
-				callback(output)
+				callback(output, code)
 			end)
 		end,
 	})

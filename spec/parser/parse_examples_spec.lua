@@ -30,7 +30,7 @@ filter = id = "42"
 
 {
 	"name": "john",
-	"valid": true,
+	"valid": true
 }
 
 
@@ -91,12 +91,7 @@ filter = id = {{id}}
 					url = "http://host",
 					headers = { accept = "application/json" },
 					query = { filter = 'id = "42"' },
-					body = {
-						"{",
-						'	"name": "john",',
-						'	"valid": true,',
-						"}",
-					},
+					body = '{\n	"name": "john",\n	"valid": true\n}\n',
 				},
 			})
 		end)

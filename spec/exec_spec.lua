@@ -5,19 +5,23 @@ local parser = require("resty.parser")
 describe("exec:", function()
 	describe("jq:", function()
 		local output
+		local code
 
-		local callback = function(content)
+		local callback = function(content, c)
 			output = content
+			code = c
 		end
 
 		it("with default filter", function()
 			exec.jq_wait(2000, '{"value":true}', callback)
 			assert.are.same({ "{", '  "value": true', "}" }, output)
+			assert.are.same(0, code)
 		end)
 
 		it("with filter: .value", function()
 			exec.jq_wait(2000, '{"value":true}', callback, ".value")
 			assert.are.same({ "true" }, output)
+			assert.are.same(0, code)
 		end)
 
 		it("error in json", function()
@@ -25,6 +29,7 @@ describe("exec:", function()
 			assert(output[1]:find("ERROR:"), output[1])
 			assert(output[2]:find(""), output[2])
 			assert(output[3]:find("Unfinished JSON term at EOF at line 1, column 9"), output[3])
+			assert.are.same(5, code)
 		end)
 	end)
 

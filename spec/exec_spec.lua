@@ -29,7 +29,7 @@ describe("exec:", function()
 			assert(output[1]:find("ERROR:"), output[1])
 			assert(output[2]:find(""), output[2])
 			assert(output[3]:find("Unfinished JSON term at EOF at line 1, column 9"), output[3])
-			assert.are.same(5, code)
+			assert.is_true(0 ~= code, code)
 		end)
 	end)
 

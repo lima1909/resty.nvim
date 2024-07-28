@@ -240,7 +240,7 @@ function M.parse(input, selected)
 	end
 
 	if not p.request.method or not p.request.url then
-		p:add_error("a valid request expect at least a url")
+		p:add_error("a valid request expect at least a url (parse rows: " .. req_start .. ":" .. req_end .. ")")
 	end
 
 	p.duration = os.clock() - start_time

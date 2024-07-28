@@ -254,28 +254,32 @@ describe("errors:", function()
 	end
 
 	it("empty", function()
-		check("", 1, { message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_START.id })
+		check("", 1, {
+			message = "a valid request expect at least a url (parse rows: 1:1)",
+			lnum = 0,
+			current_state = p.STATE_START.id,
+		})
 	end)
 
 	it("only comment", function()
-		check(
-			"# comment",
-			1,
-			{ message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_START.id }
-		)
+		check("# comment", 1, {
+			message = "a valid request expect at least a url (parse rows: 1:1)",
+			lnum = 0,
+			current_state = p.STATE_START.id,
+		})
 	end)
 
 	it("only one variable", function()
-		check(
-			"@key=value",
-			1,
-			{ message = "a valid request expect at least a url", lnum = 0, current_state = p.STATE_VARIABLE.id }
-		)
+		check("@key=value", 1, {
+			message = "a valid request expect at least a url (parse rows: 1:1)",
+			lnum = 0,
+			current_state = p.STATE_VARIABLE.id,
+		})
 	end)
 
 	it("only one variable and delimiter", function()
 		check("@key=value\n###", 1, {
-			message = "a valid request expect at least a url",
+			message = "a valid request expect at least a url (parse rows: 1:1)",
 			lnum = 0,
 			current_state = p.STATE_VARIABLE.id,
 		})
@@ -303,7 +307,7 @@ describe("errors:", function()
 
 	it("selected in global variable", function()
 		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
-			message = "a valid request expect at least a url",
+			message = "a valid request expect at least a url (parse rows: 1:2)",
 			lnum = 1,
 			current_state = p.STATE_VARIABLE.id,
 		})

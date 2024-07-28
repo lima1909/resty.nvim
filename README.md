@@ -54,19 +54,29 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 
 ## Definitions
 
-- (global) `variables`: `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
-- `###` delimiter and starting point of the rest-call-definition
-- after the starting point **must** follow:  
-    - _optional_: `variables` (local) 
-    - **mandatory**: `[method] [url]`
-- first row after `###` is the rest call: `[method] [space] [URL]`
-- `headers`: delimiter `:`
-- `query`: delimiter `=`
-- `#` starting character for comments
+### Types
+
+- `variables` : `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- `method url`: `GET http://host` (`[method] [space] [URL]`)
+- `headers`   : delimiter `:` (example: `accept: application/json`)
+- `query`     : delimiter `=` (example: `id = 5`)
+- `body`      : starts with: first row `{` and ends with: first row `}`, between is valid JSON
+- `###`       : delimiter, if more as one request definition, or text before and/or after exist
+- `#`         : comments
+
+### Grammar
+
+```
+start:              variables | method url
+variables:          variables | method url
+method_url:         headers or queries | body
+headers or queries: headers or queries | body
+body:               body | delimiter (end)
+```
 
 ## Example
 
-```
+```http
 # global variables
 @hostname = httpbin.org
 
@@ -82,6 +92,23 @@ GET https://jsonplaceholder.typicode.com/comments
 # query
 postId = 5
 id=21
+
+###
+POST https://api.restful-api.dev/objects
+
+accept: application/json  
+Content-type: application/json; charset=UTF-8
+
+# body
+{
+   "name": "MY Apple MacBook Pro 16",
+   "data": {
+      "year": 2019,
+      "price": 1849.99,
+      "CPU model": "Intel Core i9",
+      "Hard disk size": "1 TB"
+   }
+}
 ```
 
 ## Response|Result view
@@ -99,9 +126,9 @@ There are three views for the result (the rest-call-response)
 
 Hint: `jq` must be installed
 
-| key | description                   | command  |
-|-----|-------------------------------|----------|
-| `p` | json pretty print             | `jq .`   |
-| `q` | jq query                      | `jq .id` |
-| `r` | reset to the origininal json  | -        |
+| key | description                   | command/example  |
+|-----|-------------------------------|------------------|
+| `p` | json pretty print             | `jq .`           |
+| `q` | jq query                      | `jq .id`         |
+| `r` | reset to the origininal json  | -                |
 

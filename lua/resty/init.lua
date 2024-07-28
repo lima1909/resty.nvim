@@ -31,7 +31,7 @@ M.last = function()
 	if M.last_parser_result then
 		M.output:exec_and_show_response(M.last_parser_result)
 	else
-		error("No last request found. Run first [Resty run]")
+		error("No last request found. Run first [Resty run]", 0)
 	end
 end
 

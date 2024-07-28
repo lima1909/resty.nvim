@@ -10,8 +10,11 @@ local M = {
 			name = "body",
 			show_window_content = function(slf)
 				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
-				local body = vim.split(slf.current_body, "\n")
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, body)
+				if type(slf.current_body) == "table" then
+					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.current_body)
+				else
+					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, vim.split(slf.current_body, "\n"))
+				end
 			end,
 		},
 		[2] = {
@@ -81,8 +84,7 @@ local window_key_mappings = {
 		win_ids = { 1 },
 		rhs = function()
 			exec.jq(M.current_body, function(json)
-				local new_body = table.concat(json, "\n")
-				M.current_body = new_body
+				M.current_body = json
 				M:select_window(1)
 			end)
 		end,

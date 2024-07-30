@@ -1,3 +1,5 @@
+vim.filetype.add({ extension = { http = "http" } })
+
 vim.keymap.set("n", "zz", function()
 	-- toggle folding
 	if vim.opt.foldmethod._value ~= "expr" then

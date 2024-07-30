@@ -7,6 +7,9 @@ local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
 
 local default_config = {
+	output = {
+		body_pretty_print = false,
+	},
 	response = {
 		with_folding = true,
 		bufname = "resty_response",

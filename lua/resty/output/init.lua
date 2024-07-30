@@ -10,6 +10,14 @@ local M = {
 			name = "body",
 			show_window_content = function(slf)
 				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
+
+				if slf.cfg.output.body_pretty_print == true then
+					exec.jq_wait(1000, slf.current_body, function(json)
+						slf.current_body = json
+						return true
+					end)
+				end
+
 				if type(slf.current_body) == "table" then
 					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.current_body)
 				else
@@ -88,6 +96,7 @@ local window_key_mappings = {
 		rhs = function()
 			exec.jq(M.current_body, function(json)
 				M.current_body = json
+				M.cfg.output.body_pretty_print = true
 				M:select_window(1)
 			end)
 		end,
@@ -113,6 +122,7 @@ local window_key_mappings = {
 		win_ids = { 1 },
 		rhs = function()
 			M.current_body = M.response.body
+			M.cfg.output.body_pretty_print = false
 			M:select_window(1)
 		end,
 		desc = "reset to the original responsne body",

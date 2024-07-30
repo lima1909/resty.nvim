@@ -139,7 +139,7 @@ local window_key_mappings = {
 }
 
 function M.new(config)
-	M.cfg = config or {}
+	M.cfg = config or { output = { body_pretty_print = false } }
 	M.meta = {}
 	M.bufname = M.cfg.bufname or "resty_response"
 	M.current_window_id = 0

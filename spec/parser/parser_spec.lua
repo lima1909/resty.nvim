@@ -240,6 +240,30 @@ describe("parser:", function()
 			}
 		)
 	end)
+
+	it("replace variable from environment variable", function()
+		local env_user = os.getenv("USER")
+		check(
+			{
+				"GET http://host",
+				"accept: application/json",
+				"",
+				"user={{user}}",
+			},
+			1,
+			{
+				readed_lines = 4,
+				variables = {},
+				state = p.STATE_HEADERS_QUERY.id,
+				request = {
+					method = "GET",
+					url = "http://host",
+					headers = { ["accept"] = "application/json" },
+					query = { ["user"] = env_user },
+				},
+			}
+		)
+	end)
 end)
 
 describe("errors:", function()

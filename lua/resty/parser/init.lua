@@ -137,8 +137,12 @@ function M:replace_variable(variables, line)
 
 	local value = variables[name]
 	if not value then
-		self:add_error("no variable found with name: '" .. name .. "'")
-		return line
+		-- variable not found, next try to read the value from an environment variable
+		value = os.getenv(name:upper())
+		if not value then
+			self:add_error("no variable found with name: '" .. name .. "'")
+			return line
+		end
 	end
 
 	local new_line = before .. value .. after

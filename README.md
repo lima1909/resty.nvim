@@ -76,7 +76,7 @@ body:               body | delimiter (end)
 
 ## Example
 
-```http
+```
 # global variables
 @hostname = httpbin.org
 
@@ -87,11 +87,13 @@ GET https://{{hostname}}/get
 accept: application/json  
 
 ###  
-GET https://jsonplaceholder.typicode.com/comments
+GET https://{{hostname}}/comments
+# local variable overwrites global variable
+@hostname = jsonplaceholder.typicode.com
 
 # query
 postId = 5
-id=21
+id={{ID}} # variable is not set, this means, it will be loaded as environment variable ($ID)
 
 ###
 POST https://api.restful-api.dev/objects

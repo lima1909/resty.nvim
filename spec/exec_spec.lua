@@ -47,7 +47,7 @@ describe("exec:", function()
 		it("simple GET request", function()
 			local input = [[
 ### simple get 
-Get https://httpbin.org/get 
+GET https://reqres.in/api/users?page=5
 
 ]]
 

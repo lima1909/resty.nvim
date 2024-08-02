@@ -200,7 +200,7 @@ describe("output:", function()
 	it("integration: exec_and_show_response", function()
 		local input = [[
 ### simple get 
-Get https://httpbin.org/get 
+get https://reqres.in/api/users?page=5
 
 ]]
 
@@ -237,7 +237,7 @@ Get https://httpbin.org/get
 	it("integration: cancel exec_and_show_response", function()
 		local input = [[
 ### simple get 
-Get https://httpbin.org/get 
+get https://reqres.in/api/users?page=5
 
 ]]
 

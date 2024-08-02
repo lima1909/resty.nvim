@@ -87,4 +87,40 @@ describe("parse_line:", function()
 			assert.are.same(result, { method = "GET", url = "http://host" })
 		end)
 	end)
+
+	describe("request body", function()
+		local b = require("resty.parser.body")
+
+		local set_result = function(slf, r)
+			slf.request.body = slf.request.body or ""
+			slf.request.body = slf.request.body .. r.line
+			slf.body_is_ready = r.is_ready
+		end
+
+		it("empty body", function()
+			local p = parser.new()
+			p:parse_line(b.parse_request_body, "{", set_result)
+			p:parse_line(b.parse_request_body, "}", set_result)
+			assert.is_true(p.body_is_ready)
+			assert.are.same(p.request.body, "{\n}\n")
+		end)
+	end)
+
+	describe("script body", function()
+		local b = require("resty.parser.body")
+
+		local set_result = function(slf, r)
+			slf.request.body = slf.request.body or ""
+			slf.request.body = slf.request.body .. r.line
+			slf.body_is_ready = r.is_ready
+		end
+
+		it("empty body", function()
+			local p = parser.new()
+			p:parse_line(b.parse_script_body, "--{", set_result)
+			p:parse_line(b.parse_script_body, "}--", set_result)
+			assert.is_true(p.body_is_ready)
+			assert.are.same(p.request.body, "--{\n}--\n")
+		end)
+	end)
 end)

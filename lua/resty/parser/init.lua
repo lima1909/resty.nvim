@@ -46,8 +46,12 @@ M.STATE_HEADERS_QUERY = {
 M.STATE_BODY = {
 	id = 5,
 	name = "body",
-	parser = b.parse_body,
-	set_result = function() end,
+	parser = b.parse_request_body,
+	set_result = function(slf, r)
+		slf.request.body = slf.request.body or ""
+		slf.request.body = slf.request.body .. r.line
+		slf.body_is_ready = r.is_ready
+	end,
 }
 
 local transitions = {
@@ -56,9 +60,9 @@ local transitions = {
 	-- [M.STATE_VARIABLE.id] =
 	{ M.STATE_VARIABLE, M.STATE_METHOD_URL },
 	-- [M.STATE_METHOD_URL.id] =
-	{ M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	{ M.STATE_BODY, M.STATE_HEADERS_QUERY },
 	-- [M.STATE_HEADERS_QUERY.id] =
-	{ M.STATE_HEADERS_QUERY, M.STATE_BODY },
+	{ M.STATE_BODY, M.STATE_HEADERS_QUERY },
 	-- [M.STATE_BODY.id] =
 	{ M.STATE_BODY },
 }

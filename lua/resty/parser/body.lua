@@ -1,36 +1,48 @@
 local M = {}
 
-local function is_body_start(line)
-	if line:sub(1, 2) == "{" then
+local request = {
+	open = "{",
+	close = "}",
+	len = 2,
+}
+
+local script = {
+	open = "--{",
+	close = "}--",
+	len = 4,
+}
+
+local function is_body_start(line, b)
+	if line:sub(1, b.len) == b.open then
 		return true
 	end
 end
 
-local function is_body_end(line)
-	if line:sub(1, 2) == "}" then
+local function is_body_end(line, b)
+	if line:sub(1, b.len) == b.close then
 		return true
 	end
 end
 
-function M.parse_body(line, p)
-	if p.body_is_ready then
+local function parse_body(line, p, b)
+	if p.body_is_ready or (not p.request.body and not is_body_start(line, b)) then
 		return
 	end
 
-	if not p.request.body then
-		if is_body_start(line) then
-			p.request.body = line .. "\n"
-		else
-			return
-		end
-	elseif is_body_end(line) then
-		p.request.body = p.request.body .. line .. "\n"
-		p.body_is_ready = true
-	else
-		p.request.body = p.request.body .. line .. "\n"
+	local is_ready = false
+	if is_body_end(line, b) then
+		is_ready = true
 	end
 
-	return true
+	return { is_ready = is_ready, line = line .. "\n" }
+end
+
+function M.parse_request_body(line, p)
+	return parse_body(line, p, request)
+end
+
+function M.parse_script_body(line, p)
+	return parse_body(line, p, script)
 end
 
 return M

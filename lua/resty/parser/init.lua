@@ -48,9 +48,16 @@ M.STATE_BODY = {
 	name = "body",
 	parser = b.parse_request_body,
 	set_result = function(slf, r)
-		slf.request.body = slf.request.body or ""
-		slf.request.body = slf.request.body .. r.line
-		slf.body_is_ready = r.is_ready
+		slf.request.body = (slf.request.body or "") .. r.current_line .. "\n"
+	end,
+}
+
+M.STATE_SCRIPT = {
+	id = 6,
+	name = "script",
+	parser = b.parse_script_body,
+	set_result = function(slf, r)
+		slf.script = (slf.script or "") .. r.current_line .. "\n"
 	end,
 }
 
@@ -180,7 +187,7 @@ function M.new()
 		current_state = M.STATE_START,
 		readed_lines = 1,
 		duration = 0,
-		body_is_ready = false,
+		body = { is_ready = false },
 		variables = {},
 		request = {
 			headers = {},

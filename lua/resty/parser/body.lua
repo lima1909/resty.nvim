@@ -1,48 +1,51 @@
 local M = {}
 
-local request = {
+-- definition of an request body
+M.request = {
 	open = "{",
 	close = "}",
 	len = 2,
 }
 
-local script = {
+-- definition of an script body
+M.script = {
 	open = "--{",
-	close = "}--",
+	close = "--}",
 	len = 4,
 }
 
-local function is_body_start(line, b)
-	if line:sub(1, b.len) == b.open then
+local function is_body_start(line, body_type)
+	if line:sub(1, body_type.len) == body_type.open then
 		return true
 	end
 end
 
-local function is_body_end(line, b)
-	if line:sub(1, b.len) == b.close then
+local function is_body_end(line, body_type)
+	if line:sub(1, body_type.len) == body_type.close then
 		return true
 	end
 end
 
-local function parse_body(line, p, b)
-	if p.body_is_ready or (not p.request.body and not is_body_start(line, b)) then
+local function parse_body(line, body_type, body)
+	if body.is_ready or (not body.current_line and not is_body_start(line, body_type)) then
 		return
 	end
 
-	local is_ready = false
-	if is_body_end(line, b) then
-		is_ready = true
+	if is_body_end(line, body_type) then
+		body.is_ready = true
 	end
 
-	return { is_ready = is_ready, line = line .. "\n" }
+	body.current_line = line
+
+	return body
 end
 
 function M.parse_request_body(line, p)
-	return parse_body(line, p, request)
+	return parse_body(line, M.request, p.body)
 end
 
 function M.parse_script_body(line, p)
-	return parse_body(line, p, script)
+	return parse_body(line, M.script, p.body)
 end
 
 return M

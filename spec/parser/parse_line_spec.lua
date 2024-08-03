@@ -89,38 +89,26 @@ describe("parse_line:", function()
 	end)
 
 	describe("request body", function()
-		local b = require("resty.parser.body")
-
-		local set_result = function(slf, r)
-			slf.request.body = slf.request.body or ""
-			slf.request.body = slf.request.body .. r.line
-			slf.body_is_ready = r.is_ready
-		end
+		local body_parser = parser.STATE_BODY
 
 		it("empty body", function()
 			local p = parser.new()
-			p:parse_line(b.parse_request_body, "{", set_result)
-			p:parse_line(b.parse_request_body, "}", set_result)
-			assert.is_true(p.body_is_ready)
+			p:parse_line(body_parser.parser, "{", body_parser.set_result)
+			p:parse_line(body_parser.parser, "}", body_parser.set_result)
+			assert.is_true(p.body.is_ready)
 			assert.are.same(p.request.body, "{\n}\n")
 		end)
 	end)
 
 	describe("script body", function()
-		local b = require("resty.parser.body")
-
-		local set_result = function(slf, r)
-			slf.request.body = slf.request.body or ""
-			slf.request.body = slf.request.body .. r.line
-			slf.body_is_ready = r.is_ready
-		end
+		local script_parser = parser.STATE_SCRIPT
 
 		it("empty body", function()
 			local p = parser.new()
-			p:parse_line(b.parse_script_body, "--{", set_result)
-			p:parse_line(b.parse_script_body, "}--", set_result)
-			assert.is_true(p.body_is_ready)
-			assert.are.same(p.request.body, "--{\n}--\n")
+			p:parse_line(script_parser.parser, "--{", script_parser.set_result)
+			p:parse_line(script_parser.parser, "--}", script_parser.set_result)
+			assert.is_true(p.body.is_ready)
+			assert.are.same(p.script, "--{\n--}\n")
 		end)
 	end)
 end)

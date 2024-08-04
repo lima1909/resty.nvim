@@ -148,9 +148,11 @@ function M:replace_variable(variables, line)
 	local after = string.sub(line, end_pos + 2)
 
 	local value
+	-- shell command {{>[command]}}
 	if name:sub(1, 1) == ">" then
 		local cmd = name:sub(2)
 		value = exec.cmd(cmd)
+	-- environment variable: {{$[ENV]}}
 	elseif name:sub(1, 1) == "$" then
 		local env = name:sub(2)
 		value = os.getenv(env:upper())
@@ -159,6 +161,12 @@ function M:replace_variable(variables, line)
 		if not value then
 			self:add_error("no variable found with name: '" .. name .. "'")
 			return line
+		elseif value:sub(1, 1) == ">" then
+			local cmd = value:sub(2)
+			value = exec.cmd(cmd)
+		elseif value:sub(1, 1) == "$" then
+			local env = value:sub(2)
+			value = os.getenv(env:upper())
 		end
 	end
 

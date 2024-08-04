@@ -242,7 +242,6 @@ describe("parser:", function()
 	end)
 
 	it("replace variable from environment variable", function()
-		local env_user = os.getenv("USER")
 		check(
 			{
 				"GET http://host",
@@ -259,7 +258,28 @@ describe("parser:", function()
 					method = "GET",
 					url = "http://host",
 					headers = { ["accept"] = "application/json" },
-					query = { ["user"] = env_user },
+					query = { ["user"] = os.getenv("USER") },
+				},
+			}
+		)
+	end)
+
+	it("replace variable from variable from environment variable", function()
+		check(
+			{
+				"@host=$USER",
+				"GET http://{{host}}",
+			},
+			1,
+			{
+				readed_lines = 2,
+				variables = { ["host"] = "$USER" },
+				state = p.STATE_METHOD_URL.id,
+				request = {
+					method = "GET",
+					url = "http://" .. os.getenv("USER"),
+					headers = {},
+					query = {},
 				},
 			}
 		)
@@ -283,6 +303,27 @@ describe("parser:", function()
 					url = "http://echo-host",
 					headers = { ["accept"] = "application/json" },
 					query = { ["cmd"] = "my output" },
+				},
+			}
+		)
+	end)
+
+	it("replace variable from variable from command", function()
+		check(
+			{
+				"@host = >echo 'my-host-from-var'",
+				"GET http://{{host}}",
+			},
+			1,
+			{
+				readed_lines = 2,
+				variables = { ["host"] = ">echo 'my-host-from-var'" },
+				state = p.STATE_METHOD_URL.id,
+				request = {
+					method = "GET",
+					url = "http://my-host-from-var",
+					headers = {},
+					query = {},
 				},
 			}
 		)

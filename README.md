@@ -56,22 +56,23 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 
 ### Types
 
-- `variables` : `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
-- `method url`: `GET http://host` (`[method] [space] [URL]`)
-- `headers`   : delimiter `:` (example: `accept: application/json`)
-- `query`     : delimiter `=` (example: `id = 5`)
-- `body`      : starts with: first row `{` and ends with: first row `}`, between is valid JSON
-- `###`       : delimiter, if more as one request definition, or text before and/or after exist
-- `#`         : comments
+- `variables`      : `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- `method url`     : `GET http://host` (`[method] [space] [URL]`)
+- `headers`        : delimiter `:` (example: `accept: application/json`)
+- `query`          : delimiter `=` (example: `id = 5`)
+- `body`           : starts with: first row `{` and ends with: first row `}`, between is valid JSON
+- `###`            : delimiter, if more as one request definition, or text before and/or after exist
+- `#`              : comments
+- `{{>[command]}}` : replace this with the result of the command: for user: root `{{> echo $USER}}` -> `root`
 
 ### Grammar
 
 ```
-start:              variables | method url
-variables:          variables | method url
-method_url:         headers or queries | body
-headers or queries: headers or queries | body
-body:               body | delimiter (end)
+start              : variables | method url
+variables          : variables | method url
+method_url         : headers or queries | body
+headers or queries : headers or queries | body
+body               : body | delimiter (end)
 ```
 
 ## Example
@@ -96,7 +97,7 @@ GET https://{{hostname}}/comments
 
 # query
 postId = 5
-id={{ID}} # variable is not set, this means, it will be loaded as environment variable ($ID)
+id={{> echo $ID}} # execute the 'echo' command and replace it with the environment variable ($ID)
 
 
 ###

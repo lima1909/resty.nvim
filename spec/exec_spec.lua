@@ -79,7 +79,7 @@ Get https://.org/get
 		end)
 	end)
 
-	describe("stop time:", function()
+	describe("stop time", function()
 		local nix = function(a, b, c)
 			return a, b, c
 		end
@@ -90,6 +90,18 @@ Get https://.org/get
 			assert.are.same("a", a)
 			assert.are.same(true, b)
 			assert.is_true(duration > 0, duration)
+		end)
+	end)
+
+	describe("exec command", function()
+		it("echo 'test output'", function()
+			local output = exec.cmd('echo "test output"')
+			assert.are.same("test output\n", output)
+		end)
+
+		it("command fail", function()
+			local output = exec.cmd('ech "test output"')
+			assert.are.same("sh: line 1: ech: command not found\n", output)
 		end)
 	end)
 end)

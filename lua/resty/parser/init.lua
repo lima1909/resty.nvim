@@ -2,6 +2,7 @@ local kv = require("resty.parser.key_value")
 local mu = require("resty.parser.method_url")
 local b = require("resty.parser.body")
 local d = require("resty.parser.delimiter")
+local exec = require("resty.exec")
 
 local M = {}
 M.__index = M
@@ -146,10 +147,12 @@ function M:replace_variable(variables, line)
 	local name = string.sub(line, start_pos + 1, end_pos - 1)
 	local after = string.sub(line, end_pos + 2)
 
-	local value = variables[name]
-	if not value then
-		-- variable not found, next try to read the value from an environment variable
-		value = os.getenv(name:upper())
+	local value
+	if name:sub(1, 1) == ">" then
+		local cmd = name:sub(2)
+		value = exec.cmd(cmd)
+	else
+		value = variables[name]
 		if not value then
 			self:add_error("no variable found with name: '" .. name .. "'")
 			return line

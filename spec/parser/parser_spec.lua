@@ -248,7 +248,7 @@ describe("parser:", function()
 				"GET http://host",
 				"accept: application/json",
 				"",
-				"user={{user}}",
+				"user={{> echo $USER}}",
 			},
 			1,
 			{
@@ -260,6 +260,29 @@ describe("parser:", function()
 					url = "http://host",
 					headers = { ["accept"] = "application/json" },
 					query = { ["user"] = env_user },
+				},
+			}
+		)
+	end)
+
+	it("replace variable from command", function()
+		check(
+			{
+				"GET http://{{> echo 'echo-host'}}",
+				"accept: application/json",
+				"",
+				"cmd={{>echo 'my output'}}",
+			},
+			1,
+			{
+				readed_lines = 4,
+				variables = {},
+				state = p.STATE_HEADERS_QUERY.id,
+				request = {
+					method = "GET",
+					url = "http://echo-host",
+					headers = { ["accept"] = "application/json" },
+					query = { ["cmd"] = "my output" },
 				},
 			}
 		)

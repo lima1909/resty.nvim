@@ -107,4 +107,16 @@ M.exec_with_stop_time = function(fn, ...)
 	return unpack(results)
 end
 
+M.cmd = function(cmd)
+	local handle = io.popen(cmd .. " 2>&1")
+	if handle then
+		-- read the cmd output
+		local result = handle:read("*a")
+		handle:close()
+		return result
+	end
+
+	return "could not create a handle for command: " .. cmd
+end
+
 return M

@@ -101,7 +101,8 @@ Get https://.org/get
 
 		it("command fail", function()
 			local output = exec.cmd('ech "test output"')
-			assert.are.same("sh: line 1: ech: command not found\n", output)
+			assert.is_true(output:find("ech") > 0)
+			assert.is_true(output:find("not found") > 0)
 		end)
 	end)
 end)

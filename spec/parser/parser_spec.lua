@@ -248,7 +248,7 @@ describe("parser:", function()
 				"GET http://host",
 				"accept: application/json",
 				"",
-				"user={{> echo $USER}}",
+				"user={{$user}}",
 			},
 			1,
 			{

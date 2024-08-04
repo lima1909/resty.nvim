@@ -151,6 +151,9 @@ function M:replace_variable(variables, line)
 	if name:sub(1, 1) == ">" then
 		local cmd = name:sub(2)
 		value = exec.cmd(cmd)
+	elseif name:sub(1, 1) == "$" then
+		local env = name:sub(2)
+		value = os.getenv(env:upper())
 	else
 		value = variables[name]
 		if not value then

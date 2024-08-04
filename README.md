@@ -63,7 +63,11 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 - `body`           : starts with: first row `{` and ends with: first row `}`, between is valid JSON
 - `###`            : delimiter, if more as one request definition, or text before and/or after exist
 - `#`              : comments
-- `{{>[command]}}` : replace this with the result of the command: for user: root `{{> echo $USER}}` -> `root`
+
+- substitution 
+  - variable             : `{{variable-name}}` -> `{{host}}`
+  - environment variable : `{{$[variable-name]}}` -> `{{$USER}}`
+  - shell-commnad        : `{{>[command]}}` : replace this with the result of the command: `{{> echo "my value"}}`
 
 ### Grammar
 
@@ -97,7 +101,7 @@ GET https://{{hostname}}/comments
 
 # query
 postId = 5
-id={{> echo $ID}} # execute the 'echo' command and replace it with the environment variable ($ID)
+id={{$ID}} # replace it with the environment variable (ID)
 
 
 ###

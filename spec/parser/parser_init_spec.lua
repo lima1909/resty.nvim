@@ -63,6 +63,10 @@ describe("variables", function()
 			{ input = "http://{{host}}", expected = "http://my-host" },
 			{ input = "{{host}}.de", expected = "my-host.de" },
 			{ input = "http://{{host}}.de", expected = "http://my-host.de" },
+			-- environment variable
+			{ input = "{{$user}}", expected = os.getenv("USER") },
+			-- shell command
+			{ input = "{{> echo 'my value'}}", expected = "my value\n" },
 		}
 
 		for _, tc in ipairs(tt) do

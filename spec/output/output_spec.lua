@@ -197,6 +197,24 @@ describe("output:", function()
 		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 	end)
 
+	it("show error with \n", function()
+		local o = output.new():activate()
+		local error = {
+			exit = 1,
+			message = "GET error message \n and more -",
+			stderr = "{  and \n so on  }",
+		}
+
+		o:show_error(error)
+		assert.are.same({
+			"ERROR:",
+			"",
+			"GET error message  ; and more",
+			"",
+			"and  ; so on",
+		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
+	end)
+
 	it("integration: exec_and_show_response", function()
 		local input = [[
 ### simple get 

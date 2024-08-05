@@ -266,9 +266,9 @@ function M:show_error(error)
 	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
 		"ERROR:",
 		"",
-		new_err_msg,
+		new_err_msg:gsub("\n", " ;"),
 		"",
-		"" .. error.stderr:sub(4, -4),
+		"" .. error.stderr:sub(4, -4):gsub("\n", " ;"),
 	})
 end
 

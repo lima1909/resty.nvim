@@ -2,6 +2,7 @@ local kv = require("resty.parser.key_value")
 local mu = require("resty.parser.method_url")
 local b = require("resty.parser.body")
 local d = require("resty.parser.delimiter")
+local v = require("resty.parser.variables")
 local exec = require("resty.exec")
 
 local M = {}
@@ -123,55 +124,13 @@ end
 ---@param line string the input line
 ---@return string the output line with replaced variables
 function M:replace_variable(variables, line)
-	if not variables then
+	local ok, result = pcall(v.replace_variable, variables, line)
+	if not ok then
+		self:add_error(result)
 		return line
 	end
 
-	local _, start_pos = string.find(line, "{{")
-	local end_pos, _ = string.find(line, "}}")
-
-	if not start_pos and not end_pos then
-		-- no variable found
-		return line
-	elseif start_pos and not end_pos then
-		-- error
-		self:add_error("missing closing brackets: '}}'")
-		return line
-	elseif not start_pos and end_pos then
-		-- error
-		self:add_error("missing open brackets: '{{'")
-		return line
-	end
-
-	local before = string.sub(line, 1, start_pos - 2)
-	local name = string.sub(line, start_pos + 1, end_pos - 1)
-	local after = string.sub(line, end_pos + 2)
-
-	local value
-	-- shell command {{>[command]}}
-	if name:sub(1, 1) == ">" then
-		local cmd = name:sub(2)
-		value = exec.cmd(cmd)
-	-- environment variable: {{$[ENV]}}
-	elseif name:sub(1, 1) == "$" then
-		local env = name:sub(2)
-		value = os.getenv(env:upper())
-	else
-		value = variables[name]
-		if not value then
-			self:add_error("no variable found with name: '" .. name .. "'")
-			return line
-		elseif value:sub(1, 1) == ">" then
-			local cmd = value:sub(2)
-			value = exec.cmd(cmd)
-		elseif value:sub(1, 1) == "$" then
-			local env = value:sub(2)
-			value = os.getenv(env:upper())
-		end
-	end
-
-	local new_line = before .. value .. after
-	return self:replace_variable(variables, new_line)
+	return result
 end
 
 ---@param line nil | string the readed line
@@ -217,6 +176,7 @@ end
 ---@param selected number the selected row
 ---@return self the parser with the request and possible errors
 function M.parse(input, selected)
+	selected = selected or 1
 	local start_time = os.clock()
 
 	local lines

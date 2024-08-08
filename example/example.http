@@ -6,7 +6,7 @@ accept: application/json
 
 # query values
 postId = 5
-id=21
+id={{:ID}} # 21
 
 ### GET httpbin
 

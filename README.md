@@ -68,6 +68,7 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
   - variable             : `{{variable-name}}` -> `{{host}}`
   - environment variable : `{{$[variable-name]}}` -> `{{$USER}}`
   - shell-commnad        : `{{>[command]}}` : replace this with the result of the command: `{{> echo "my value"}}`
+  - prompt               : `{{:[name]}}` : prompt for put an input value: `{{:Name}}`
 
 ### Grammar
 
@@ -100,7 +101,7 @@ accept: application/json
 GET https://{{hostname}}/comments
 
 # query
-postId = 5
+postId = {{:PostID}} # show an input prompt for the post ID 
 id={{$ID}} # replace it with the environment variable (ID)
 
 

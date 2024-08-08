@@ -61,10 +61,24 @@ local M = {
 						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, json)
 					end)
 				end
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "```" })
+
+				-- print Variables and replacements
+				if #slf.parser_result.replacements > 0 then
+					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
+						"",
+						"## Variables:",
+						"",
+					})
+					for _, typ in ipairs(slf.parser_result.replacements) do
+						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
+							"- '" .. typ.from .. "': '" .. typ.to .. "' (" .. typ.type.text .. ")",
+						})
+					end
+				end
 
 				-- RESPONSE AND META
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"```",
 					"",
 					"## Response: ",
 					"- state: " .. slf.meta.status_str,

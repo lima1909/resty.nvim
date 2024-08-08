@@ -46,6 +46,7 @@ end)
 
 describe("variables", function()
 	it("replace variable", function()
+		local v = require("resty.parser.variables")
 		local variables = { ["host"] = "my-host" }
 
 		local tt = {
@@ -71,7 +72,7 @@ describe("variables", function()
 
 		for _, tc in ipairs(tt) do
 			local parser = p.new()
-			local line = parser:replace_variable(variables, tc.input)
+			local line = parser:replace_variable(variables, tc.input, {})
 			if parser:has_errors() then
 				assert.are.same(tc.err_msg, parser.errors[1].message)
 			else

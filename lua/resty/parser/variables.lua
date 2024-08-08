@@ -28,19 +28,19 @@ function M.execute(key)
 
 	-- environment variable
 	if symbol == M.TypeEnv.symbol then
-		return os.getenv(key:sub(2):upper()), true, M.TypeEnv
+		return os.getenv(key:sub(2):upper()), M.TypeEnv
 	-- commmand
 	elseif symbol == M.TypeCmd.symbol then
-		return exec.cmd(key:sub(2)), true, M.TypeCmd
+		return exec.cmd(key:sub(2)), M.TypeCmd
 	-- prompt
 	elseif symbol == M.TypePrompt.symbol then
-		return vim.fn.input("Input for key " .. key:sub(2) .. ": "), true, M.TypePrompt
+		return vim.fn.input("Input for key " .. key:sub(2) .. ": "), M.TypePrompt
 	else
-		return key, false, M.TypeVar
+		return key, M.TypeVar
 	end
 end
 
-local function _replace_variable(variables, line, replaced)
+function M.replace_variable(variables, line, replacements)
 	local _, start_pos = string.find(line, "{{")
 	local end_pos, _ = string.find(line, "}}")
 
@@ -57,23 +57,19 @@ local function _replace_variable(variables, line, replaced)
 	local name = string.sub(line, start_pos + 1, end_pos - 1)
 	local after = string.sub(line, end_pos + 2)
 
-	local value, ok, type = M.execute(name)
-	if ok == false then
+	local value, type = M.execute(name)
+	-- if it is a variable
+	if type.symbol == "" then
 		value = variables[name]
 		if not value then
 			error("no variable found with name: '" .. name .. "'", 0)
 		end
-		value, ok, type = M.execute(value)
+		value, type = M.execute(value)
 	end
 
-	table.insert(replaced, { from = name, to = value, type = type })
+	table.insert(replacements, { from = name, to = value, type = type })
 	local new_line = before .. value .. after
-	return _replace_variable(variables, new_line, replaced)
-end
-
-function M.replace_variable(variables, line)
-	local replaced = {}
-	return _replace_variable(variables, line, replaced), replaced
+	return M.replace_variable(variables, new_line, replacements)
 end
 
 return M

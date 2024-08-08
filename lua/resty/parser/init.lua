@@ -123,8 +123,8 @@ end
 ---@param variables { } the parsed variables
 ---@param line string the input line
 ---@return string the output line with replaced variables
-function M:replace_variable(variables, line)
-	local ok, result = pcall(v.replace_variable, variables, line)
+function M:replace_variable(variables, line, replacements)
+	local ok, result = pcall(v.replace_variable, variables, line, replacements)
 	if not ok then
 		self:add_error(result)
 		return line
@@ -162,6 +162,7 @@ function M.new()
 		duration = 0,
 		body = { is_ready = false },
 		variables = {},
+		replacements = {},
 		request = {
 			headers = {},
 			query = {},
@@ -218,7 +219,7 @@ function M.parse(input, selected)
 	-- read request
 	p.readed_lines = req_start
 	while true do
-		local line = p:replace_variable(p.variables, lines[p.readed_lines])
+		local line = p:replace_variable(p.variables, lines[p.readed_lines], p.replacements)
 		-- read the line and execute the state machine
 		p:read_line(line, M.do_transition)
 

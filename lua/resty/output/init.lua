@@ -81,9 +81,11 @@ local M = {
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"",
 					"## Response: ",
+					"",
 					"- state: " .. slf.meta.status_str,
 					"",
 					"## Meta:",
+					"",
 					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
 					"- duration rest-call: " .. slf.meta.duration_str,
 					"- duration parse-request: " .. slf.parser_result.duration_str,

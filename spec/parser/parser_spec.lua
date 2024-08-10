@@ -1,5 +1,6 @@
 local assert = require("luassert")
 local p = require("resty.parser")
+local body = require("resty.parser.body")
 
 describe("parser:", function()
 	local function check(input, selected, expected)
@@ -10,6 +11,7 @@ describe("parser:", function()
 		assert.are.same(r.variables, expected.variables, "compare global_variables")
 		assert.are.same(r.current_state.id, expected.state, "compare state")
 		assert.are.same(r.request, expected.request or {}, "compare request")
+		assert.are.same(r.script, expected.script, "compare script")
 	end
 
 	it("method url", function()
@@ -327,6 +329,21 @@ describe("parser:", function()
 				},
 			}
 		)
+	end)
+
+	it("method url with script", function()
+		check({ "GET http://host", "  ", body.script.open, "-- comment", body.script.close }, 1, {
+			readed_lines = 5,
+			variables = {},
+			state = p.STATE_SCRIPT.id,
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = {},
+				query = {},
+			},
+			script = body.script.open .. "\n-- comment\n" .. body.script.close .. "\n",
+		})
 	end)
 end)
 

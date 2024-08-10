@@ -89,26 +89,28 @@ describe("parse_line:", function()
 	end)
 
 	describe("request body", function()
+		local body = require("resty.parser.body")
 		local body_parser = parser.STATE_BODY
 
 		it("empty body", function()
 			local p = parser.new()
-			p:parse_line(body_parser.parser, "{", body_parser.set_result)
-			p:parse_line(body_parser.parser, "}", body_parser.set_result)
+			p:parse_line(body_parser.parser, body.request.open, body_parser.set_result)
+			p:parse_line(body_parser.parser, body.request.close, body_parser.set_result)
 			assert.is_true(p.body.is_ready)
 			assert.are.same(p.request.body, "{\n}\n")
 		end)
 	end)
 
 	describe("script body", function()
+		local body = require("resty.parser.body")
 		local script_parser = parser.STATE_SCRIPT
 
 		it("empty body", function()
 			local p = parser.new()
-			p:parse_line(script_parser.parser, "--{", script_parser.set_result)
-			p:parse_line(script_parser.parser, "--}", script_parser.set_result)
+			p:parse_line(script_parser.parser, body.script.open, script_parser.set_result)
+			p:parse_line(script_parser.parser, body.script.close, script_parser.set_result)
 			assert.is_true(p.body.is_ready)
-			assert.are.same(p.script, "--{\n--}\n")
+			assert.are.same(p.script, body.script.open .. "\n" .. body.script.close .. "\n")
 		end)
 	end)
 end)

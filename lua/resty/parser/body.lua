@@ -9,8 +9,8 @@ M.request = {
 
 -- definition of an script body
 M.script = {
-	open = "--{",
-	close = "--}",
+	open = "--{%",
+	close = "--%}",
 	len = 4,
 }
 

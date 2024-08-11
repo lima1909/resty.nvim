@@ -197,7 +197,7 @@ describe("output:", function()
 		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 	end)
 
-	it("show error with \n", function()
+	it("show error with", function()
 		local o = output.new():activate()
 		local error = {
 			exit = 1,
@@ -250,6 +250,33 @@ get https://reqres.in/api/users?page=5
 		assert.are.same(3, o.current_window_id)
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 		assert.are.same({ "", "## Request:" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+	end)
+
+	it("integration: with script", function()
+		local input = [[
+GET https://reqres.in/api/users/2
+
+--{%
+
+local json = ctx.result.body
+local email = vim.json.decode(json).data.email
+
+ctx.set("email", email)
+
+--%} 
+
+]]
+
+		local r = parser.parse(input)
+		local o = output.new()
+		o:exec_and_show_response(r)
+
+		-- wait of curl response
+		vim.wait(7000, function()
+			return 1 == o.current_window_id
+		end)
+
+		assert.are.same({ ["email"] = "janet.weaver@reqres.in" }, parser.global_variables)
 	end)
 
 	it("integration: cancel exec_and_show_response", function()

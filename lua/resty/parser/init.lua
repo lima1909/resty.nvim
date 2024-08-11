@@ -3,10 +3,13 @@ local mu = require("resty.parser.method_url")
 local b = require("resty.parser.body")
 local d = require("resty.parser.delimiter")
 local v = require("resty.parser.variables")
-local exec = require("resty.exec")
 
-local M = {}
+local M = { global_variables = {} }
 M.__index = M
+
+M.set_global_variables = function(gvars)
+	M.global_variables = vim.tbl_deep_extend("force", M.global_variables, gvars)
+end
 
 M.STATE_START = {
 	id = 1,
@@ -170,7 +173,7 @@ end
 
 ---Entry point, the parser
 ---@param input string | { } a string with delimiter '\n' or an array with strings
----@param selected number the selected row
+---@param selected? number the selected row
 ---@return self the parser with the request and possible errors
 function M.parse(input, selected)
 	selected = selected or 1

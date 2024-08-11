@@ -119,4 +119,31 @@ M.cmd = function(cmd)
 	return "could not create a handle for command: " .. cmd
 end
 
+function M.script(code, result)
+	if not code or vim.trim(code):len() == 0 then
+		return {}
+	end
+
+	M.global_variables = {}
+
+	local ctx = {
+		result = result,
+		set = function(key, value)
+			M.global_variables[key] = value
+		end,
+	}
+
+	local env = { ctx = ctx }
+	setmetatable(env, { __index = _G })
+
+	local f, err = load(code, "script error", "bt", env) -- 't' indicates that the env is a table
+	if f then
+		f()
+	else
+		error(err, 0)
+	end
+
+	return M.global_variables
+end
+
 return M

@@ -2,6 +2,7 @@ local winbar = require("resty.output.winbar")
 local format = require("resty.output.format")
 local statuscode = require("resty.output.statuscode")
 local exec = require("resty.exec")
+local parser = require("resty.parser")
 
 local M = {
 	windows = {
@@ -297,6 +298,9 @@ function M:exec_and_show_response(parser_result)
 
 	self.curl = exec.curl(parser_result.request, function(result)
 		self.meta.duration = os.clock() - start_time
+
+		local gvars = exec.script(parser_result.script, result)
+		parser.set_global_variables(gvars)
 
 		vim.schedule(function()
 			self:show(parser_result, result)

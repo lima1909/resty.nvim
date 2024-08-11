@@ -105,4 +105,41 @@ Get https://.org/get
 			assert.is_true(output:find("not found") > 0)
 		end)
 	end)
+
+	describe("sript:", function()
+		it("empty", function()
+			local ctx = exec.script("")
+			assert.are.same({}, ctx)
+		end)
+
+		it("no script", function()
+			local ctx = exec.script("\n")
+			assert.are.same({}, ctx)
+		end)
+
+		it("simple", function()
+			local ctx = exec.script(
+				[[
+--{%
+  ctx.set("my-foo", ctx.result.name.."bar")
+--%}
+			]],
+				{ name = "foo" }
+			)
+			assert.are.same("foobar", ctx["my-foo"])
+		end)
+
+		it("with error", function()
+			local _, err = pcall(
+				exec.script,
+				[[
+--{%
+  ctx.set("my-foo", )
+--%}
+			]],
+				{ name = "foo" }
+			)
+			assert.are.same([[[string "script error"]:2: unexpected symbol near ')']], err)
+		end)
+	end)
 end)

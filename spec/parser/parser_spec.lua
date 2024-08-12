@@ -345,6 +345,67 @@ describe("parser:", function()
 			script = body.script.open .. "\n-- comment\n" .. body.script.close .. "\n",
 		})
 	end)
+
+	it("method url with script and body", function()
+		check(
+			{
+				"GET http://host",
+				"",
+				"{",
+				"\t'name': 'John'",
+				"}",
+				"",
+				body.script.open,
+				"print('Hey ...')",
+				body.script.close,
+			},
+			1,
+			{
+				readed_lines = 9,
+				variables = {},
+				state = p.STATE_SCRIPT.id,
+				request = {
+					method = "GET",
+					url = "http://host",
+					body = "{\n\t'name': 'John'\n}\n",
+					headers = {},
+					query = {},
+				},
+				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
+			}
+		)
+	end)
+
+	it("method url with body and script ", function()
+		check(
+			{
+				"GET http://host",
+				"accept: application/json",
+				"",
+				body.script.open,
+				"print('Hey ...')",
+				body.script.close,
+				"",
+				"{",
+				"\t'name': 'John'",
+				"}",
+			},
+			1,
+			{
+				readed_lines = 10,
+				variables = {},
+				state = p.STATE_BODY.id,
+				request = {
+					method = "GET",
+					url = "http://host",
+					body = "{\n\t'name': 'John'\n}\n",
+					headers = { ["accept"] = "application/json" },
+					query = {},
+				},
+				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
+			}
+		)
+	end)
 end)
 
 describe("errors:", function()
@@ -428,7 +489,7 @@ describe("errors:", function()
 
 	it("invalid transition", function()
 		check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
-			message = "from current state: 'body' are only possible state(s): body",
+			message = "from current state: 'body' are only possible state(s): body, script",
 			lnum = 4,
 			current_state = p.STATE_BODY.id,
 		})

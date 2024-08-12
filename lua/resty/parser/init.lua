@@ -53,7 +53,7 @@ M.STATE_BODY = {
 	name = "body",
 	parser = b.parse_request_body,
 	set_result = function(slf, r)
-		slf.request.body = (slf.request.body or "") .. r.current_line .. "\n"
+		slf.request.body = (slf.request.body or "") .. r .. "\n"
 	end,
 }
 
@@ -62,7 +62,7 @@ M.STATE_SCRIPT = {
 	name = "script",
 	parser = b.parse_script_body,
 	set_result = function(slf, r)
-		slf.script = (slf.script or "") .. r.current_line .. "\n"
+		slf.script = (slf.script or "") .. r .. "\n"
 	end,
 }
 
@@ -71,12 +71,12 @@ local transitions = {
 	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
 	[M.STATE_METHOD_URL.id] = { M.STATE_BODY, M.STATE_HEADERS_QUERY, M.STATE_SCRIPT },
 	[M.STATE_HEADERS_QUERY.id] = { M.STATE_BODY, M.STATE_HEADERS_QUERY, M.STATE_SCRIPT },
-	[M.STATE_BODY.id] = { M.STATE_BODY },
-	[M.STATE_SCRIPT.id] = { M.STATE_SCRIPT },
+	[M.STATE_BODY.id] = { M.STATE_BODY, M.STATE_SCRIPT },
+	[M.STATE_SCRIPT.id] = { M.STATE_SCRIPT, M.STATE_BODY },
 }
 
 function M:parse_line(parser, line, set_result)
-	local no_error, result = pcall(parser, line, self)
+	local no_error, result = pcall(parser, line)
 
 	-- if has an error
 	if not no_error then
@@ -159,7 +159,6 @@ function M.new()
 		current_state = M.STATE_START,
 		readed_lines = 1,
 		duration = 0,
-		body = { is_ready = false },
 		variables = {},
 		replacements = {},
 		request = {

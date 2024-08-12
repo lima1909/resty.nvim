@@ -131,6 +131,9 @@ function M.script(code, result)
 		set = function(key, value)
 			M.global_variables[key] = value
 		end,
+		json_body = function()
+			return vim.json.decode(result.body)
+		end,
 	}
 
 	local env = { ctx = ctx }

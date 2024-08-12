@@ -129,6 +129,19 @@ Get https://.org/get
 			assert.are.same("foobar", ctx["my-foo"])
 		end)
 
+		it("json body", function()
+			local ctx = exec.script(
+				[[
+--{%
+  local name = ctx.json_body().name
+  ctx.set("foo", name)
+--%}
+			]],
+				{ body = '{ "name": "foo"}' }
+			)
+			assert.are.same("foo", ctx["foo"])
+		end)
+
 		it("with error", function()
 			local _, err = pcall(
 				exec.script,

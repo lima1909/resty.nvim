@@ -134,8 +134,11 @@ end
 
 ---@param line  string the readed line
 ---@param parse function a parser function
+---@param with_replace_variable? boolean with replacing variables
 ---@return boolean has_parsed is the given a line, that the parser should parse
-function M:read_line(line, parse)
+function M:read_line(line, parse, with_replace_variable)
+	with_replace_variable = with_replace_variable or false
+
 	-- ignore line with comment or empty line, do nothing
 	if vim.startswith(line, "#") or line == "" or vim.trim(line) == "" then
 		return false
@@ -148,12 +151,14 @@ function M:read_line(line, parse)
 	end
 
 	-- replace variables
-	local replaced_line = self:replace_variable(self.variables, line, self.replacements)
-	if replaced_line == "" then
-		return false
+	if with_replace_variable then
+		line = self:replace_variable(self.variables, line, self.replacements)
+		if line == "" then
+			return false
+		end
 	end
 
-	parse(self, replaced_line)
+	parse(self, line)
 
 	return true
 end
@@ -225,7 +230,7 @@ function M.parse(input, selected)
 	p.readed_lines = req_start
 	while true do
 		-- read the line and execute the state machine
-		p:read_line(lines[p.readed_lines], M.do_transition)
+		p:read_line(lines[p.readed_lines], M.do_transition, true)
 
 		if p.readed_lines == req_end then
 			break

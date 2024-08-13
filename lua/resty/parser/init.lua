@@ -126,32 +126,36 @@ function M:replace_variable(variables, line, replacements)
 	local ok, result = pcall(v.replace_variable, variables, line, replacements)
 	if not ok then
 		self:add_error(result)
-		return line
+		return ""
 	end
 
 	return result
 end
 
----@param line nil | string the readed line
+---@param line  string the readed line
 ---@param parse function a parser function
----@return boolean continue to read (true) or stop (false)
+---@return boolean has_parsed is the given a line, that the parser should parse
 function M:read_line(line, parse)
-	if not line or line:sub(1, 3) == "###" then
+	-- ignore line with comment or empty line, do nothing
+	if vim.startswith(line, "#") or line == "" or vim.trim(line) == "" then
 		return false
 	end
 
-	-- ignore comment or empty line
-	if vim.startswith(line, "#") or line == "" or vim.trim(line) == "" then
-		return true
-	end
-
-	-- cut comment
+	-- cut comment from the current line
 	local pos = string.find(line, "#")
 	if pos then
 		line = line:sub(1, pos - 1)
 	end
 
-	return parse(self, line)
+	-- replace variables
+	local replaced_line = self:replace_variable(self.variables, line, self.replacements)
+	if replaced_line == "" then
+		return false
+	end
+
+	parse(self, replaced_line)
+
+	return true
 end
 
 function M.new()
@@ -198,18 +202,21 @@ function M.parse(input, selected)
 	-- start == 1, no global variables exist
 	if req_start > 1 then
 		-- read global variables
-		while
-			p:read_line(lines[p.readed_lines], function(_, line)
-				local no_error, result = pcall(kv.parse_variable, line)
+		while true do
+			local line = lines[p.readed_lines]
+			if not line or vim.startswith(line, "###") then
+				break
+			end
+
+			p:read_line(line, function(_, l)
+				local no_error, result = pcall(kv.parse_variable, l)
 				if not no_error then
 					p:add_error(result)
-					return true
 				elseif result then
 					p.variables[result.k] = result.v
-					return true
 				end
 			end)
-		do
+
 			p.readed_lines = p.readed_lines + 1
 		end
 	end
@@ -217,9 +224,8 @@ function M.parse(input, selected)
 	-- read request
 	p.readed_lines = req_start
 	while true do
-		local line = p:replace_variable(p.variables, lines[p.readed_lines], p.replacements)
 		-- read the line and execute the state machine
-		p:read_line(line, M.do_transition)
+		p:read_line(lines[p.readed_lines], M.do_transition)
 
 		if p.readed_lines == req_end then
 			break

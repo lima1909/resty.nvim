@@ -24,7 +24,7 @@ describe("parser:", function()
 	end)
 
 	it("only one variable and method and url", function()
-		check({ "@key=value", "GET http://host" }, 0, {
+		check({ "@key=value # comment", "GET http://host" }, 0, {
 			readed_lines = 2,
 			variables = { key = "value" },
 			state = p.STATE_METHOD_URL.id,
@@ -42,7 +42,7 @@ describe("parser:", function()
 	end)
 
 	it("method url with variable", function()
-		check({ "@host=my-host", "###", "GET http://{{host}}" }, 3, {
+		check({ "@host=my-host # comment", "###", "GET http://{{host}}" }, 3, {
 			readed_lines = 3,
 			variables = { host = "my-host" },
 			state = p.STATE_METHOD_URL.id,
@@ -329,6 +329,11 @@ describe("parser:", function()
 				},
 			}
 		)
+	end)
+
+	it("do not replace variable in comment", function()
+		local r = p.parse("GET http://host\nid=3 # {{:id}}")
+		assert.are.same({}, r.replacements)
 	end)
 
 	it("method url with script", function()

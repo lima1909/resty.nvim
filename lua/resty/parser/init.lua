@@ -123,7 +123,7 @@ end
 ---@param line string the input line
 ---@return string the output line with replaced variables
 function M:replace_variable(variables, line, replacements)
-	local ok, result = pcall(v.replace_variable, variables, line, replacements)
+	local ok, result = pcall(v.replace_variable, variables, line, replacements, M.global_variables)
 	if not ok then
 		self:add_error(result)
 		return ""

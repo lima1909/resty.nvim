@@ -129,7 +129,7 @@ function M.script(code, result)
 	local ctx = {
 		result = result,
 		set = function(key, value)
-			M.global_variables[key] = value
+			M.global_variables[tostring(key)] = tostring(value)
 		end,
 		json_body = function()
 			return vim.json.decode(result.body)

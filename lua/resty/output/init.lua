@@ -78,6 +78,20 @@ local M = {
 					end
 				end
 
+				-- print Global Variables
+				-- if #slf.parser_result.replacements > 0 then
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
+					"",
+					"## Global Variables:",
+					"",
+				})
+				for k, v in pairs(parser.global_variables) do
+					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
+						"- '" .. k .. "': '" .. v .. "'",
+					})
+				end
+				-- end
+
 				-- RESPONSE AND META
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 					"",

@@ -11,6 +11,20 @@ describe("variables parser", function()
 		assert.are.same(p.TypeVar, replacements[1].type)
 	end)
 
+	it("global variable", function()
+		local replacements = {}
+		local line = p.replace_variable(variables, "myid={{id}}", replacements, { ["id"] = "42" })
+		assert.are.same("myid=42", line)
+		assert.are.same(p.TypeGlobalVar, replacements[1].type)
+	end)
+
+	it("global variable, override variable", function()
+		local replacements = {}
+		local line = p.replace_variable(variables, "host={{host}}", replacements, { ["host"] = "global-host" })
+		assert.are.same("host=global-host", line)
+		assert.are.same(p.TypeGlobalVar, replacements[1].type)
+	end)
+
 	it("command", function()
 		local replacements = {}
 		local line = p.replace_variable(variables, "user={{> echo -n 'me'}}", replacements)

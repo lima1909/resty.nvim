@@ -7,6 +7,11 @@ M.TypeVar = {
 	text = "variable",
 }
 
+M.TypeGlobalVar = {
+	symbol = "",
+	text = "global_variable",
+}
+
 M.TypeEnv = {
 	symbol = "$",
 	text = "environment",
@@ -40,7 +45,9 @@ function M.execute(key)
 	end
 end
 
-function M.replace_variable(variables, line, replacements)
+function M.replace_variable(variables, line, replacements, global_variables)
+	global_variables = global_variables or {}
+
 	local _, start_pos = string.find(line, "{{")
 	local end_pos, _ = string.find(line, "}}")
 
@@ -60,11 +67,16 @@ function M.replace_variable(variables, line, replacements)
 	local value, type = M.execute(name)
 	-- if it is a variable
 	if type.symbol == "" then
-		value = variables[name]
-		if not value then
-			error("no variable found with name: '" .. name .. "'", 0)
+		value = global_variables[name]
+		if value then
+			type = M.TypeGlobalVar
+		else
+			value = variables[name]
+			if not value then
+				error("no variable found with name: '" .. name .. "'", 0)
+			end
+			value, type = M.execute(value)
 		end
-		value, type = M.execute(value)
 	end
 
 	table.insert(replacements, { from = name, to = value, type = type })

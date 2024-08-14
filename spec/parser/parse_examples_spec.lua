@@ -1,6 +1,7 @@
 local assert = require("luassert")
 local p = require("resty.parser")
 local f = require("resty.output.format")
+local exec = require("resty.exec")
 
 describe("examples parser:", function()
 	describe("one input", function()
@@ -152,6 +153,26 @@ include = sub, *
 			assert.are.same("http://myhost:8080", r.request.url)
 			assert.are.same({ accept = "application/json", Authorization = "Bearer mytoken123" }, r.request.headers)
 			assert.are.same({ filter = 'id = "42" and age > 42', include = "sub, *" }, r.request.query)
+		end)
+	end)
+
+	describe("global variables", function()
+		it("global variables", function()
+			local input = [[
+GET https://reqres.in/api/users/2
+
+--{%
+  local json = ctx.json_body()
+  ctx.set("id", json.data.id)
+--%}
+]]
+
+			local r = p.parse(input, 1)
+			local gvars = exec.script(r.script, { ["body"] = '{"data" : { "id": 42 }}' })
+			assert.are.same({ ["id"] = "42" }, gvars)
+
+			p.set_global_variables(gvars)
+			assert.are.same({ ["id"] = "42" }, p.global_variables)
 		end)
 	end)
 end)

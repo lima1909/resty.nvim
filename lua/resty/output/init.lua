@@ -313,8 +313,7 @@ function M:exec_and_show_response(parser_result)
 	self.curl = exec.curl(parser_result.request, function(result)
 		self.meta.duration = os.clock() - start_time
 
-		local gvars = exec.script(parser_result.script, result)
-		parser.set_global_variables(gvars)
+		parser.set_global_variables(result.global_variables)
 
 		vim.schedule(function()
 			self:show(parser_result, result)

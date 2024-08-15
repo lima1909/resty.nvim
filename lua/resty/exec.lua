@@ -62,6 +62,13 @@ M._create_curl_job = function(request, callback, error)
 	local job
 	request.callback = function(result)
 		job.is_finished = true
+
+		if request.script then
+			result.global_variables = M.script(request.script, result)
+		else
+			result.global_variables = {}
+		end
+
 		callback(result)
 	end
 	request.on_error = function(result)

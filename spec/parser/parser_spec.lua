@@ -346,8 +346,8 @@ describe("parser:", function()
 				url = "http://host",
 				headers = {},
 				query = {},
+				script = body.script.open .. "\n-- comment\n" .. body.script.close .. "\n",
 			},
-			script = body.script.open .. "\n-- comment\n" .. body.script.close .. "\n",
 		})
 	end)
 
@@ -375,8 +375,8 @@ describe("parser:", function()
 					body = "{\n\t'name': 'John'\n}\n",
 					headers = {},
 					query = {},
+					script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
 				},
-				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
 			}
 		)
 	end)
@@ -406,8 +406,8 @@ describe("parser:", function()
 					body = "{\n\t'name': 'John'\n}\n",
 					headers = { ["accept"] = "application/json" },
 					query = {},
+					script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
 				},
-				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
 			}
 		)
 	end)

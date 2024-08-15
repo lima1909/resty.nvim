@@ -76,6 +76,28 @@ Get https://.org/get
 			assert.are.same(6, error.exit)
 			local err_msg = "Could not resolve host: .org"
 			assert(error.stderr:find(err_msg), err_msg)
+
+			-- reset error
+			error = nil
+		end)
+
+		it("with script", function()
+			local input = [[
+GET https://reqres.in/api/users/2
+
+--{%
+  local json = ctx.json_body()
+  ctx.set("id", json.data.id)
+--%}
+]]
+
+			local r = parser.parse(input)
+			assert.is_false(r:has_errors())
+
+			exec.curl_wait(7000, r.request, callback, error_fn)
+
+			assert.are.same(200, response.status)
+			assert.are.same("2", response.global_variables["id"])
 		end)
 	end)
 

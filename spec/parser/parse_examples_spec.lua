@@ -168,7 +168,7 @@ GET https://reqres.in/api/users/2
 ]]
 
 			local r = p.parse(input, 1)
-			local gvars = exec.script(r.script, { ["body"] = '{"data" : { "id": 42 }}' })
+			local gvars = exec.script(r.request.script, { ["body"] = '{"data" : { "id": 42 }}' })
 			assert.are.same({ ["id"] = "42" }, gvars)
 
 			p.set_global_variables(gvars)

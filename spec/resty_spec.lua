@@ -24,6 +24,7 @@ describe("resty:", function()
 				body = '{"name": "foo"}',
 				status = 200,
 				headers = {},
+				global_variables = {},
 			})
 		end)
 

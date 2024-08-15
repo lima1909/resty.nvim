@@ -62,7 +62,7 @@ M.STATE_SCRIPT = {
 	name = "script",
 	parser = b.parse_script_body,
 	set_result = function(slf, r)
-		slf.script = (slf.script or "") .. r .. "\n"
+		slf.request.script = (slf.request.script or "") .. r .. "\n"
 	end,
 }
 

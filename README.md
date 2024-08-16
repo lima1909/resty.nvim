@@ -80,16 +80,27 @@ headers or queries : headers or queries | body
 body               : body | delimiter (end)
 ```
 
-## Example
+## Examples
+
+###  Simple get call
 
 ```http
-# global variables
+GET https://reqres.in/api/users/2
+```
+
+### Using local and global variables 
+
+```http
+# variable for the hostname
 @hostname = httpbin.org
+# @hostname = {{$HOSTNAME}}       # from environment variable (start symbol: '$')
+# @hostname = {{> ./myscript.sh}} # from script (start symbol: '>')
+# @hostname = {{:hostname}}       # with input prompt (start symbol: ':')
 
-### 
+###  
+
 GET https://{{hostname}}/get
-
-# headers
+# with header
 accept: application/json  
 
 
@@ -100,18 +111,31 @@ accept: application/json
 
 GET https://{{hostname}}/comments
 
-# query
-postId = {{:PostID}} # show an input prompt for the post ID 
-id={{$ID}} # replace it with the environment variable (ID)
+# with query parameter
+id={{$ID}} # set ID from a environment variable
+```
 
+### Call with query parameter
 
+```http
+###
+GET https://reqres.in/api/users
+
+delay = 1
+
+### not necessary, only for running from this file
+```
+
+### Post with body
+
+```http
 ###
 POST https://api.restful-api.dev/objects
 
 accept: application/json  
 Content-type: application/json; charset=UTF-8
 
-# body
+# body, the starting '{' and ending '}' must be in first column
 {
    "name": "MY Apple MacBook Pro 16",
    "data": {
@@ -121,6 +145,33 @@ Content-type: application/json; charset=UTF-8
       "Hard disk size": "1 TB"
    }
 }
+### not necessary, only for running from this file
+```
+
+### Login and save the Token
+
+```http
+###
+POST https://reqres.in/api/login
+accept: application/json  
+Content-type: application/json ; charset=UTF-8
+
+{
+    "email": "eve.holt@reqres.in",
+    "password": "cityslicka"
+}
+
+# response: { "token": "QpwL5tke4Pnpja7X4" }
+
+# lua script for saving the response, the starting '--{%' and ending '--%}' must be in first column
+
+--{%
+  local response = ctx.json_body()
+  ctx.set("token", response.token)
+--%}
+# using the token with variable: {{token}}
+
+### not necessary, only for running from this file
 ```
 
 ## Response|Result view

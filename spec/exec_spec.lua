@@ -81,7 +81,7 @@ Get https://.org/get
 			error = nil
 		end)
 
-		it("with script", function()
+		it("with script, json body", function()
 			local input = [[
 GET https://reqres.in/api/users/2
 
@@ -98,6 +98,25 @@ GET https://reqres.in/api/users/2
 
 			assert.are.same(200, response.status)
 			assert.are.same("2", response.global_variables["id"])
+		end)
+
+		it("with script, jq body", function()
+			local input = [[
+GET https://reqres.in/api/users/3
+
+--{%
+  local id = ctx.jq_body('.data.id')
+  ctx.set("id", id)
+--%}
+]]
+
+			local r = parser.parse(input)
+			assert.is_false(r:has_errors())
+
+			exec.curl_wait(7000, r.request, callback, error_fn)
+
+			assert.are.same(200, response.status)
+			assert.are.same("3", response.global_variables["id"])
 		end)
 	end)
 

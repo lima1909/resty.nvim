@@ -1,11 +1,12 @@
 local curl = require("plenary.curl")
+local pjob = require("plenary.job")
 
 local M = {}
 
 -- --------- JQ -------------------
 M._create_jq_job = function(json, callback, jq_filter)
 	local filter = jq_filter or "."
-	return require("plenary.job"):new({
+	return pjob:new({
 		command = "jq",
 		args = { filter },
 		writer = json,
@@ -134,12 +135,22 @@ function M.script(code, result)
 	M.global_variables = {}
 
 	local ctx = {
+		-- body = '{}', status = 200, headers = {}, exit = 0, global_variables = {}
 		result = result,
+		-- set global variables with key and value
 		set = function(key, value)
 			M.global_variables[tostring(key)] = tostring(value)
 		end,
+		-- JSON parse the body
 		json_body = function()
 			return vim.json.decode(result.body)
+		end,
+		-- jq to the body
+		jq_body = function(filter)
+			local b = string.gsub(result.body, "\n", " ")
+			local c = "echo '" .. b .. "' | jq '" .. filter .. "'"
+			local r = M.cmd(c)
+			return string.gsub(r, "\n", "")
 		end,
 	}
 

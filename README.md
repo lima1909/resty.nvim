@@ -48,8 +48,27 @@ A small http/rest client plugin for neovim
 ## Commands
 
 ```lua
-vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un" })
+vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un request under the cursor" })
 vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
+```
+The idea is, to define all rest calls in a `*.http` file and execute the definition where the cursor is (with: `Resty run`).
+
+But it is also possible to define and call a request which is included in any file.
+The request must start and end with: `###`
+
+```go
+/*
+Here is the rest call definition:
+
+###
+GET https://reqres.in/api/users/2
+
+###
+*/
+func my_rest_call() {
+ // ..
+}
+
 ```
 
 ## Definitions
@@ -60,7 +79,8 @@ vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]as
 - `method url`     : `GET http://host` (`[method] [space] [URL]`)
 - `headers`        : delimiter `:` (example: `accept: application/json`)
 - `query`          : delimiter `=` (example: `id = 5`)
-- `body`           : starts with: first row `{` and ends with: first row `}`, between is valid JSON
+- `body`           : starts with (first column): `{` and ends with (first column): `}`, between is valid JSON
+- `script`         : starts with (first column): `--{%` and ends with (first column): `--%}`, between is valid LUA script
 - `###`            : delimiter, if more as one request definition, or text before and/or after exist
 - `#`              : comments
 
@@ -77,7 +97,8 @@ start              : variables | method url
 variables          : variables | method url
 method_url         : headers or queries | body
 headers or queries : headers or queries | body
-body               : body | delimiter (end)
+body               : body | script | delimiter (end)
+script             : body | script | delimiter (end)
 ```
 
 ## Examples
@@ -90,7 +111,7 @@ GET https://reqres.in/api/users/2
 
 ### Using local and global variables 
 
-```http
+```
 # variable for the hostname
 @hostname = httpbin.org
 # @hostname = {{$HOSTNAME}}       # from environment variable (start symbol: '$')
@@ -117,7 +138,7 @@ id={{$ID}} # set ID from a environment variable
 
 ### Call with query parameter
 
-```http
+```
 ###
 GET https://reqres.in/api/users
 
@@ -150,7 +171,7 @@ Content-type: application/json; charset=UTF-8
 
 ### Login and save the Token
 
-```http
+```
 ###
 POST https://reqres.in/api/login
 accept: application/json  
@@ -163,8 +184,6 @@ Content-type: application/json ; charset=UTF-8
 
 # response: { "token": "QpwL5tke4Pnpja7X4" }
 
-# lua script for saving the response, the starting '--{%' and ending '--%}' must be in first column
-
 --{%
   local response = ctx.json_body()
   ctx.set("token", response.token)
@@ -172,6 +191,21 @@ Content-type: application/json ; charset=UTF-8
 # using the token with variable: {{token}}
 
 ### not necessary, only for running from this file
+```
+
+In LUA scripts you can use an `ctx` table, which has access to the following properties and methods:
+
+```lua
+local ctx = {
+	-- body = '{}', status = 200, headers = {}, exit = 0, global_variables = {}
+	result = ...,
+	-- set global variables with key and value
+	set = function(key, value) end,
+	-- parse the JSON body
+	json_body = function() end,
+	-- jq to the body
+	jq_body = function(filter) end,
+}
 ```
 
 ## Response|Result view
@@ -194,4 +228,6 @@ Hint: `jq` must be installed
 | `p` | json pretty print             | `jq .`           |
 | `q` | jq query                      | `jq .id`         |
 | `r` | reset to the origininal json  | -                |
+
+__Hint:__ with `cc` can the curl call canceled.
 

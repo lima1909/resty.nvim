@@ -38,14 +38,13 @@ M.last = function()
 	end
 end
 
-M.run = function(bufnr)
-	bufnr = bufnr or 0
-	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
+M.run = function()
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	local winnr = vim.api.nvim_get_current_win()
 	local row = vim.api.nvim_win_get_cursor(winnr)[1]
 
 	local parser_result = parser.parse(lines, row)
-	if diagnostic.show(bufnr, parser_result) then
+	if diagnostic.show(0, parser_result) then
 		return
 	end
 

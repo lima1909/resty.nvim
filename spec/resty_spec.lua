@@ -41,7 +41,10 @@ describe("resty:", function()
 
 		-- call resty command RUN
 		assert.are.same(0, resty.output.current_window_id)
-		resty.run(bufnr)
+
+		vim.api.nvim_set_current_buf(bufnr)
+		resty.run()
+
 		vim.wait(50, function()
 			return false
 		end)

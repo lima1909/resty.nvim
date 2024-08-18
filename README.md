@@ -101,6 +101,30 @@ body               : body | script | delimiter (end)
 script             : body | script | delimiter (end)
 ```
 
+## Response|Result view
+
+There are three views for the result (the rest-call-response)
+
+| view      | short cut | hint                                         |
+|-----------|-----------|----------------------------------------------|
+| `body`    |   `b`     | response body                                |
+| `headers` |   `h`     | response headers                             |
+| `info`    |   `i`     | shows information from the call and response |
+
+
+### Short cuts for the body-view
+
+Hint: `jq` must be installed
+
+| key | description                   | command/example  |
+|-----|-------------------------------|------------------|
+| `p` | json pretty print             | `jq .`           |
+| `q` | jq query                      | `jq .id`         |
+| `r` | reset to the origininal json  | -                |
+
+__Hint:__ with `cc` can the curl call canceled.
+
+
 ## Examples
 
 ###  Simple get call
@@ -111,7 +135,7 @@ GET https://reqres.in/api/users/2
 
 ### Using local and global variables 
 
-```
+```http
 # variable for the hostname
 @hostname = httpbin.org
 # @hostname = {{$HOSTNAME}}       # from environment variable (start symbol: '$')
@@ -119,26 +143,21 @@ GET https://reqres.in/api/users/2
 # @hostname = {{:hostname}}       # with input prompt (start symbol: ':')
 
 ###  
-
 GET https://{{hostname}}/get
-# with header
+
 accept: application/json  
 
 
 ###  
-
 # local variable overwrites global variable
 @hostname = jsonplaceholder.typicode.com
 
 GET https://{{hostname}}/comments
-
-# with query parameter
-id={{$ID}} # set ID from a environment variable
 ```
 
 ### Call with query parameter
 
-```
+```http
 ###
 GET https://reqres.in/api/users
 
@@ -171,7 +190,7 @@ Content-type: application/json; charset=UTF-8
 
 ### Login and save the Token
 
-```
+```http
 ###
 POST https://reqres.in/api/login
 accept: application/json  
@@ -183,12 +202,12 @@ Content-type: application/json ; charset=UTF-8
 }
 
 # response: { "token": "QpwL5tke4Pnpja7X4" }
+# save the token into the variable: {{login.token}}
 
 --{%
-  local response = ctx.json_body()
-  ctx.set("token", response.token)
+  local body = ctx.json_body()
+  ctx.set("login.token", body.token)
 --%}
-# using the token with variable: {{token}}
 
 ### not necessary, only for running from this file
 ```
@@ -197,37 +216,14 @@ In LUA scripts you can use an `ctx` table, which has access to the following pro
 
 ```lua
 local ctx = {
-	-- body = '{}', status = 200, headers = {}, exit = 0, global_variables = {}
-	result = ...,
-	-- set global variables with key and value
-	set = function(key, value) end,
-	-- parse the JSON body
-	json_body = function() end,
-	-- jq to the body
-	jq_body = function(filter) end,
+    -- result of the current request
+    -- body = '{}', status = 200, headers = {}, exit = 0, global_variables = {}
+    result = ...,
+    -- set global variables with key and value
+    set = function(key, value) end,
+    -- parse the JSON body
+    json_body = function() end,
+    -- jq to the body
+    jq_body = function(filter) end,
 }
 ```
-
-## Response|Result view
-
-There are three views for the result (the rest-call-response)
-
-| view      | short cut | hint                                         |
-|-----------|-----------|----------------------------------------------|
-| `body`    |   `b`     | response body                                |
-| `headers` |   `h`     | response headers                             |
-| `info`    |   `i`     | shows information from the call and response |
-
-
-### Short cuts for the body-view
-
-Hint: `jq` must be installed
-
-| key | description                   | command/example  |
-|-----|-------------------------------|------------------|
-| `p` | json pretty print             | `jq .`           |
-| `q` | jq query                      | `jq .id`         |
-| `r` | reset to the origininal json  | -                |
-
-__Hint:__ with `cc` can the curl call canceled.
-

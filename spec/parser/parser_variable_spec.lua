@@ -18,6 +18,13 @@ describe("variables parser", function()
 		assert.are.same(p.TypeGlobalVar, replacements[1].type)
 	end)
 
+	it("global variable with . as seperator", function()
+		local replacements = {}
+		local line = p.replace_variable(variables, "myid={{my.id}}", replacements, { ["my.id"] = "42" })
+		assert.are.same("myid=42", line)
+		assert.are.same(p.TypeGlobalVar, replacements[1].type)
+	end)
+
 	it("global variable, override variable", function()
 		local replacements = {}
 		local line = p.replace_variable(variables, "host={{host}}", replacements, { ["host"] = "global-host" })

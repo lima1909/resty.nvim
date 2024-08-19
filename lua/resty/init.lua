@@ -39,10 +39,25 @@ M.last = function()
 end
 
 M.run = function()
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-	local winnr = vim.api.nvim_get_current_win()
-	local row = vim.api.nvim_win_get_cursor(winnr)[1]
+	local start_line = vim.fn.getpos("'<")[2] -- 2 = line number, 3 = columns number
+	vim.fn.setpos("'<", { 0, 0, 0, 0 }) -- reset the start pos
 
+	-- VISUAL mode
+	if start_line > 0 then
+		local end_line = vim.fn.getpos("'>")[2]
+		vim.fn.setpos("'>", { 0, 0, 0, 0 }) -- reset
+		local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+		M._run(lines)
+	-- NORMAL mode
+	else
+		local winnr = vim.api.nvim_get_current_win()
+		local row = vim.api.nvim_win_get_cursor(winnr)[1]
+		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		M._run(lines, row)
+	end
+end
+
+M._run = function(lines, row)
 	local parser_result = parser.parse(lines, row)
 	if diagnostic.show(0, parser_result) then
 		return

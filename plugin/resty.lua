@@ -13,6 +13,7 @@ vim.api.nvim_create_user_command("Resty", function(args)
 	require("resty").last()
 end, {
 	nargs = "?", -- one or none argument
+	range = true,
 	desc = "Run a Resty requests",
 	complete = function()
 		return { "diagnostic", "last", "run" }

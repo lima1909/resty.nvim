@@ -28,23 +28,15 @@ describe("resty:", function()
 			})
 		end)
 
-		-- simulate an http buffer for creating a request
-		local bufnr = vim.api.nvim_create_buf(false, false)
-		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+		assert.are.same(0, resty.output.current_window_id)
+
+		-- call resty command RUN
+		resty._run({
 			"###",
 			"GET https://jsonplaceholder.typicode.com/comments",
 			"postId = 5",
 			"id=21",
 		})
-		local winnr = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_cursor(winnr, { 1, 1 })
-
-		-- call resty command RUN
-		assert.are.same(0, resty.output.current_window_id)
-
-		vim.api.nvim_set_current_buf(bufnr)
-		resty.run()
-
 		vim.wait(50, function()
 			return false
 		end)

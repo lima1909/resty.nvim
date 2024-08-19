@@ -48,13 +48,13 @@ A small http/rest client plugin for neovim
 ## Commands
 
 ```lua
-vim.keymap.set("n", "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un request under the cursor" })
-vim.keymap.set("n", "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
+vim.keymap.set({ "n", "v" }, "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un request under the cursor" })
+vim.keymap.set({ "n", "v" }, "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
 ```
 The idea is, to define all rest calls in a `*.http` file and execute the definition where the cursor is (with: `Resty run`).
 
-But it is also possible to define and call a request which is included in any file.
-The request must start and end with: `###`
+But it is also possible to define and call a request which is included in __any__ file.
+The request must start and end with: `###` __or__ can execute with the visual mode, where the request is marked.
 
 ```go
 /*
@@ -158,18 +158,14 @@ GET https://{{hostname}}/comments
 ### Call with query parameter
 
 ```http
-###
 GET https://reqres.in/api/users
 
 delay = 1
-
-### not necessary, only for running from this file
 ```
 
 ### Post with body
 
 ```http
-###
 POST https://api.restful-api.dev/objects
 
 accept: application/json  
@@ -185,13 +181,11 @@ Content-type: application/json; charset=UTF-8
       "Hard disk size": "1 TB"
    }
 }
-### not necessary, only for running from this file
 ```
 
 ### Login and save the Token
 
 ```http
-###
 POST https://reqres.in/api/login
 accept: application/json  
 Content-type: application/json ; charset=UTF-8
@@ -208,8 +202,6 @@ Content-type: application/json ; charset=UTF-8
   local body = ctx.json_body()
   ctx.set("login.token", body.token)
 --%}
-
-### not necessary, only for running from this file
 ```
 
 In LUA scripts you can use an `ctx` table, which has access to the following properties and methods:

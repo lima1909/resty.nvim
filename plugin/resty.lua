@@ -1,22 +1,24 @@
+local resty = require("resty")
+
 vim.api.nvim_create_user_command("Resty", function(args)
 	if args and #args.fargs > 0 then
 		if args.fargs[1] == "run" then
-			require("resty").run()
+			resty.run()
 			return
-		elseif args.fargs[1] == "diagnostic" then
-			require("resty").diagnostic()
+		elseif args.fargs[1] == "favorite" then
+			resty.favorite(args.fargs[2])
 			return
 		end
 	end
 
 	-- default call, if there are no arguments
-	require("resty").last()
+	resty.last()
 end, {
-	nargs = "?", -- one or none argument
+	nargs = "*", -- one or none argument
 	range = true,
 	desc = "Run a Resty requests",
 	complete = function()
-		return { "diagnostic", "last", "run" }
+		return { "favorite", "last", "run" }
 	end,
 })
 

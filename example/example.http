@@ -1,4 +1,4 @@
-###
+### #users
 GET https://reqres.in/api/users/2
 
 --{%
@@ -16,7 +16,7 @@ accept: application/json
 postId = {{id}} 
 id=6 # id={{:ID}} # 21
 
-### GET httpbin
+###  #httpbin
 
 # variable for the hostname
 @hostname = httpbin.org

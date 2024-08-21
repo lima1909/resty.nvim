@@ -1,0 +1,57 @@
+local M = {}
+
+local function to_lines(input)
+	if type(input) == "table" then
+		return input
+	elseif type(input) == "string" then
+		return vim.split(input, "\n")
+	else
+		error("only string or string array are supported as input. Got: " .. type(input), 0)
+	end
+end
+
+M.check_lines = function(lines, check)
+	for row, l in ipairs(lines) do
+		if vim.startswith(l, "###") then
+			l = l:sub(4)
+			local pos = string.find(l, "#")
+			if pos then
+				local favorite = l:sub(pos + 1)
+				-- favorite = vim.trim(favorite)
+				if check(row, favorite) == true then
+					return
+				end
+			end
+		end
+	end
+end
+
+M.find_favorite = function(input, favorite)
+	local lines = to_lines(input)
+	local row
+
+	M.check_lines(lines, function(r, f)
+		if favorite == f then
+			row = r
+			return true
+		else
+			return false
+		end
+	end)
+
+	return row
+end
+
+M.find_all_favorites = function(input)
+	local lines = to_lines(input)
+	local favorites = {}
+
+	M.check_lines(lines, function(r, f)
+		table.insert(favorites, { ["row"] = r, ["favorite"] = f })
+		return false
+	end)
+
+	return favorites
+end
+
+return M

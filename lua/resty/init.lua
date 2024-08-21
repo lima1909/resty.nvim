@@ -3,6 +3,7 @@ P = function(tab)
 end
 
 local parser = require("resty.parser")
+local f = require("resty.parser.favorite")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
 
@@ -54,6 +55,24 @@ M.run = function()
 		local row = vim.api.nvim_win_get_cursor(winnr)[1]
 		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 		M._run(lines, row)
+	end
+end
+
+M.favorite = function(favorite)
+	print("Buffer: " .. vim.fn.bufname("%") .. " -- " .. vim.api.nvim_get_current_buf())
+
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+	if favorite then
+		local row = f.find_favorite(lines, favorite)
+		if row then
+			M._run(lines, row)
+		else
+			print("Favorite: '" .. favorite .. "' not found", 0)
+		end
+	else
+		local favorites = f.find_all_favorites(lines)
+		print("Favorites: " .. vim.inspect(favorites))
 	end
 end
 

@@ -1,4 +1,4 @@
-### #users
+### #Users ID=2
 GET https://reqres.in/api/users/2
 
 --{%
@@ -6,7 +6,7 @@ GET https://reqres.in/api/users/2
   ctx.set("id", json.data.id)
 --%}
 
-### GET to jsonplaceholder 
+### #GET to jsonplaceholder 
 GET https://jsonplaceholder.typicode.com/comments
 
 # headers

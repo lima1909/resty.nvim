@@ -6,6 +6,7 @@ local parser = require("resty.parser")
 local f = require("resty.parser.favorite")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
+local view_favorites = require("resty.view_favorites")
 
 local default_config = {
 	output = {
@@ -65,19 +66,23 @@ M.favorite = function(favorite, bufnr)
 	if favorite then
 		local row = f.find_favorite(lines, favorite)
 		if row then
-			M._run(lines, row)
+			M._run(lines, row, bufnr)
 		else
-			print("Favorite: '" .. favorite .. "' not found", 0)
+			error("Favorite: '" .. favorite .. "' not found", -1)
 		end
 	else
 		local favorites = f.find_all_favorites(lines)
-		print("Favorites: " .. vim.inspect(favorites))
+		view_favorites.show({}, favorites, lines, function(row)
+			M._run(lines, row, bufnr)
+		end)
 	end
 end
 
-M._run = function(lines, row)
+M._run = function(lines, row, bufnr)
+	bufnr = bufnr or 0
+
 	local parser_result = parser.parse(lines, row)
-	if diagnostic.show(0, parser_result) then
+	if diagnostic.show(bufnr, parser_result) then
 		return
 	end
 

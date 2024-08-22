@@ -6,7 +6,6 @@ local parser = require("resty.parser")
 local f = require("resty.parser.favorite")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
-local view_favorites = require("resty.view_favorites")
 
 local default_config = {
 	output = {
@@ -22,6 +21,12 @@ local M = {
 	output = output.new(default_config),
 	last_parser_result = nil,
 }
+
+-- check, is telescope installed for viewing favorites
+local has_telescope = pcall(require, "telescope")
+if has_telescope then
+	M.view_favorites = require("resty.view_favorites")
+end
 
 M.setup = function(user_configs)
 	M.config = vim.tbl_deep_extend("force", default_config, user_configs)
@@ -68,13 +73,15 @@ M.favorite = function(favorite, bufnr)
 		if row then
 			M._run(lines, row, bufnr)
 		else
-			error("Favorite: '" .. favorite .. "' not found", -1)
+			error("Favorite: '" .. favorite .. "' not found", 0)
 		end
-	else
+	elseif M.view_favorites then
 		local favorites = f.find_all_favorites(lines)
-		view_favorites.show({}, favorites, lines, function(row)
+		M.view_favorites.show({}, favorites, lines, function(row)
 			M._run(lines, row, bufnr)
 		end)
+	else
+		error("For this action you must install: 'telescope.nvim'", 0)
 	end
 end
 

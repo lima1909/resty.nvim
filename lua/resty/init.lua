@@ -58,10 +58,9 @@ M.run = function()
 	end
 end
 
-M.favorite = function(favorite)
-	print("Buffer: " .. vim.fn.bufname("%") .. " -- " .. vim.api.nvim_get_current_buf())
-
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+M.favorite = function(favorite, bufnr)
+	bufnr = f.get_current_bufnr(bufnr)
+	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
 
 	if favorite then
 		local row = f.find_favorite(lines, favorite)

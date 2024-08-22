@@ -1,5 +1,17 @@
 local M = {}
 
+M.get_current_bufnr = function(bufnr)
+	-- override the existing bufnr
+	if bufnr then
+		M.current_bufnr = bufnr
+	-- first time, set the bufnr
+	elseif M.current_bufnr == nil then
+		M.current_bufnr = vim.api.nvim_get_current_buf()
+	end
+
+	return M.current_bufnr
+end
+
 local function to_lines(input)
 	if type(input) == "table" then
 		return input

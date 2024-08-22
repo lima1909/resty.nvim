@@ -47,4 +47,26 @@ GET http://host.com
 			}, rows)
 		end)
 	end)
+
+	describe("current bufnr:", function()
+		it("first = nil", function()
+			local bufnr = f.get_current_bufnr()
+			assert.are.same(vim.api.nvim_get_current_buf(), bufnr)
+		end)
+
+		it("bufnr: 42", function()
+			local bufnr = f.get_current_bufnr(42)
+			assert.are.same(42, bufnr)
+		end)
+
+		it("bufnr: still 42", function()
+			local bufnr = f.get_current_bufnr()
+			assert.are.same(42, bufnr)
+		end)
+
+		it("override bufnr: 24", function()
+			local bufnr = f.get_current_bufnr(24)
+			assert.are.same(24, bufnr)
+		end)
+	end)
 end)

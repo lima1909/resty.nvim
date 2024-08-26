@@ -66,4 +66,18 @@ M.find_all_favorites = function(input)
 	return favorites
 end
 
+M.find_favorite_by_prefix = function(input, prefix)
+	local lines = to_lines(input)
+	local favorites = M.find_all_favorites(lines)
+	local list = {}
+
+	for _, f in pairs(favorites) do
+		if vim.startswith(f.favorite, prefix) then
+			table.insert(list, f.favorite)
+		end
+	end
+
+	return list
+end
+
 return M

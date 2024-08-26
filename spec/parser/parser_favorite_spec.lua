@@ -69,4 +69,24 @@ GET http://host.com
 			assert.are.same(24, bufnr)
 		end)
 	end)
+
+	describe("favorite by prefix:", function()
+		it("not found", function()
+			local favorites = f.find_favorite_by_prefix(input, "xyz")
+			assert.are.same({}, favorites)
+		end)
+
+		it("all", function()
+			local favorites = f.find_favorite_by_prefix(input, "")
+			assert.are.same({ "first", " next one", "next one one" }, favorites)
+		end)
+
+		it("with prefix", function()
+			local favorites = f.find_favorite_by_prefix(input, "f")
+			assert.are.same({ "first" }, favorites)
+
+			local favorites = f.find_favorite_by_prefix(input, "n")
+			assert.are.same({ "next one one" }, favorites)
+		end)
+	end)
 end)

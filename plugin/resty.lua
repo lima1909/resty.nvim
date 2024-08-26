@@ -1,5 +1,5 @@
 local resty = require("resty")
-local favorite = require("resty.parser.favorite")
+local cmd = require("resty.commands")
 
 vim.api.nvim_create_user_command("Resty", function(args)
 	if args and #args.fargs > 0 then
@@ -7,7 +7,9 @@ vim.api.nvim_create_user_command("Resty", function(args)
 			resty.run()
 			return
 		elseif args.fargs[1] == "favorite" then
-			resty.favorite(args.fargs[2])
+			local sel_favorite = args.args:sub(9) -- cut the command
+			sel_favorite = string.gsub(sel_favorite, "^%s+", "") -- cut the spaces
+			resty.favorite(sel_favorite)
 			return
 		end
 	end
@@ -18,30 +20,7 @@ end, {
 	nargs = "*", -- one or none argument
 	range = true,
 	desc = "Run a Resty requests",
-	complete = function(arglead, cmdline, _) --, cursorpos
-		-- if arglead == "" then
-		-- 	return { "favorite", "last", "run" }
-		if vim.startswith(cmdline, "Resty favorite") then
-			local bufnr = favorite.get_current_bufnr()
-			local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
-			local favorites = favorite.find_all_favorites(lines)
-			local list = {}
-			for _, f in pairs(favorites) do
-				if vim.startswith(f.favorite, arglead) then
-					table.insert(list, f.favorite)
-				end
-			end
-			return list
-			-- elseif vim.startswith(arglead, "f") then
-			-- 	return { "favorite" }
-			-- elseif vim.startswith(arglead, "l") then
-			-- 	return { "last" }
-			-- elseif vim.startswith(arglead, "r") then
-			-- 	return { "run" }
-		end
-
-		return { "favorite", "last", "run" }
-	end,
+	complete = cmd.complete,
 })
 
 -- no arg (or [last]) - call the last saved request

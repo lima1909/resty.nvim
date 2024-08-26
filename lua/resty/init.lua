@@ -68,7 +68,7 @@ M.favorite = function(favorite, bufnr)
 	bufnr = f.get_current_bufnr(bufnr)
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
 
-	if favorite then
+	if favorite and #favorite > 0 then
 		local row = f.find_favorite(lines, favorite)
 		if row then
 			M._run(lines, row, bufnr)

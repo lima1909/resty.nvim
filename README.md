@@ -46,16 +46,8 @@ A (hopefully) easy to use Rest Client plugin for neovim.
 - `jq` (optional) query the body
 - `nvim-telescope/telescope.nvim` plugin, for using a listing of available favorites 
 
-## Commands
+## The idea 
 
-```lua
-vim.keymap.set({ "n", "v" }, "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un request under the cursor" })
-vim.keymap.set({ "n", "v" }, "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
-vim.keymap.set({ "n", "v" }, "<leader>rv", ":Resty favorite<CR>", { desc = "[R]esty [V]iew favorites" })
-
--- example for calling an concrete favorite
-vim.keymap.set({ "n", "v" }, "<leader>rv1", ":Resty favorite(my favorite)<CR>", { desc = "[R]esty [V]iew favorites" })
-```
 The idea is, to define all rest calls in a `*.http` file and execute the definition where the cursor is (with: `Resty run`).
 
 But it is also possible to define and call a request which is included in __any__ file.
@@ -63,7 +55,7 @@ The request must start and end with: `###` __or__ can execute with the visual mo
 
 ```go
 /*
-Here is the rest call definition embedded in a go file:
+Here is the rest call definition embedded in a golang file:
 
 ###
 GET https://reqres.in/api/users/2
@@ -78,6 +70,17 @@ func user_rest_call() {
 You can call the favorite manually, with **completion**:
 ```
 Resty favorite [an favorite]
+```
+
+## Commands
+
+```lua
+vim.keymap.set({"n","v"},"<leader>rr", ":Resty run<CR>",{desc="[R]esty [R]un request under the cursor"})
+vim.keymap.set({"n","v"},"<leader>rl", ":Resty last<CR>",{desc="[R]esty run [L]ast"})
+vim.keymap.set({"n","v"},"<leader>rv", ":Resty favorite<CR>",{desc="[R]esty [V]iew favorites"})
+
+-- example for calling an concrete favorite
+vim.keymap.set({"n", "v"},"<leader>rv1", ":Resty favorite(my favorite)<CR>",{desc="[R]esty [V]iew my favorite"})
 ```
 
 ## Definitions
@@ -152,6 +155,7 @@ to find the request very fast (with telescope: `:Resty favorite<CR>` or direct: 
 GET https://reqres.in/api/users/2
 
 ###
+POST https://api.restful-api.dev/objects
 ```
 
 ### Using local and global variables 

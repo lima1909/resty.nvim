@@ -7,7 +7,7 @@
 [Build Action]: https://github.com/lima1909/resty.nvim/actions
 
 
-A small http/rest client plugin for neovim
+A (hopefully) easy to use Rest Client plugin for neovim.
 
 <div align="center">
 
@@ -44,12 +44,17 @@ A small http/rest client plugin for neovim
 
 - `curl` execute the rest definition
 - `jq` (optional) query the body
+- `nvim-telescope/telescope.nvim` plugin, for using a listing of available favorites 
 
 ## Commands
 
 ```lua
 vim.keymap.set({ "n", "v" }, "<leader>rr", ":Resty run<CR>", { desc = "[R]esty [R]un request under the cursor" })
 vim.keymap.set({ "n", "v" }, "<leader>rl", ":Resty last<CR>", { desc = "[R]esty run [L]ast" })
+vim.keymap.set({ "n", "v" }, "<leader>rv", ":Resty favorite<CR>", { desc = "[R]esty [V]iew favorites" })
+
+-- example for calling an concrete favorite
+vim.keymap.set({ "n", "v" }, "<leader>rv1", ":Resty favorite(my favorite)<CR>", { desc = "[R]esty [V]iew favorites" })
 ```
 The idea is, to define all rest calls in a `*.http` file and execute the definition where the cursor is (with: `Resty run`).
 
@@ -58,33 +63,38 @@ The request must start and end with: `###` __or__ can execute with the visual mo
 
 ```go
 /*
-Here is the rest call definition:
+Here is the rest call definition embedded in a go file:
 
 ###
 GET https://reqres.in/api/users/2
 
 ###
 */
-func my_rest_call() {
+func user_rest_call() {
  // ..
 }
+```
 
+You can call the favorite manually, with **completion**:
+```
+Resty favorite [an favorite]
 ```
 
 ## Definitions
 
 ### Types
 
-- `variables`      : `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
-- `method url`     : `GET http://host` (`[method] [space] [URL]`)
-- `headers`        : delimiter `:` (example: `accept: application/json`)
-- `query`          : delimiter `=` (example: `id = 5`)
-- `body`           : starts with (first column): `{` and ends with (first column): `}`, between is valid JSON
-- `script`         : starts with (first column): `--{%` and ends with (first column): `--%}`, between is valid LUA script
-- `###`            : delimiter, if more as one request definition, or text before and/or after exist
-- `#`              : comments
+- `variables`        : `@[variable-name]=[value]` and reference to the variable `{{variable-replacement}}`
+- `method url`       : `GET http://host` (`[method] [space] [URL]`)
+- `headers`          : delimiter `:` (example: `accept: application/json`)
+- `query`            : delimiter `=` (example: `id = 5`)
+- `body`             : starts with (first column): `{` and ends with (first column): `}`, between is valid JSON
+- `script`           : starts with (first column): `--{%` and ends with (first column): `--%}`, between is valid LUA script
+- `###`              : delimiter, if more as one request definition, or text before and/or after exist
+- `### #my favorite` : define a favorite ('my favorite') for the following request
+- `#`                : comments
 
-- substitution 
+- variable ssubstitution 
   - variable             : `{{variable-name}}` -> `{{host}}`
   - environment variable : `{{$[variable-name]}}` -> `{{$USER}}`
   - shell-commnad        : `{{>[command]}}` : replace this with the result of the command: `{{> echo "my value"}}`
@@ -132,6 +142,17 @@ __Hint:__ with `cc` can the curl call canceled.
 ```http
 GET https://reqres.in/api/users/2
 ```
+### Define a request with marked favorite 
+
+If there are many request definition, you can marked the request with an favorite name
+to find the request very fast (with telescope: `:Resty favorite<CR>` or direct: `:Resty favorite(users)<CR>` ). 
+
+```http
+### #users
+GET https://reqres.in/api/users/2
+
+###
+```
 
 ### Using local and global variables 
 
@@ -148,7 +169,7 @@ GET https://{{hostname}}/get
 accept: application/json  
 
 
-###  
+### 
 # local variable overwrites global variable
 @hostname = jsonplaceholder.typicode.com
 

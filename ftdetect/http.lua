@@ -15,3 +15,14 @@ end, { silent = true, desc = "[zz] activate folding" })
 
 vim.keymap.set("n", "+", "zo")
 vim.keymap.set("n", "-", "zc")
+
+-- Reset diagnostic by changing the file
+vim.api.nvim_create_augroup("RestyDiagnostic", { clear = true })
+-- text change in Insert and Normal mode
+vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+	group = "RestyDiagnostic",
+	pattern = "*.http",
+	callback = function(ev)
+		require("resty.diagnostic").reset(ev.buf)
+	end,
+})

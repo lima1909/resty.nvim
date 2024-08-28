@@ -7,7 +7,7 @@
 [Build Action]: https://github.com/lima1909/resty.nvim/actions
 
 
-A (hopefully) easy to use Rest Client plugin for neovim.
+An easy to use Rest Client plugin for neovim written in LUA.
 
 <div align="center">
 
@@ -48,10 +48,12 @@ A (hopefully) easy to use Rest Client plugin for neovim.
 
 ## The idea 
 
-The idea is, to define all rest calls in a `*.http` file and execute the definition where the cursor is (with: `Resty run`).
+The idea is, to define all requests in a `*.http` file and execute the definition where the cursor is (with: `:Resty run`) __or__
+set a marker (delimiter + `#` + favorite-name: `### #my favorite` and run it with: `:Resty favorite my favorite`)
+for the request to execute it from every where.
 
 But it is also possible to define and call a request which is included in __any__ file.
-The request must start and end with: `###` __or__ can execute with the visual mode, where the request is marked.
+The request must start and end with the delimiter: `###` __or__ can execute with the visual mode, where the request is marked.
 
 ```go
 /*
@@ -67,20 +69,22 @@ func user_rest_call() {
 }
 ```
 
-You can call the favorite manually, with **completion**:
-```
-Resty favorite [an favorite]
-```
-
 ## Commands
+
+All commands are working with completion, including a list of possible favorites.
+
+| User command                   | Description                                                                           |
+|--------------------------------|---------------------------------------------------------------------------------------|
+| `:Resty run`                   | run request under the cursor                                                          |
+| `:Resty last`                  | run last successfully executed request                                                |
+| `:Resty favorite`              | show a telescope view with all marked requests                                        |
+| `:Resty favorite my favorite`  | run marked request `my favorite`, independend, where the cursor is or in which buffer |
+
+Examples for using a command with a keymap configuration:
 
 ```lua
 vim.keymap.set({"n","v"},"<leader>rr", ":Resty run<CR>",{desc="[R]esty [R]un request under the cursor"})
-vim.keymap.set({"n","v"},"<leader>rl", ":Resty last<CR>",{desc="[R]esty run [L]ast"})
 vim.keymap.set({"n","v"},"<leader>rv", ":Resty favorite<CR>",{desc="[R]esty [V]iew favorites"})
-
--- example for calling an concrete favorite
-vim.keymap.set({"n", "v"},"<leader>rv1", ":Resty favorite(my favorite)<CR>",{desc="[R]esty [V]iew my favorite"})
 ```
 
 ## Definitions
@@ -97,10 +101,10 @@ vim.keymap.set({"n", "v"},"<leader>rv1", ":Resty favorite(my favorite)<CR>",{des
 - `### #my favorite` : define a favorite ('my favorite') for the following request
 - `#`                : comments
 
-- variable ssubstitution 
+- variable substitution 
   - variable             : `{{variable-name}}` -> `{{host}}`
   - environment variable : `{{$[variable-name]}}` -> `{{$USER}}`
-  - shell-commnad        : `{{>[command]}}` : replace this with the result of the command: `{{> echo "my value"}}`
+  - shell - command      : `{{>[command]}}` : replace this with the result of the command: `{{> echo "my value"}}`
   - prompt               : `{{:[name]}}` : prompt for put an input value: `{{:Name}}`
 
 ### Grammar
@@ -118,22 +122,22 @@ script             : body | script | delimiter (end)
 
 There are three views for the result (the rest-call-response)
 
-| view      | short cut | hint                                         |
+| view      | short cut | description                                  |
 |-----------|-----------|----------------------------------------------|
 | `body`    |   `b`     | response body                                |
 | `headers` |   `h`     | response headers                             |
 | `info`    |   `i`     | shows information from the call and response |
 
 
-### Short cuts for the body-view
+### Short cuts for the view: body
 
-Hint: `jq` must be installed
+`jq` must be installed!
 
-| key | description                   | command/example  |
-|-----|-------------------------------|------------------|
-| `p` | json pretty print             | `jq .`           |
-| `q` | jq query                      | `jq .id`         |
-| `r` | reset to the origininal json  | -                |
+| short cut | description                   | 
+|-----------|-------------------------------|
+| `p`       | json pretty print             |
+| `q`       | jq query                      |
+| `r`       | reset to the origininal json  |
 
 __Hint:__ with `cc` can the curl call canceled.
 

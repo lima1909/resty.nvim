@@ -19,16 +19,6 @@ M = {
 	parser = parser.new(),
 }
 
-local output = function(lines, favorite)
-	local p = M.parser.parse(lines, favorite.row)
-	return {
-		"# '" .. favorite.favorite .. "' on row: " .. favorite.row,
-		"",
-		p.request.method .. " " .. p.request.url,
-		"",
-	}
-end
-
 M.show = function(opts, favorites, lines, exec)
 	pickers
 		.new(opts, {
@@ -37,7 +27,7 @@ M.show = function(opts, favorites, lines, exec)
 				entry_maker = function(entry)
 					return {
 						value = entry,
-						display = entry.favorite,
+						display = entry.favorite .. " (row: " .. entry.row .. ")",
 						ordinal = entry.favorite .. ":" .. entry.row,
 					}
 				end,
@@ -46,8 +36,10 @@ M.show = function(opts, favorites, lines, exec)
 			previewer = previewers.new_buffer_previewer({
 				title = "Favorites",
 				define_preview = function(self, entry)
-					vim.api.nvim_buf_set_lines(self.state.bufnr, 0, 0, true, output(lines, entry.value))
-					utils.highlighter(self.state.bufnr, "http")
+					local bufnr = self.state.bufnr
+					local favorite = entry.value
+					M.parser.parse(lines, favorite.row):write_to_buffer(bufnr)
+					utils.highlighter(bufnr, "markdown")
 				end,
 			}),
 			attach_mappings = function(prompt_bufnr)

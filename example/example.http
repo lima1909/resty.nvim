@@ -30,7 +30,7 @@ accept: application/json
 GET https://api.restful-api.dev/objects
 
 
-###
+### #POST objects
 POST https://api.restful-api.dev/objects
 accept: application/json  
 Content-type: application/json ; charset=UTF-8

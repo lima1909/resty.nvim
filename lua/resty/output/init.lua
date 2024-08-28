@@ -39,58 +39,8 @@ local M = {
 			name = "info",
 			show_window_content = function(slf)
 				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
-				-- "# headers",
-				-- "" .. vim.fn.flatten(slf.request.headers),
 
-				local req = slf.parser_result.request
-				-- REQUEST
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"## Request:",
-					"",
-					"```http",
-					"",
-					req.method .. " " .. req.url,
-					"",
-				})
-
-				-- BODY
-				if req.body then
-					exec.jq_wait(2000, req.body, function(json, code)
-						if code ~= 0 then
-							vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, vim.split(req.body, "\n"))
-						end
-						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, json)
-					end)
-				end
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "```" })
-
-				-- print Variables and replacements
-				if #slf.parser_result.replacements > 0 then
-					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-						"",
-						"## Variables:",
-						"",
-					})
-					for _, typ in ipairs(slf.parser_result.replacements) do
-						vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-							"- '" .. typ.from .. "': '" .. typ.to .. "' (" .. typ.type.text .. ")",
-						})
-					end
-				end
-
-				-- print Global Variables
-				-- if #slf.parser_result.replacements > 0 then
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"",
-					"## Global Variables:",
-					"",
-				})
-				for k, v in pairs(parser.global_variables) do
-					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-						"- '" .. k .. "': '" .. v .. "'",
-					})
-				end
-				-- end
+				slf.parser_result:write_to_buffer(slf.bufnr)
 
 				-- RESPONSE AND META
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {

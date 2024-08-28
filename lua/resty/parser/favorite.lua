@@ -1,3 +1,5 @@
+local util = require("resty.util")
+
 local M = {}
 
 M.get_current_bufnr = function(bufnr)
@@ -10,16 +12,6 @@ M.get_current_bufnr = function(bufnr)
 	end
 
 	return M.current_bufnr
-end
-
-local function to_lines(input)
-	if type(input) == "table" then
-		return input
-	elseif type(input) == "string" then
-		return vim.split(input, "\n")
-	else
-		error("only string or string array are supported as input. Got: " .. type(input), 0)
-	end
 end
 
 M.check_lines = function(lines, check)
@@ -39,7 +31,7 @@ M.check_lines = function(lines, check)
 end
 
 M.find_favorite = function(input, favorite)
-	local lines = to_lines(input)
+	local lines = util.input_to_lines(input)
 	local row
 
 	M.check_lines(lines, function(r, f)
@@ -55,7 +47,7 @@ M.find_favorite = function(input, favorite)
 end
 
 M.find_all_favorites = function(input)
-	local lines = to_lines(input)
+	local lines = util.input_to_lines(input)
 	local favorites = {}
 
 	M.check_lines(lines, function(r, f)
@@ -67,7 +59,7 @@ M.find_all_favorites = function(input)
 end
 
 M.find_favorite_by_prefix = function(input, prefix)
-	local lines = to_lines(input)
+	local lines = util.input_to_lines(input)
 	local favorites = M.find_all_favorites(lines)
 	local list = {}
 

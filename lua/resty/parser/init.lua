@@ -3,6 +3,7 @@ local mu = require("resty.parser.method_url")
 local b = require("resty.parser.body")
 local d = require("resty.parser.delimiter")
 local v = require("resty.parser.variables")
+local util = require("resty.util")
 
 local M = { global_variables = {} }
 M.__index = M
@@ -187,15 +188,7 @@ function M.parse(input, selected)
 	selected = selected or 1
 	local start_time = os.clock()
 
-	local lines
-	if type(input) == "table" then
-		lines = input
-	elseif type(input) == "string" then
-		lines = vim.split(input, "\n")
-	else
-		error("only string or string array are supported as input. Got: " .. type(input), 0)
-	end
-
+	local lines = util.input_to_lines(input)
 	local p = M.new()
 	--
 	-- find request

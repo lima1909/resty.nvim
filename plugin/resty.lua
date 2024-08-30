@@ -4,7 +4,8 @@ local cmd = require("resty.commands")
 vim.api.nvim_create_user_command("Resty", function(args)
 	if args and #args.fargs > 0 then
 		if args.fargs[1] == "run" then
-			resty.run()
+			local input = args.args:sub(4) -- cut the 'run' command
+			resty.run(input)
 			return
 		elseif args.fargs[1] == "favorite" then
 			local sel_favorite = args.args:sub(9) -- cut the command

@@ -7,6 +7,10 @@ function M.reset(bufnr)
 end
 
 function M.show(bufnr, parser_result)
+	if not bufnr then
+		return false
+	end
+
 	M.reset(bufnr)
 
 	if parser_result:has_errors() then

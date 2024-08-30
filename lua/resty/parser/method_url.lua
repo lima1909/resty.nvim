@@ -1,6 +1,8 @@
 local M = {}
 
 function M.parse_method_url(line)
+	line = string.gsub(line, "^%s+", "") -- trim the spaces in the start
+
 	local pos_space = line:find(" ")
 	if not pos_space then
 		error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line, 0)

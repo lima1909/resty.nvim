@@ -45,7 +45,12 @@ M.last = function()
 	end
 end
 
-M.run = function()
+M.run = function(input)
+	if input and input:len() > 0 then
+		M._run(input)
+		return
+	end
+
 	local start_line = vim.fn.getpos("'<")[2] -- 2 = line number, 3 = columns number
 	vim.fn.setpos("'<", { 0, 0, 0, 0 }) -- reset the start pos
 
@@ -54,13 +59,13 @@ M.run = function()
 		local end_line = vim.fn.getpos("'>")[2]
 		vim.fn.setpos("'>", { 0, 0, 0, 0 }) -- reset
 		local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-		M._run(lines)
+		M._run(lines, 1, 0)
 	-- NORMAL mode
 	else
 		local winnr = vim.api.nvim_get_current_win()
 		local row = vim.api.nvim_win_get_cursor(winnr)[1]
 		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-		M._run(lines, row)
+		M._run(lines, row, 0)
 	end
 end
 
@@ -86,8 +91,6 @@ M.favorite = function(favorite, bufnr)
 end
 
 M._run = function(lines, row, bufnr)
-	bufnr = bufnr or 0
-
 	local parser_result = parser.parse(lines, row)
 	if diagnostic.show(bufnr, parser_result) then
 		return

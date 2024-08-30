@@ -73,12 +73,13 @@ func user_rest_call() {
 
 All commands are working with completion, including a list of possible favorites.
 
-| User command                   | Description                                                                           |
-|--------------------------------|---------------------------------------------------------------------------------------|
-| `:Resty run`                   | run request under the cursor                                                          |
-| `:Resty last`                  | run last successfully executed request                                                |
-| `:Resty favorite`              | show a telescope view with all marked requests                                        |
-| `:Resty favorite my favorite`  | run marked request `my favorite`, independend, where the cursor is or in which buffer |
+| User command                      | Description                                                                           |
+|-----------------------------------|---------------------------------------------------------------------------------------|
+| `:Resty run`                      | run request under the cursor OR in visual mod run the marked request rows             |
+| `:Resty run [request definition]` | run request which is given by input, rows are seperated by `\n`                       |
+| `:Resty last`                     | run last successfully executed request                                                |
+| `:Resty favorite`                 | show a telescope view with all marked requests                                        |
+| `:Resty favorite [my favorite]`   | run marked request `my favorite`, independend, where the cursor is or in which buffer |
 
 Examples for using a command with a keymap configuration:
 

@@ -16,24 +16,24 @@ describe("resty:", function()
 		assert.are.same("foo", resty.config.response.bufname)
 	end)
 
-	it("run and run_last", function()
-		-- create an curl stub
-		local curl = stub.new(exec, "curl")
-		curl.invokes(function(_, callback, _)
-			callback({
-				body = '{"name": "foo"}',
-				status = 200,
-				headers = {},
-				global_variables = {},
-			})
-		end)
+	-- create an curl stub
+	local curl = stub.new(exec, "curl")
+	curl.invokes(function(_, callback, _)
+		callback({
+			body = '{"name": "foo"}',
+			status = 200,
+			headers = {},
+			global_variables = {},
+		})
+	end)
 
+	it("_run and run_last", function()
 		assert.are.same(0, resty.output.current_window_id)
 
 		-- call resty command RUN
 		resty._run({
 			"###",
-			"GET https://jsonplaceholder.typicode.com/comments",
+			"GET https://dummy",
 			"postId = 5",
 			"id=21",
 		})
@@ -53,6 +53,23 @@ describe("resty:", function()
 		vim.wait(50, function()
 			return false
 		end)
+
+		assert.is_true(resty.output.meta.duration > 0)
+
+		-- show response body
+		assert.are.same(1, resty.output.current_window_id)
+		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
+		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
+	end)
+
+	it("run input", function()
+		resty.run("  GET http://dummy\n id = 7")
+		vim.wait(50, function()
+			return false
+		end)
+
+		-- no parse errors
+		assert.are.same({}, resty.output.parser_result.errors)
 
 		assert.is_true(resty.output.meta.duration > 0)
 

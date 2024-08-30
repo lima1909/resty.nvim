@@ -13,10 +13,15 @@ M.complete_cmd = function(arglead)
 		return M.COMMANDS
 	end
 
+	local cmds = {}
 	for _, cmd in ipairs(M.COMMANDS) do
 		if vim.startswith(cmd, arglead) then
-			return { cmd }
+			table.insert(cmds, cmd)
 		end
+	end
+
+	if #cmds ~= 0 then
+		return cmds
 	end
 
 	return M.COMMANDS

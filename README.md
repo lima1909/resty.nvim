@@ -43,7 +43,7 @@ An easy to use Rest Client plugin for neovim written in LUA.
 ## Dependencies
 
 - `curl` execute the rest definition
-- `jq` (optional) query the body
+- `jq` (optional, but recommended) query the body
 - `nvim-telescope/telescope.nvim` plugin, for using a listing of available favorites 
 
 ## The idea 
@@ -53,7 +53,7 @@ set a marker (delimiter + `#` + favorite-name: `### #my favorite` and run it wit
 for the request to execute it from every where.
 
 But it is also possible to define and call a request which is included in __any__ file.
-The request must start and end with the delimiter: `###` __or__ can execute with the visual mode, where the request is marked.
+The request must start and end with the delimiter: `###` __or__ can execute with the `visual mode`, where the request is marked.
 
 ```go
 /*
@@ -75,8 +75,8 @@ All commands are working with completion, including a list of possible favorites
 
 | User command                      | Description                                                                           |
 |-----------------------------------|---------------------------------------------------------------------------------------|
-| `:Resty run`                      | run request under the cursor OR in visual mod run the marked request rows             |
-| `:Resty run [request definition]` | run request which is given by input, rows are seperated by `\n`                       |
+| `:Resty run`                      | run request under the cursor OR <br>in `visual mode` run the marked request rows      |
+| `:Resty run [request definition]` | run request which is given by input, rows are seperated by `\n`<br> (you can simulate it with <C-v><CR> in `command mode`) |
 | `:Resty last`                     | run last successfully executed request                                                |
 | `:Resty favorite`                 | show a telescope view with all marked requests                                        |
 | `:Resty favorite [my favorite]`   | run marked request `my favorite`, independend, where the cursor is or in which buffer |

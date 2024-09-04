@@ -127,6 +127,7 @@ describe("parse:", function()
 			"GET http://host",
 			"accept: application/json",
 			"",
+			"id=7",
 			"",
 			"{",
 			'"name": "me"',

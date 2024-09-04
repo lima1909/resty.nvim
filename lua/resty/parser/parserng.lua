@@ -140,12 +140,19 @@ function M.parse_headers_query(iter)
 	local headers = {}
 
 	while true do
+		Is_headers = false
+
 		local line, is_hq = iter:next(function(l)
 			if vim.startswith(l, "{") or vim.startswith(l, "--{%") then
 				return false
+			elseif l:match("^([%w%-]+):") then
+				Is_headers = true
+				return true
+			elseif l:match("([%w%-_%.]+)=") then
+				return true
+			else
+				return false
 			end
-
-			return l:match("^[%aZ]+-[%aZ]+:") or l:match("^[%aZ]+-[%aZ]+=")
 		end)
 
 		-- end of lines and no variables
@@ -153,8 +160,8 @@ function M.parse_headers_query(iter)
 			return line, headers, query
 		end
 
-		print("HQ: " .. line)
-		return line, headers, query
+		print(line .. " | " .. tostring(Is_headers))
+		-- return line, headers, query
 	end
 end
 

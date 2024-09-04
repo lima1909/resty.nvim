@@ -1,0 +1,146 @@
+local assert = require("luassert")
+local p = require("resty.parser.parserng")
+
+describe("iter", function()
+	it("not skipping the line", function()
+		assert.is_false(p.skip_line(""))
+		assert.is_false(p.skip_line(" #"))
+		assert.is_false(p.skip_line("@key=value"))
+	end)
+
+	it("skip line", function()
+		assert.is_true(p.skip_line("#"))
+		assert.is_true(p.skip_line("# comment"))
+	end)
+
+	it("skip blank lines", function()
+		assert.is_true(p.skip_line("", true))
+		assert.is_true(p.skip_line(" ", true))
+		assert.is_true(p.skip_line("\t", true))
+	end)
+end)
+
+describe("parse json :", function()
+	it("empty or not a json", function()
+		local line, json = p.parse_json(p.line_iter({}))
+		assert.is_nil(line)
+		assert.is_nil(json)
+
+		line, json = p.parse_json(p.line_iter({ "" }))
+		assert.is_nil(line)
+		assert.is_nil(json)
+	end)
+
+	it("is json", function()
+		local line, json = p.parse_json(p.line_iter({ "{" }))
+		assert.is_nil(line)
+		assert.are.same("{", json)
+
+		line, json = p.parse_json(p.line_iter({ "{", "" }))
+		assert.are.same("", line)
+		assert.are.same("{", json)
+
+		--
+		line, json = p.parse_json(p.line_iter({ "{ }" }))
+		assert.is_nil(line)
+		assert.are.same("{ }", json)
+
+		line, json = p.parse_json(p.line_iter({ "{ }", " " }))
+		assert.are.same(" ", line)
+		assert.are.same("{ }", json)
+
+		--
+		line, json = p.parse_json(p.line_iter({ '{ "name": "foo" }' }))
+		assert.is_nil(line)
+		assert.are.same('{ "name": "foo" }', json)
+
+		line, json = p.parse_json(p.line_iter({ '{ "name": "foo" }', "\t" }))
+		assert.are.same("\t", line)
+		assert.are.same('{ "name": "foo" }', json)
+
+		line, json = p.parse_json(p.line_iter({ "{", ' "name": "foo" # comment', "}", " \t" }))
+		assert.are.same(" \t", line)
+		assert.are.same('{ "name": "foo" }', json)
+	end)
+end)
+
+describe("parse variables:", function()
+	it("parse no variable", function()
+		local line, vars = p.parse_variable(p.line_iter({ "GET http://host" }))
+		assert.is_nil(vars)
+		assert.are.same("GET http://host", line)
+	end)
+
+	it("parse one variable", function()
+		local line, vars = p.parse_variable(p.line_iter({ "@key1=value1" }))
+		assert.are.same({ key1 = "value1" }, vars)
+		assert.is_nil(line)
+	end)
+
+	it("parse two variables", function()
+		local line, vars = p.parse_variable(p.line_iter({ "@key1=value1", "@key2=value2" }))
+		assert.are.same({ key1 = "value1", key2 = "value2" }, vars)
+		assert.is_nil(line)
+	end)
+
+	it("parse two variables with more lines ", function()
+		local line, vars = p.parse_variable(p.line_iter({ "@key1=value1", "@key2=value2", "GET http://host" }))
+		assert.are.same({ key1 = "value1", key2 = "value2" }, vars)
+		assert.are.same("GET http://host", line)
+	end)
+
+	it("parse two variables with comment", function()
+		local line, vars = p.parse_variable(p.line_iter({ "@key1=value1", "# comment", "@key2=value2 # comment" }))
+		assert.are.same({ key1 = "value1", key2 = "value2" }, vars)
+		assert.is_nil(line)
+	end)
+
+	it("parse two variables with comment and blanked line", function()
+		local line, vars = p.parse_variable(p.line_iter({ "@key1=value1", " ", "# comment", "@key2=value2 # comment" }))
+		assert.are.same({ key1 = "value1", key2 = "value2" }, vars)
+		assert.is_nil(line)
+	end)
+end)
+
+describe("parse method and url:", function()
+	it("only method and url", function()
+		local line, mu = p.parse_method_url(p.line_iter({ "GET http://host" }))
+		assert.are.same({ method = "GET", url = "http://host" }, mu)
+		assert.is_nil(line)
+	end)
+
+	it("method and url and an other line", function()
+		local line, mu = p.parse_method_url(p.line_iter({ "GET http://host", "accept: application/json" }))
+		assert.are.same({ method = "GET", url = "http://host" }, mu)
+		assert.are.same("accept: application/json", line)
+	end)
+end)
+
+describe("parse:", function()
+	it("parse two variables with more lines ", function()
+		local start_time = os.clock()
+		local line, parse = p.parse(p.line_iter({
+			"@key1=value1",
+			"@key2=value2",
+			"",
+			"GET http://host",
+			"",
+			"",
+			"{",
+			'"name": "me"',
+			"}",
+			"",
+		}))
+		print("Time: " .. require("resty.output.format").duration(os.clock() - start_time))
+
+		assert.are.same({
+			variables = { key1 = "value1", key2 = "value2" },
+			request = {
+				method = "GET",
+				url = "http://host",
+				body = '{"name": "me"}',
+			},
+		}, parse)
+		assert.are.same("", line)
+	end)
+end)

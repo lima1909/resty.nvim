@@ -26,20 +26,17 @@ vim.bo.omnifunc = "v:lua.MyInsertCompletion"
 
 local M = {}
 
-M.skip_line = function(line, skip_blank_line)
-	if vim.startswith(line, "#") == true then
+M.with_blank_lines = { ignore_blank_lines = false }
+
+M.ignore_line = function(line, opts)
+	if vim.startswith(line, "#") then
 		return true
-	elseif skip_blank_line == true then
+	elseif not opts or opts.ignore_blank_lines == true then
 		local m = line:match("^%s*$")
 		return m ~= nil and #m >= 0
+	else
+		return false
 	end
-
-	return false
-end
-
-M.is_blank_line = function(line)
-	local m = line:match("^%s*$")
-	return m ~= nil and #m >= 0
 end
 
 M.line_iter = function(lines, cursor)
@@ -47,20 +44,22 @@ M.line_iter = function(lines, cursor)
 		cursor = cursor or 1,
 		lines = lines,
 
-		-- returns the current line or nil, if no more lines left
-		-- skips all lines, which starts with a comment char or ignore blank lines, if the option is set
-		current_line = function(self, skip_blank_line)
+		next = function(self, check, opts)
 			local line = self.lines[self.cursor]
 			if not line then
-				return nil
+				return nil, false
 			end
 
-			while vim.startswith(line, "#") == true or (skip_blank_line and skip_blank_line(line) == true) do
+			while M.ignore_line(line, opts) do
 				self.cursor = self.cursor + 1
 				line = self.lines[self.cursor]
 				if not line then
-					return nil
+					return nil, false
 				end
+			end
+
+			if check(line) == false then
+				return line, false
 			end
 
 			-- cut comment from the current line
@@ -69,95 +68,120 @@ M.line_iter = function(lines, cursor)
 				line = line:sub(1, pos - 1)
 			end
 
-			return line
-		end,
-
-		next = function(self, skip_blank_line)
 			self.cursor = self.cursor + 1
-			return self:current_line(skip_blank_line)
+			return line, true
 		end,
 	}
 
 	return setmetatable(iter, { __index = iter })
 end
 
--- parse definition:
---	return current line and current selected json
---	line == nil -> no more lines left
---	json == nil -> no json found
---
-M.parse_json = function(iter)
-	local line = iter:current_line(M.is_blank_line)
-	-- end of lines and no json
-	if not line then
-		return nil, nil
+function M.parse_variable(iter)
+	local variables = {}
+
+	while true do
+		local line, is_variable = iter:next(function(line)
+			return vim.startswith(line, "@")
+		end)
+		-- end of lines and no variables
+		if not line or is_variable == false then
+			return line, variables
+		end
+
+		-- cut the variable token
+		line = string.sub(line, 2)
+		local parts = vim.split(line, "=")
+		local k = parts[1]
+		if not k then
+			error("an empty variable name is not allowed: '" .. line .. "'", 0)
+		end
+		local v = parts[2]
+		if not v then
+			error("an empty variable value is not allowed: '" .. line .. "'", 0)
+		end
+
+		-- CHECK duplicate
+		-- if variables[vim.trim(k)] then
+		-- error("the variable key: '" .. key .. "' already exist")
+		-- end
+
+		variables[vim.trim(k)] = vim.trim(v)
+	end
+end
+
+function M.parse_method_url(iter)
+	local line, is_mu = iter:next(function(l)
+		l = string.gsub(l, "^%s+", "") -- trim the spaces in the start
+		return l:find(" ") ~= nil
+	end)
+	-- end of lines and no variables
+	if not line or is_mu == false then
+		return line, nil
 	end
 
-	if not vim.startswith(line, "{") then
-		-- line, but not a json
+	local parts = vim.split(line, " ")
+	if #parts < 2 then
+		error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line, 0)
+	end
+
+	local method = vim.trim(parts[1])
+	if not method:match("^[%aZ]+$") then
+		error("invalid method name: '" .. method .. "'. Only letters are allowed", 0)
+	end
+
+	return line, {
+		method = method:upper(),
+		url = vim.trim(parts[2]),
+	}
+end
+
+function M.parse_headers_query(iter)
+	local query = {}
+	local headers = {}
+
+	while true do
+		local line, is_hq = iter:next(function(l)
+			if vim.startswith(l, "{") or vim.startswith(l, "--{%") then
+				return false
+			end
+
+			return l:match("^[%aZ]+-[%aZ]+:") or l:match("^[%aZ]+-[%aZ]+=")
+		end)
+
+		-- end of lines and no variables
+		if not line or is_hq == false then
+			return line, headers, query
+		end
+
+		print("HQ: " .. line)
+		return line, headers, query
+	end
+end
+
+-- parse definition:
+--	return not processed line and current selected json
+--	line == nil -> no more lines left
+--	json == nil -> no json found
+M.parse_json = function(iter)
+	local line, is_json = iter:next(function(line)
+		return vim.startswith(line, "{")
+	end)
+	if not line or is_json == false then
 		return line, nil
 	end
 
 	local json = ""
 	while true do
 		json = json .. line
-		line = iter:next()
-		if not line then
-			-- no more lines, but a json
-			return nil, json
-		elseif M.is_blank_line(line) then
-			-- more lines and json
+
+		line, is_json = iter:next(function(l)
+			-- is not blank line
+			return l:match("%S") ~= nil
+		end, M.with_blank_lines)
+		if not line or is_json == false then
 			return line, json
 		end
 	end
-end
-
-function M.parse_variable(iter)
-	local line = iter:current_line(M.is_blank_line)
-	-- end of lines and no variables
-	if not line then
-		return nil, nil
-	end
-
-	local kv = require("resty.parser.key_value")
-	local r = kv.parse_variable(line)
-	if not r then
-		-- line, but not a variable
-		return line, nil
-	end
-
-	local variables = {}
-	while true do
-		variables[r.k] = r.v
-
-		line = iter:next(M.is_blank_line)
-		if not line then
-			-- no more lines, but a json
-			return nil, variables
-		end
-
-		r = kv.parse_variable(line)
-		if not r then
-			return line, variables
-		end
-	end
-end
-
-function M.parse_method_url(iter)
-	local line = iter:current_line()
-	-- end of lines and no variables
-	if not line then
-		return nil, nil
-	end
-
-	local mu = require("resty.parser.method_url")
-	local r = mu.parse_method_url(line)
-	if not r then
-		-- line, but not a variable
-		return line, nil
-	end
-
-	return iter:next(), r
 end
 
 function M.parse(iter)
@@ -165,10 +189,26 @@ function M.parse(iter)
 	local line
 
 	line, parse.variables = M.parse_variable(iter)
-	line, parse.request = M.parse_method_url(iter)
-	line, parse.request.body = M.parse_json(iter)
+	if not line then
+		return
+	end
 
-	return line, parse
+	line, parse.request = M.parse_method_url(iter)
+	if not line then
+		return
+	end
+
+	line, parse.request.headers, parse.request.query = M.parse_headers_query(iter)
+	if not line then
+		return
+	end
+
+	line, parse.request.body = M.parse_json(iter)
+	if not line then
+		return
+	end
+
+	return parse
 end
 
 return M

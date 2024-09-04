@@ -3,20 +3,22 @@ local p = require("resty.parser.parserng")
 
 describe("iter", function()
 	it("not skipping the line", function()
-		assert.is_false(p.skip_line(""))
-		assert.is_false(p.skip_line(" #"))
-		assert.is_false(p.skip_line("@key=value"))
+		assert.is_false(p.ignore_line("", p.with_blank_lines))
+		assert.is_false(p.ignore_line(" #", p.with_blank_lines))
+		assert.is_false(p.ignore_line("@key=value", p.with_blank_lines))
 	end)
 
 	it("skip line", function()
-		assert.is_true(p.skip_line("#"))
-		assert.is_true(p.skip_line("# comment"))
+		assert.is_true(p.ignore_line(""))
+		assert.is_true(p.ignore_line(" "))
+		assert.is_true(p.ignore_line("#"))
+		assert.is_true(p.ignore_line("# comment"))
 	end)
 
 	it("skip blank lines", function()
-		assert.is_true(p.skip_line("", true))
-		assert.is_true(p.skip_line(" ", true))
-		assert.is_true(p.skip_line("\t", true))
+		assert.is_true(p.ignore_line("", { ignore_blank_lines = true }))
+		assert.is_true(p.ignore_line(" ", { ignore_blank_lines = true }))
+		assert.is_true(p.ignore_line("\t", { ignore_blank_lines = true }))
 	end)
 end)
 
@@ -67,7 +69,7 @@ end)
 describe("parse variables:", function()
 	it("parse no variable", function()
 		local line, vars = p.parse_variable(p.line_iter({ "GET http://host" }))
-		assert.is_nil(vars)
+		assert.are.same({}, vars)
 		assert.are.same("GET http://host", line)
 	end)
 
@@ -106,31 +108,34 @@ describe("parse method and url:", function()
 	it("only method and url", function()
 		local line, mu = p.parse_method_url(p.line_iter({ "GET http://host" }))
 		assert.are.same({ method = "GET", url = "http://host" }, mu)
-		assert.is_nil(line)
+		assert.are.same("GET http://host", line)
 	end)
 
 	it("method and url and an other line", function()
 		local line, mu = p.parse_method_url(p.line_iter({ "GET http://host", "accept: application/json" }))
 		assert.are.same({ method = "GET", url = "http://host" }, mu)
-		assert.are.same("accept: application/json", line)
+		assert.are.same("GET http://host", line)
 	end)
 end)
 
 describe("parse:", function()
 	it("parse two variables with more lines ", function()
-		local start_time = os.clock()
-		local line, parse = p.parse(p.line_iter({
+		local input = {
 			"@key1=value1",
 			"@key2=value2",
 			"",
 			"GET http://host",
+			"accept: application/json",
 			"",
 			"",
 			"{",
 			'"name": "me"',
 			"}",
 			"",
-		}))
+		}
+
+		local start_time = os.clock()
+		local parse = p.parse(p.line_iter(input))
 		print("Time: " .. require("resty.output.format").duration(os.clock() - start_time))
 
 		assert.are.same({
@@ -139,8 +144,9 @@ describe("parse:", function()
 				method = "GET",
 				url = "http://host",
 				body = '{"name": "me"}',
+				query = {},
+				headers = {},
 			},
 		}, parse)
-		assert.are.same("", line)
 	end)
 end)

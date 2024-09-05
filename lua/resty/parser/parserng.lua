@@ -23,20 +23,129 @@ vim.bo.omnifunc = "v:lua.MyInsertCompletion"
 --
 --
 --
+--[[
 
+| input           | starts with                                                    |
+|-----------------|----------------------------------------------------------------|
+| delimiter       | ### (optional)                                                 |
+| comments        | # (optional)                                                   |
+
+
+* variable        
+  - start: with @ (optional)
+  - end: not @
+* method_url      
+  - start: after variable or first, starts with a letter, and 2 or 3 parts 
+  - end: only one line
+* header or query 
+  - start: after method_url, starts with a letter, contains : or = 
+  - end: } (json_body), --%} (script_body), END
+* json body        
+  - start: {
+  - end: }        
+* script body     
+  - start: --{% 
+  - end: --%} 
+
+
+* ignore lines
+  - comments (delimiters)
+  - blank lines
+
+1) while is_variable  
+2) method_url (one line)
+3) json_body | script_body | header_query 
+	-> header_query -> while header_query -> json_body | script_body | END
+	-> json_body    -> while json_body    -> script_body | END
+	-> script_body  -> while script_body  -> END
+
+
+]]
 local M = {}
 
-M.with_blank_lines = { ignore_blank_lines = false }
+M.Json = {
+	start = function(line)
+		return vim.startswith(line, "{") and #line == 1
+	end,
+	stop = function(line)
+		return vim.startswith(line, "}") == false
+	end,
+}
 
-M.ignore_line = function(line, opts)
-	if vim.startswith(line, "#") then
-		return true
-	elseif not opts or opts.ignore_blank_lines == true then
-		local m = line:match("^%s*$")
-		return m ~= nil and #m >= 0
-	else
-		return false
+M.Script = {
+	start = function(line)
+		return vim.startswith(line, "--{%") and #line == 4
+	end,
+	stop = function(line)
+		return vim.startswith(line, "--%}") == false
+	end,
+}
+
+local u = require("resty.util")
+
+M.check_type = function(input, linenr)
+	local lines = u.input_to_lines(input)
+	local line = lines[linenr]
+
+	if not line then
+		error("line number: " .. linenr .. " is not valid. Max number is: " .. #lines, 0)
 	end
+
+	M.line_iter({ line })
+end
+
+function M.parse(input)
+	local lines = u.input_to_lines(input)
+	local iter = M.line_iter(lines, 1)
+
+	local parse = {}
+	local line
+
+	line, parse.variables = M.parse_variable(iter)
+	if not line then
+		return
+	end
+
+	line, parse.request = M.parse_method_url(iter)
+	if not line then
+		return
+	end
+
+	local peek = iter:peek()
+	-- no more lines
+	if not peek then
+		return parse
+	end
+
+	-- json_body
+	if M.Json.start(peek) then
+		line, parse.request.body = M.parse_body(iter, M.Json)
+		if not line then
+			return parse
+		end
+	-- script_body
+	elseif M.Script.start(peek) then
+		line, parse.request.script = M.parse_body(iter, M.Script)
+		if not line then
+			return parse
+		end
+	-- header_query
+	else
+		print("- header_query: ")
+		-- header_query
+	end
+
+	-- line, parse.request.headers, parse.request.query = M.parse_headers_query(iter)
+	-- if not line then
+	-- 	return
+	-- end
+	--
+	-- line, parse.request.body = M.parse_json(iter)
+	-- if not line then
+	-- 	return
+	-- end
+
+	return parse
 end
 
 M.line_iter = function(lines, cursor)
@@ -44,15 +153,45 @@ M.line_iter = function(lines, cursor)
 		cursor = cursor or 1,
 		lines = lines,
 
-		next = function(self, check, opts)
-			local line = self.lines[self.cursor]
-			if not line then
-				return nil, false
-			end
-
-			while M.ignore_line(line, opts) do
-				self.cursor = self.cursor + 1
+		-- returns the next NOT blank or comment line
+		--
+		next_not_ignored_line = function(self)
+			local line
+			while true do
 				line = self.lines[self.cursor]
+				if not line then
+					return nil
+				end
+
+				-- ignore this lines
+				if #line == 0 or vim.startswith(line, "#") or line:match("^%s") then
+					self.cursor = self.cursor + 1
+				else
+					return line
+				end
+			end
+		end,
+
+		-- read the one preview line
+		--
+		peek = function(self)
+			self:next_not_ignored_line()
+			return self.lines[self.cursor]
+		end,
+
+		-- next not ignored line
+		--   - line == nil, this is the end of the lines
+		--   - false, it not the searched line
+		--   - true find the correct line
+		next = function(self, check, all_lines)
+			local line
+			if all_lines == true then
+				line = self.lines[self.cursor]
+				if not line then
+					return nil
+				end
+			else
+				line = self:next_not_ignored_line()
 				if not line then
 					return nil, false
 				end
@@ -79,10 +218,12 @@ end
 function M.parse_variable(iter)
 	local variables = {}
 
+	local check = function(l)
+		return vim.startswith(l, "@")
+	end
+
 	while true do
-		local line, is_variable = iter:next(function(line)
-			return vim.startswith(line, "@")
-		end)
+		local line, is_variable = iter:next(check)
 		-- end of lines and no variables
 		if not line or is_variable == false then
 			return line, variables
@@ -111,9 +252,16 @@ end
 
 function M.parse_method_url(iter)
 	local line, is_mu = iter:next(function(l)
-		l = string.gsub(l, "^%s+", "") -- trim the spaces in the start
-		return l:find(" ") ~= nil
+		-- l = string.gsub(l, "^%s+", "") -- trim the spaces in the start
+		-- return l:find(" ") ~= nil
+		--
+		-- first char is a letter
+		local first_char = l:sub(1, 1)
+		local letter = (first_char >= "A" and first_char <= "Z") or (first_char >= "a" and first_char <= "z")
+		return letter
+		-- return l:match("^[%aZ]")
 	end)
+
 	-- end of lines and no variables
 	if not line or is_mu == false then
 		return line, nil
@@ -129,9 +277,14 @@ function M.parse_method_url(iter)
 		error("invalid method name: '" .. method .. "'. Only letters are allowed", 0)
 	end
 
+	local url = vim.trim(parts[2])
+	if vim.startswith(url, "http") == false then
+		error("invalid url: '" .. url .. "'. Must staret with 'http'", 0)
+	end
+
 	return line, {
 		method = method:upper(),
-		url = vim.trim(parts[2]),
+		url = url,
 	}
 end
 
@@ -169,53 +322,25 @@ end
 --	return not processed line and current selected json
 --	line == nil -> no more lines left
 --	json == nil -> no json found
-M.parse_json = function(iter)
-	local line, is_json = iter:next(function(line)
-		return vim.startswith(line, "{")
-	end)
-	if not line or is_json == false then
+M.parse_body = function(iter, body)
+	local line, is_body = iter:next(body.start)
+	if not line or is_body == false then
 		return line, nil
 	end
 
-	local json = ""
+	local more_body
+	local body_str = ""
 	while true do
-		json = json .. line
+		body_str = body_str .. line
 
-		line, is_json = iter:next(function(l)
-			-- is not blank line
-			return l:match("%S") ~= nil
-		end, M.with_blank_lines)
-		if not line or is_json == false then
-			return line, json
+		line, more_body = iter:next(body.stop, true)
+		if not line then
+			return line, body_str
+		elseif more_body == false then
+			iter.cursor = iter.cursor + 1
+			return line, body_str .. line
 		end
 	end
-end
-
-function M.parse(iter)
-	local parse = {}
-	local line
-
-	line, parse.variables = M.parse_variable(iter)
-	if not line then
-		return
-	end
-
-	line, parse.request = M.parse_method_url(iter)
-	if not line then
-		return
-	end
-
-	line, parse.request.headers, parse.request.query = M.parse_headers_query(iter)
-	if not line then
-		return
-	end
-
-	line, parse.request.body = M.parse_json(iter)
-	if not line then
-		return
-	end
-
-	return parse
 end
 
 return M

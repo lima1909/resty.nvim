@@ -1,5 +1,6 @@
 local assert = require("luassert")
 local p = require("resty.parser.parserng")
+local format = require("resty.output.format")
 
 describe("parse:", function()
 	-- it("script", function()
@@ -59,7 +60,8 @@ POST http://host
 		}
 		local start_time = os.clock()
 		local parse = p.parse(input)
-		print("Time: " .. require("resty.output.format").duration(os.clock() - start_time))
+		local time = format.duration(os.clock() - start_time)
+		print("Time: " .. time)
 
 		assert.are.same({
 			variables = { key1 = "value1", key2 = "value2" },

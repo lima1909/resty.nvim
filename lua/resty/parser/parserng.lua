@@ -65,20 +65,22 @@ local M = {}
 
 M.Json = {
 	start = function(line)
-		return vim.startswith(line, "{") and #line == 1
+		return line:sub(1, 1) == "{" and #line == 1
 	end,
 	stop = function(line)
-		return vim.startswith(line, "}") == false
+		return line:sub(1, 1) ~= "}"
 	end,
+	end_line = "}",
 }
 
 M.Script = {
 	start = function(line)
-		return vim.startswith(line, "--{%") and #line == 4
+		return line:sub(1, 4) == "--{%" and #line == 4
 	end,
 	stop = function(line)
-		return vim.startswith(line, "--%}") == false
+		return line:sub(1, 4) ~= "--%}"
 	end,
+	end_line = "--%}",
 }
 
 local u = require("resty.util")
@@ -156,20 +158,19 @@ M.line_iter = function(lines, cursor)
 		-- returns the next NOT blank or comment line
 		--
 		next_not_ignored_line = function(self)
-			local line
-			while true do
-				line = self.lines[self.cursor]
-				if not line then
-					return nil
-				end
+			local len = #self.lines
+			for i = self.cursor, len do
+				local line = self.lines[i]
 
 				-- ignore this lines
-				if #line == 0 or vim.startswith(line, "#") or line:match("^%s") then
-					self.cursor = self.cursor + 1
+				if #line == 0 or line:sub(1, 1) == "#" or line:match("^%s") then
+					self.cursor = i + 1
 				else
 					return line
 				end
 			end
+
+			return nil
 		end,
 
 		-- read the one preview line
@@ -183,18 +184,10 @@ M.line_iter = function(lines, cursor)
 		--   - line == nil, this is the end of the lines
 		--   - false, it not the searched line
 		--   - true find the correct line
-		next = function(self, check, all_lines)
-			local line
-			if all_lines == true then
-				line = self.lines[self.cursor]
-				if not line then
-					return nil
-				end
-			else
-				line = self:next_not_ignored_line()
-				if not line then
-					return nil, false
-				end
+		next = function(self, check)
+			local line = self:next_not_ignored_line()
+			if not line then
+				return nil, false
 			end
 
 			if check(line) == false then
@@ -219,7 +212,7 @@ function M.parse_variable(iter)
 	local variables = {}
 
 	local check = function(l)
-		return vim.startswith(l, "@")
+		return l:sub(1, 1) == "@"
 	end
 
 	while true do
@@ -231,12 +224,12 @@ function M.parse_variable(iter)
 
 		-- cut the variable token
 		line = string.sub(line, 2)
-		local parts = vim.split(line, "=")
-		local k = parts[1]
+		local parts = line:gmatch("([^=]+)")
+		local k = parts()
 		if not k then
 			error("an empty variable name is not allowed: '" .. line .. "'", 0)
 		end
-		local v = parts[2]
+		local v = parts()
 		if not v then
 			error("an empty variable value is not allowed: '" .. line .. "'", 0)
 		end
@@ -267,18 +260,18 @@ function M.parse_method_url(iter)
 		return line, nil
 	end
 
-	local parts = vim.split(line, " ")
-	if #parts < 2 then
-		error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line, 0)
-	end
+	local parts = line:gmatch("([^ ]+)")
+	-- if #parts < 2 then
+	-- 	error("expected two parts: method and url (e.g: 'GET http://foo'), got: " .. line, 0)
+	-- end
 
-	local method = vim.trim(parts[1])
+	local method = vim.trim(parts())
 	if not method:match("^[%aZ]+$") then
 		error("invalid method name: '" .. method .. "'. Only letters are allowed", 0)
 	end
 
-	local url = vim.trim(parts[2])
-	if vim.startswith(url, "http") == false then
+	local url = vim.trim(parts())
+	if url:sub(1, 4) == "http" == false then
 		error("invalid url: '" .. url .. "'. Must staret with 'http'", 0)
 	end
 
@@ -296,7 +289,7 @@ function M.parse_headers_query(iter)
 		Is_headers = false
 
 		local line, is_hq = iter:next(function(l)
-			if vim.startswith(l, "{") or vim.startswith(l, "--{%") then
+			if l:sub(1, 1) == "{" or vim.startswith(l, "--{%") then
 				return false
 			elseif l:match("^([%w%-]+):") then
 				Is_headers = true
@@ -328,17 +321,18 @@ M.parse_body = function(iter, body)
 		return line, nil
 	end
 
-	local more_body
 	local body_str = ""
 	while true do
 		body_str = body_str .. line
 
-		line, more_body = iter:next(body.stop, true)
+		line = iter.lines[iter.cursor]
 		if not line then
+			-- error("parsing body hast started, but not ended: " .. body_str, 0)
 			return line, body_str
-		elseif more_body == false then
-			iter.cursor = iter.cursor + 1
+		elseif line.sub(1, #body.end_line) == body.end_line then
 			return line, body_str .. line
+		else
+			iter.cursor = iter.cursor + 1
 		end
 	end
 end

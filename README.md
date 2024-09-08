@@ -7,7 +7,7 @@
 [Build Action]: https://github.com/lima1909/resty.nvim/actions
 
 
-An easy to use Rest Client plugin for neovim written in LUA.
+An easy to use HTTP-Rest-Client plugin for neovim complete written in LUA.
 
 <div align="center">
 

@@ -61,7 +61,14 @@ vim.bo.omnifunc = "v:lua.MyInsertCompletion"
 
 
 ]]
-local M = {}
+
+-- local v = require("resty.parser.variables")
+
+local M = { global_variables = {} }
+
+M.set_global_variables = function(gvars)
+	M.global_variables = vim.tbl_deep_extend("force", M.global_variables, gvars)
+end
 
 function M.new(input)
 	return setmetatable({
@@ -96,7 +103,14 @@ function M.parse_request(input)
 	end
 
 	if p.iter.cursor < #p.iter.lines then
-		print("-- not reading all lines. From:" .. #p.iter.lines .. " reading: " .. p.iter.cursor)
+		-- handle this, maybe with: vim.api.nvim_buf_set_extmark
+		print(
+			"Hint: Process only: "
+				.. p.iter.cursor
+				.. " from possible: "
+				.. #p.iter.lines
+				.. " lines. The remaining lines are ignored."
+		)
 	end
 
 	return p.parsed
@@ -132,6 +146,8 @@ function M:_parse_variable()
 		-- end
 
 		self.parsed.variables[k] = v
+		-- TODO: a good idea ?!?!
+		-- self.iter.variables = self.parsed.variables
 	end
 end
 
@@ -154,7 +170,7 @@ function M:_parse_method_url()
 	end
 
 	local url = vim.trim(parts())
-	if url:sub(1, 4) == "http" == false then
+	if string.sub(url, 1, 4) == "http" == false then
 		error("invalid url: '" .. url .. "'. Must staret with 'http'", 0)
 	end
 
@@ -215,16 +231,18 @@ function M:_parse_body(start, end_line)
 		if not line then
 			-- error("parsing body hast started, but not ended: " .. body_str, 0)
 			return line, body_str
-		elseif line.sub(1, #end_line) == end_line then
+		elseif string.sub(line, 1, #end_line) == end_line then
 			return line, body_str .. line
 		else
+			-- TODO: a good idea ?!?!
+			-- line = v.replace_variable(self.variables, line, {}, {}) -- replacements, global_variables
 			self.iter.cursor = self.iter.cursor + 1
 		end
 	end
 end
 
 local start_json = function(line)
-	return line:sub(1, 1) == "{" and #line == 1
+	return string.sub(line, 1, 1) == "{" and #line == 1
 end
 
 function M:_parse_json_body()
@@ -234,7 +252,7 @@ function M:_parse_json_body()
 end
 
 local start_script = function(line)
-	return line:sub(1, 4) == "--{%" and #line == 4
+	return string.sub(line, 1, 4) == "--{%" and #line == 4
 end
 
 function M:_parse_script_body()

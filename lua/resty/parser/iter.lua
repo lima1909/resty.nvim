@@ -1,3 +1,5 @@
+-- local v = require("resty.parser.variables")
+
 local M = {}
 
 -- returns the next NOT blank or commented line
@@ -37,6 +39,9 @@ function M:next(check)
 		return nil, false
 	end
 
+	-- TODO: a good idea ?!?!
+	-- line = v.replace_variable(self.variables, line, {}, {}) -- replacements, global_variables
+
 	if check(line) == false then
 		return line, false
 	end
@@ -47,14 +52,20 @@ function M:next(check)
 		line = line:sub(1, pos - 1)
 	end
 
+	-- replace variables
+	-- line = string.gsub(line, "{{(.-)}}", function(v)
+	-- 	return self.variables[v] or "undefined"
+	-- end)
+
 	self.cursor = self.cursor + 1
 	return line, true
 end
 
-function M.new(input)
+function M.new(input, variables)
 	local u = require("resty.util")
 	M.lines = u.input_to_lines(input)
 	M.cursor = 1
+	M.variables = variables or {}
 
 	return M
 end

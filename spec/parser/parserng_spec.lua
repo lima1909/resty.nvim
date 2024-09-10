@@ -1,6 +1,7 @@
 local assert = require("luassert")
 local p = require("resty.parser.parserng")
 local format = require("resty.output.format")
+local var = require("resty.parser.variables")
 
 describe("parse:", function()
 	it("foo", function()
@@ -12,14 +13,27 @@ describe("parse:", function()
 		-- don't replace variables
 		local s = os.clock()
 		local k, v
-		for i = 1, 10 do
-			k, v = string.match("@host = my host # comment " .. i, "^@([%w%-_]+)[%s]*=([%w%_-%s]+)")
-		end
-		local e = os.clock() - s
-		print("|" .. k .. "| |" .. v .. "| " .. format.duration(e))
+		local line = "@host = {{$USER}}{{>echo 'abc'} # comment "
+		local variable_declaration = "^@([%w%-_]+)[%s]*=[%s]*([^#^%s]+)"
 
-		k, v = string.match("@key=", "^@([%w%-_]+)[%s]*=([%w%_-%s]+)")
-		print("|" .. tostring(k) .. "| |" .. tostring(v) .. "| ")
+		for i = 1, 10 do
+			line = var.replace_variable_ng(line)
+			k, v = string.match(line .. i, variable_declaration)
+			-- v = vim.trim(v)
+			-- simulate a choice
+			-- v = string.match(line, var)
+			-- if not v then
+			-- 	v = string.match(line, val)
+			-- end
+		end
+
+		line = "get	 http://my-host  HTTP/1 # comment"
+		local m, u, h = string.match(line, "^([%w]+)[%s]+([%w%_-:/%?&]+)[%s]+(HTTP/[%.]?[%d])")
+
+		local e = os.clock() - s
+		print("variable:   |" .. k .. "| |" .. v .. "| ")
+		print("method_url: |" .. tostring(m) .. "| |" .. tostring(u) .. "| " .. tostring(h) .. "|")
+		print("time: " .. format.duration(e))
 	end)
 
 	-- it("script", function()

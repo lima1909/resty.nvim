@@ -65,6 +65,7 @@ function M.new(input, variables)
 	local u = require("resty.util")
 	M.lines = u.input_to_lines(input)
 	M.cursor = 1
+	M.len = #M.lines
 	M.variables = variables or {}
 
 	return M

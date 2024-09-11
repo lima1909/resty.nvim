@@ -1,40 +1,68 @@
 local assert = require("luassert")
 local p = require("resty.parser.parserng")
 local format = require("resty.output.format")
-local var = require("resty.parser.variables")
+-- local var = require("resty.parser.variables")
 
 describe("parse:", function()
-	it("foo", function()
-		-- variables:
-		-- first char:
-		--   - ignore: cursor + 1
-		--   - @: try to read key-value
-		--   - other: next parser
-		-- don't replace variables
+	it("parse ng", function()
+		local input = {
+			"",
+			"# comment",
+			"@k1= v1",
+			"",
+			"@user = {{$USER}}",
+			"",
+			"GET http://myhost # HTTP/1",
+			"",
+			"accept: application/json",
+			"Content-type: application/json ; charset=UTF-8",
+		}
+		local r = p.parse_request(input)
+
 		local s = os.clock()
-		local k, v
-		local line = "@host = {{$USER}}{{>echo 'abc'} # comment "
-		local variable_declaration = "^@([%w%-_]+)[%s]*=[%s]*([^#^%s]+)"
 
-		for i = 1, 10 do
-			line = var.replace_variable_ng(line)
-			k, v = string.match(line .. i, variable_declaration)
-			-- v = vim.trim(v)
-			-- simulate a choice
-			-- v = string.match(line, var)
-			-- if not v then
-			-- 	v = string.match(line, val)
-			-- end
-		end
-
-		line = "get	 http://my-host  HTTP/1 # comment"
-		local m, u, h = string.match(line, "^([%w]+)[%s]+([%w%_-:/%?&]+)[%s]+(HTTP/[%.]?[%d])")
+		r = p.parse_request_ng(input)
 
 		local e = os.clock() - s
-		print("variable:   |" .. k .. "| |" .. v .. "| ")
-		print("method_url: |" .. tostring(m) .. "| |" .. tostring(u) .. "| " .. tostring(h) .. "|")
+
+		print(vim.inspect(r))
 		print("time: " .. format.duration(e))
 	end)
+
+	-- it("foo", function()
+	-- 	-- variables:
+	-- 	-- first char:
+	-- 	--   - ignore: cursor + 1
+	-- 	--   - @: try to read key-value
+	-- 	--   - other: next parser
+	-- 	-- don't replace variables
+	-- 	local s = os.clock()
+	-- 	local k, v, header
+	-- 	local variable_declaration = "^@([%w%-_]+)[%s]*=[%s]*([^#^%s]+)"
+	-- 	local line = "@host = {{$USER}}{{>echo 'abc'} # comment "
+	-- 	local header_def = "^([%w][%w-]*)[%s]*:[%s]*([^#]+)[#%.]*" -- %s%w-_{}
+	-- 	local hline = "application: f {{ff}} # comment"
+	-- 	local hk, hv
+	-- 	for i = 1, 10 do
+	-- 		line = var.replace_variable_ng(line)
+	-- 		k, v = string.match(line .. i, variable_declaration)
+	-- 		hk, hv = string.match(hline .. i, header_def)
+	--
+	-- 		-- v = vim.trim(v)
+	-- 		-- simulate a choice
+	-- 		-- v = string.match(line, var)
+	-- 		-- if not v then
+	-- 		--     v = string.match(line, val)
+	-- 		-- end
+	-- 	end
+	-- local line = "get     http://my-host  HTTP/1 # comment"
+	-- local m, u, h = string.match(line, "^([%w]+)[%s]+([%w%_-:/%?&]+)[%s]+(HTTP/[%.]?[%d])")
+	-- 	local e = os.clock() - s
+	-- 	print("variable:   |" .. k .. "| |" .. v .. "| ")
+	-- print("method_url: |" .. tostring(m) .. "| |" .. tostring(u) .. "| " .. tostring(h) .. "|")
+	-- 	print("header: |" .. tostring(hk) .. "| |" .. tostring(hv) .. "| ")
+	-- 	print("time: " .. format.duration(e))
+	-- end)
 
 	-- it("script", function()
 	-- 	local lines = {
@@ -109,38 +137,40 @@ describe("parse:", function()
 	-- 		}, r)
 	-- 	end)
 	--
-	-- 	it("parse two variables with more lines ", function()
-	-- 		local input = {
-	-- 			"@key1=value1",
-	-- 			"@id = 7",
-	-- 			"",
-	-- 			"GET http://host",
-	-- 			"",
-	-- 			"accept: application/json",
-	-- 			"foo: =bar",
-	-- 			"",
-	-- 			"id = 7",
-	-- 			"",
-	-- 			"# comment",
-	-- 			"{",
-	-- 			' "name": "me" ',
-	-- 			"}",
-	-- 			"",
-	-- 		}
-	-- 		local start_time = os.clock()
-	-- 		local parse = p.parse_request(input)
-	-- 		local time = format.duration(os.clock() - start_time)
-	-- 		print("Time: " .. time)
-	--
-	-- 		assert.are.same({
-	-- 			variables = { key1 = "value1", id = "7" },
-	-- 			request = {
-	-- 				method = "GET",
-	-- 				url = "http://host",
-	-- 				body = '{ "name": "me" }',
-	-- 				query = { id = "7" },
-	-- 				headers = { accept = "application/json", foo = "=bar" },
-	-- 			},
-	-- 		}, parse)
-	-- 	end)
+	it("parse two variables with more lines ", function()
+		local input = {
+			"@key1=value1",
+			"@id = 7",
+			"",
+			"GET http://host",
+			"",
+			"accept: application/json",
+			"foo: =bar",
+			"",
+			"id = 7",
+			"",
+			"# comment",
+			"{",
+			' "name": "me" ',
+			"}",
+			"",
+		}
+		local parse = p.parse_request(input)
+
+		local start_time = os.clock()
+		parse = p.parse_request(input)
+		local time = format.duration(os.clock() - start_time)
+		print("Time: " .. time)
+
+		assert.are.same({
+			variables = { key1 = "value1", id = "7" },
+			request = {
+				method = "GET",
+				url = "http://host",
+				body = '{ "name": "me" }',
+				query = { id = "7" },
+				headers = { accept = "application/json", foo = "=bar" },
+			},
+		}, parse)
+	end)
 end)

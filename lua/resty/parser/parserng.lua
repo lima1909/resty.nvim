@@ -116,6 +116,122 @@ function M.parse_request(input)
 	return p.parsed
 end
 
+-- ----------------------------------------------------------------------------
+--
+local WS = "[%s]*"
+local NAME = "[%w][%w%-_]+"
+local VARIABLE = "^@(" .. NAME .. ")" .. WS .. "=" .. WS .. "([^#^%s]+)"
+local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?&]+)[%s]+([%w%/%.%d]*)"
+local HEADER = "^([%w][%w-]*)[%s]*:[%s]*([^#]+)[#%.]*"
+
+function M.parse_request_ng(input)
+	local p = M.new(input)
+
+	p.parsed = {
+		request = {
+			query = {},
+			headers = {},
+		},
+		variables = {},
+	}
+
+	local parsers = {
+		M._parse_variable_ng,
+		M._parse_method_url_ng,
+		M._parse_headers_query_ng,
+		-- M._parse_json_body,
+		-- M._parse_script_body,
+	}
+
+	for _, parse in ipairs(parsers) do
+		if not parse(p) then
+			return p.parsed
+		end
+	end
+
+	return p.parsed
+end
+
+function M:_parse_variable_ng()
+	for i = self.iter.cursor, self.iter.len do
+		local line = self.iter.lines[i]
+		local first_char = string.sub(line, 1, 1)
+
+		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		elseif first_char == "@" then
+			local k, v = string.match(line, VARIABLE)
+			if not k then
+				print("invalid variable name in line: " .. line)
+			end
+			if not v then
+				print("invalid variable value in line: " .. line)
+			end
+
+			self.parsed.variables[k] = v
+		else
+			-- TODO: this will be go better
+			self.iter.cursor = i
+
+			return line
+		end
+	end
+
+	return nil
+end
+
+function M:_parse_method_url_ng()
+	local line = self.iter.lines[self.iter.cursor]
+	if not line then
+		print("no method and url found")
+		return
+	end
+	self.iter.cursor = self.iter.cursor + 1
+
+	local m, u, h = string.match(line, REQUEST)
+	if not m then
+		print("invalid method in line: " .. line)
+	end
+	if not u then
+		print("invalid url in line: " .. line)
+	end
+	-- valdiate h HTTP/1 ,0.9, 2
+
+	self.parsed.request.method = m
+	self.parsed.request.url = u
+	self.parsed.request.http_version = h or ""
+
+	return line
+end
+
+function M:_parse_headers_query_ng()
+	for i = self.iter.cursor, self.iter.len do
+		local line = self.iter.lines[i]
+		local first_char = string.sub(line, 1, 1)
+
+		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		else
+			local k, v = string.match(line, HEADER)
+			if not k then
+				-- check query, else return
+				self.iter.cursor = i
+				return line
+			end
+			if not v then
+				print("invalid header value in line: " .. line)
+			end
+
+			self.parsed.request.headers[k] = v
+		end
+	end
+
+	return nil
+end
+
+--
+-- ----------------------------------------------------------------------------
+
 M._is_variable = function(line)
 	return string.sub(line, 1, 1) == "@"
 end

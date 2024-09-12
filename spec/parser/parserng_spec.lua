@@ -4,18 +4,30 @@ local format = require("resty.output.format")
 -- local var = require("resty.parser.variables")
 
 describe("parse:", function()
+	-- it("json", function()
+	-- 	local s = os.clock()
+	-- 	local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
+	-- 	local e = os.clock() - s
+	-- 	print("time: " .. format.duration(e))
+	-- end)
+
 	it("parse ng", function()
 		local input = {
+			"@key1=value1",
+			"@id = 7",
 			"",
-			"# comment",
-			"@k1= v1",
-			"",
-			"@user = {{$USER}}",
-			"",
-			"GET http://myhost # HTTP/1",
+			"GET http://host",
 			"",
 			"accept: application/json",
-			"Content-type: application/json ; charset=UTF-8",
+			"foo: =bar",
+			"",
+			"id = 7",
+			"",
+			"# comment",
+			"{",
+			' "name": "me" ',
+			"}",
+			"",
 		}
 		local r = p.parse_request(input)
 

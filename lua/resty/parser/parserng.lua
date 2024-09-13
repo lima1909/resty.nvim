@@ -119,7 +119,72 @@ end
 -- ----------------------------------------------------------------------------
 --
 
-local VARIABLE = "^@([^%s^=]+)[%s]*=[%s]*([^#^%s]+)"
+---------------------
+local exec = require("resty.exec")
+
+M.TypeVar = {
+	symbol = "",
+	text = "variable",
+}
+
+M.TypeGlobalVar = {
+	symbol = "",
+	text = "global_variable",
+}
+
+M.TypeEnv = {
+	symbol = "$",
+	text = "environment",
+}
+
+M.TypeCmd = {
+
+	symbol = ">",
+	text = "commmand",
+}
+
+M.TypePrompt = {
+	symbol = ":",
+	text = "prompt",
+}
+
+M._replace_variable = function(line, variables)
+	local replacements = {}
+
+	line = string.gsub(line, "{{(.-)}}", function(key)
+		local symbol = key:sub(1, 1)
+		local value
+
+		-- environment variable
+		if symbol == M.TypeEnv.symbol then
+			value = os.getenv(key:sub(2):upper())
+			table.insert(replacements, { from = key, to = value, type = M.TypeEnv.text })
+		-- commmand
+		elseif symbol == M.TypeCmd.symbol then
+			value = exec.cmd(key:sub(2))
+			table.insert(replacements, { from = key, to = value, type = M.TypeCmd.text })
+		-- prompt
+		elseif symbol == M.TypePrompt.symbol then
+			value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
+			table.insert(replacements, { from = key, to = value, type = M.TypePrompt.text })
+		-- variable
+		else
+			value = variables[key]
+			table.insert(replacements, { from = key, to = value, type = M.TypeVar.text })
+		end
+
+		return value
+	end)
+
+	return line, replacements
+end
+
+---------------------
+---
+
+local WITH_COMMENT = "[#%.]*"
+
+local VARIABLE = "^@([^%s^=^#]+)[%s]*=[%s]*([^#^%s]+)" .. WITH_COMMENT
 
 M._pv = function(line)
 	local k, v = string.match(line, VARIABLE)
@@ -133,19 +198,15 @@ M._pv = function(line)
 	return k, v
 end
 
-local function _create_variable_parser(self)
+function M:_parse_variables_ng()
 	return self:parse_matching_line_ng("@", M._pv, function(k, v)
 		self.parsed.variables[k] = v
 	end)
 end
 
-local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?&]+)[%s]*([%w%/%.%d]*)"
+local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
 
-function M:_parse_method_url_ng()
-	local line = self.iter.lines[self.iter.cursor]
-	if not line then
-		error("no method and url found", 0)
-	end
+function M:_parse_method_url_ng(line)
 	self.iter.cursor = self.iter.cursor + 1
 
 	local m, u, h = string.match(line, REQUEST)
@@ -159,13 +220,16 @@ function M:_parse_method_url_ng()
 
 	self.parsed.request.method = m
 	self.parsed.request.url = u
-	self.parsed.request.http_version = h or ""
+
+	if h and #h > 0 then
+		self.parsed.request.http_version = h
+	end
 
 	return line
 end
 
-local HEADER = "^([%w][^%s^:^%#]*)[%s]*:[%s]*([^#]+)[#%.]*"
-local QUERY = "^([%w][^%s^=^%#]*)[%s]*=[%s]*([^#]+)[#%.]*"
+local HEADER = "^([%w][^%s^:^%#]*)[%s]*:[%s]*([^#]+)" .. WITH_COMMENT
+local QUERY = "^([%w][^%s^=^%#]*)[%s]*=[%s]*([^#]+)" .. WITH_COMMENT
 
 M._phq = function(line)
 	local what = 2 -- query
@@ -187,7 +251,7 @@ M._phq = function(line)
 	end
 end
 
-local function _create_header_query_parser(self)
+function M:_parse_header_query_ng()
 	return self:parse_matching_line_ng("%w", M._phq, function(k, v, what)
 		if what == 1 then
 			self.parsed.request.headers[k] = v
@@ -197,46 +261,30 @@ local function _create_header_query_parser(self)
 	end)
 end
 
-function M:_parse_json_ng()
-	return self:parse_body_ng("({)[%s]*", "(})[%s]*", function(body, is_complete)
-		if is_complete == false then
-			error("not closing json body: " .. body, 0)
-		else
-			self.parsed.request.body = body
-		end
-	end)
-end
-
-function M:parse_body_ng(begin, stop, collect_result)
-	for i = self.iter.cursor, self.iter.len do
-		local line = self.iter.lines[i]
-		local first_char = string.sub(line, 1, 1)
-
-		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
-			self.iter.cursor = i
-		else
-			break
-		end
-	end
-
+function M:_parse_json_ng(line)
 	local body = nil
 
+	if string.match(line, "({)[%s]*") then
+		body = line
+		self.iter.cursor = self.iter.cursor + 1
+	else
+		return line
+	end
+
 	for i = self.iter.cursor, self.iter.len do
-		local line = self.iter.lines[i]
+		line = self.iter.lines[i]
 		local first_char = string.sub(line, 1, 1)
 
-		if not body and string.match(first_char, begin) then
-			body = line
-		elseif string.match(first_char, stop) then
+		if first_char == "}" and string.match(line, "(})[%s]*") then
 			self.iter.cursor = i
-			collect_result(body .. line, true)
+			self.parsed.request.body = body .. line
 			return line
-		elseif body then
+		else
 			body = body .. line
 		end
 	end
 
-	collect_result(body, false)
+	self.iter.cursor = self.iter.len
 	return nil
 end
 
@@ -252,15 +300,17 @@ function M.parse_request_ng(input)
 	}
 
 	local parsers = {
-		_create_variable_parser,
+		M._parse_variables_ng,
 		M._parse_method_url_ng,
-		_create_header_query_parser,
+		M._parse_header_query_ng,
 		M._parse_json_ng,
 		-- M._parse_script_body,
 	}
 
+	local line
 	for _, parse in ipairs(parsers) do
-		if not parse(p) then
+		line = parse(p, line)
+		if not line then
 			return p.parsed
 		end
 	end
@@ -276,14 +326,16 @@ function M:parse_matching_line_ng(match, parser, collect_result)
 		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
 		elseif string.match(first_char, match) then
+			-- TODO: check this
+			line = M._replace_variable(line, self.parsed.variables)
 			collect_result(parser(line))
 		else
-			-- TODO: this will be go better
 			self.iter.cursor = i
 			return line
 		end
 	end
 
+	self.iter.cursor = self.iter.len
 	return nil
 end
 

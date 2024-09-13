@@ -11,18 +11,29 @@ describe("parse:", function()
 	-- 	print("time: " .. format.duration(e))
 	-- end)
 
+	it("replace variables", function()
+		local s = os.clock()
+		local line, replaced = p._replace_variable("abc: {{$USER}}, {{var}}", { var = "from var" })
+		local e = os.clock() - s
+
+		print(line .. ": " .. format.duration(e))
+		-- print(vim.inspect(replaced))
+		assert.are.same("abc: obelix, from var", line)
+	end)
+
 	it("parse ng", function()
 		local input = {
-			"@key1=value1",
-			"@id = 7",
+			"@key1={{$USER}} # comment",
+			"@id = 42",
 			"",
-			"GET http://host",
+			"GET http://my-h_ost?myid=9&other=a # comment ",
 			"",
-			"accept: application/json",
-			"foo: =bar",
+			"accept: application/json # comment",
+			"foo: =bar; blub",
 			"",
-			"id = 7",
+			"id = {{id}} # comment",
 			"",
+			"# comment",
 			"# comment",
 			"{",
 			' "name": "me" ',

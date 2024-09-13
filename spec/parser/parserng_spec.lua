@@ -13,12 +13,14 @@ describe("parse:", function()
 
 	it("replace variables", function()
 		local s = os.clock()
-		local line, replaced = p._replace_variable("abc: {{$USER}}, {{var}}", { var = "from var" })
+		local line, replaced = p._replace_variable("abc: {{$USER}}, {{var}}, {{> echo -n 'yeh'}}", { var = "from var" })
 		local e = os.clock() - s
 
 		print(line .. ": " .. format.duration(e))
-		-- print(vim.inspect(replaced))
-		assert.are.same("abc: obelix, from var", line)
+		assert.are.same("abc: " .. os.getenv("USER") .. ", from var, yeh", line)
+		assert.are.same({ from = "$USER", to = os.getenv("USER"), type = "env" }, replaced[1])
+		assert.are.same({ from = "var", to = "from var", type = "var" }, replaced[2])
+		assert.are.same({ from = "> echo -n 'yeh'", to = "yeh", type = "cmd" }, replaced[3])
 	end)
 
 	it("parse ng", function()
@@ -48,8 +50,8 @@ describe("parse:", function()
 
 		local e = os.clock() - s
 
+		print("--> time: " .. format.duration(e))
 		print(vim.inspect(r))
-		print("time: " .. format.duration(e))
 	end)
 
 	-- it("foo", function()

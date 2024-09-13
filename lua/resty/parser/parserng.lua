@@ -117,60 +117,32 @@ function M.parse_request(input)
 end
 
 -- ----------------------------------------------------------------------------
---
 
----------------------
 local exec = require("resty.exec")
 
-M.TypeVar = {
-	symbol = "",
-	text = "variable",
-}
-
-M.TypeGlobalVar = {
-	symbol = "",
-	text = "global_variable",
-}
-
-M.TypeEnv = {
-	symbol = "$",
-	text = "environment",
-}
-
-M.TypeCmd = {
-
-	symbol = ">",
-	text = "commmand",
-}
-
-M.TypePrompt = {
-	symbol = ":",
-	text = "prompt",
-}
-
-M._replace_variable = function(line, variables)
-	local replacements = {}
+M._replace_variable = function(line, variables, replacements)
+	replacements = replacements or {}
 
 	line = string.gsub(line, "{{(.-)}}", function(key)
-		local symbol = key:sub(1, 1)
 		local value
+		local symbol = key:sub(1, 1)
 
 		-- environment variable
-		if symbol == M.TypeEnv.symbol then
+		if symbol == "$" then
 			value = os.getenv(key:sub(2):upper())
-			table.insert(replacements, { from = key, to = value, type = M.TypeEnv.text })
+			table.insert(replacements, { from = key, to = value, type = "env" })
 		-- commmand
-		elseif symbol == M.TypeCmd.symbol then
+		elseif symbol == ">" then
 			value = exec.cmd(key:sub(2))
-			table.insert(replacements, { from = key, to = value, type = M.TypeCmd.text })
+			table.insert(replacements, { from = key, to = value, type = "cmd" })
 		-- prompt
-		elseif symbol == M.TypePrompt.symbol then
+		elseif symbol == ":" then
 			value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
-			table.insert(replacements, { from = key, to = value, type = M.TypePrompt.text })
+			table.insert(replacements, { from = key, to = value, type = "prompt" })
 		-- variable
 		else
 			value = variables[key]
-			table.insert(replacements, { from = key, to = value, type = M.TypeVar.text })
+			table.insert(replacements, { from = key, to = value, type = "var" })
 		end
 
 		return value
@@ -179,7 +151,6 @@ M._replace_variable = function(line, variables)
 	return line, replacements
 end
 
----------------------
 ---
 
 local WITH_COMMENT = "[#%.]*"
@@ -198,7 +169,7 @@ M._pv = function(line)
 	return k, v
 end
 
-function M:_parse_variables_ng()
+function M:_parse_variables_ng(_)
 	return self:parse_matching_line_ng("@", M._pv, function(k, v)
 		self.parsed.variables[k] = v
 	end)
@@ -297,6 +268,7 @@ function M.parse_request_ng(input)
 			headers = {},
 		},
 		variables = {},
+		replacements = {},
 	}
 
 	local parsers = {
@@ -326,8 +298,7 @@ function M:parse_matching_line_ng(match, parser, collect_result)
 		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
 		elseif string.match(first_char, match) then
-			-- TODO: check this
-			line = M._replace_variable(line, self.parsed.variables)
+			line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 			collect_result(parser(line))
 		else
 			self.iter.cursor = i

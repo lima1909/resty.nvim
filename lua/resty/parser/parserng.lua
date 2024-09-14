@@ -20,49 +20,9 @@ end
 -- Set the omnifunc to your custom completion function
 vim.bo.omnifunc = "v:lua.MyInsertCompletion"
 -- To use the custom completion in insert mode, type: Ctrl-X Ctrl-O
---
---
---
---[[
 
-| input           | starts with                                                    |
-|-----------------|----------------------------------------------------------------|
-| delimiter       | ### (optional)                                                 |
-| comments        | # (optional)                                                   |
-
-
-* variable        
-  - start: with @ (optional)
-  - end: not @
-* method_url      
-  - start: after variable or first, starts with a letter, and 2 or 3 parts 
-  - end: only one line
-* header or query 
-  - start: after method_url, starts with a letter, contains : or = 
-  - end: } (json_body), --%} (script_body), END
-* json body        
-  - start: {
-  - end: }        
-* script body     
-  - start: --{% 
-  - end: --%} 
-
-
-* ignore lines
-  - comments (delimiters)
-  - blank lines
-
-1) while is_variable  
-2) method_url (one line)
-3) json_body | script_body | header_query 
-	-> header_query -> while header_query -> json_body | script_body | END
-	-> json_body    -> while json_body    -> script_body | END
-	-> script_body  -> while script_body  -> END
-
-
-]]
-
--- local v = require("resty.parser.variables")
+local exec = require("resty.exec")
+local util = require("resty.util")
 
 local M = { global_variables = {} }
 
@@ -71,8 +31,12 @@ M.set_global_variables = function(gvars)
 end
 
 function M.new(input)
+	local lines = util.input_to_lines(input)
+
 	return setmetatable({
-		iter = require("resty.parser.iter").new(input),
+		lines = lines,
+		cursor = 1,
+		len = #lines,
 		parsed = {},
 	}, { __index = M })
 end
@@ -86,100 +50,35 @@ function M.parse_request(input)
 			headers = {},
 		},
 		variables = {},
+		replacements = {},
 	}
 
 	local parsers = {
-		M._parse_variable,
+		M._parse_variables,
 		M._parse_method_url,
-		M._parse_headers_query,
-		M._parse_json_body,
-		M._parse_script_body,
+		M._parse_header_query,
+		M._parse_json,
+		M._parse_script,
 	}
 
+	local line
 	for _, parse in ipairs(parsers) do
-		if not parse(p) then
+		line = parse(p, line)
+		if not line then
 			return p.parsed
 		end
-	end
-
-	if p.iter.cursor < #p.iter.lines then
-		-- handle this, maybe with: vim.api.nvim_buf_set_extmark
-		-- print(
-		-- 	"Hint: Process only: "
-		-- 		.. p.iter.cursor
-		-- 		.. " from possible: "
-		-- 		.. #p.iter.lines
-		-- 		.. " lines. The remaining lines are ignored."
-		-- )
 	end
 
 	return p.parsed
 end
 
--- ----------------------------------------------------------------------------
-
-local exec = require("resty.exec")
-
-M._replace_variable = function(line, variables, replacements)
-	replacements = replacements or {}
-
-	line = string.gsub(line, "{{(.-)}}", function(key)
-		local value
-		local symbol = key:sub(1, 1)
-
-		-- environment variable
-		if symbol == "$" then
-			value = os.getenv(key:sub(2):upper())
-			table.insert(replacements, { from = key, to = value, type = "env" })
-		-- commmand
-		elseif symbol == ">" then
-			value = exec.cmd(key:sub(2))
-			table.insert(replacements, { from = key, to = value, type = "cmd" })
-		-- prompt
-		elseif symbol == ":" then
-			value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
-			table.insert(replacements, { from = key, to = value, type = "prompt" })
-		-- variable
-		else
-			value = variables[key]
-			table.insert(replacements, { from = key, to = value, type = "var" })
-		end
-
-		return value
-	end)
-
-	return line, replacements
-end
-
----
-
 local WITH_COMMENT = "[#%.]*"
-
-local VARIABLE = "^@([^%s^=^#]+)[%s]*=[%s]*([^#^%s]+)" .. WITH_COMMENT
-
-M._pv = function(line)
-	local k, v = string.match(line, VARIABLE)
-	if not k then
-		error("invalid variable name in line: " .. line, 0)
-	end
-	if not v then
-		error("invalid variable value in line: " .. line, 0)
-	end
-
-	return k, v
-end
-
-function M:_parse_variables_ng(_)
-	return self:parse_matching_line_ng("@", M._pv, function(k, v)
-		self.parsed.variables[k] = v
-	end)
-end
 
 -- ([A-Z]+) (.-) HTTP/(%d%.%d)\r?\n
 local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
 
-function M:_parse_method_url_ng(line)
-	self.iter.cursor = self.iter.cursor + 1
+function M:_parse_method_url(line)
+	self.cursor = self.cursor + 1
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 
 	local m, u, h = string.match(line, REQUEST)
@@ -199,6 +98,26 @@ function M:_parse_method_url_ng(line)
 	end
 
 	return line
+end
+
+local VARIABLE = "^@([^%s^=^#]+)[%s]*=[%s]*([^#^%s]+)" .. WITH_COMMENT
+
+M._pv = function(line)
+	local k, v = string.match(line, VARIABLE)
+	if not k then
+		error("invalid variable name in line: " .. line, 0)
+	end
+	if not v then
+		error("invalid variable value in line: " .. line, 0)
+	end
+
+	return k, v
+end
+
+function M:_parse_variables(_)
+	return self:parse_matching_line("@", M._pv, function(k, v)
+		self.parsed.variables[k] = v
+	end)
 end
 
 local HEADER = "^([%w][^%s^:^%#]*)[%s]*:[%s]*([^#]+)" .. WITH_COMMENT
@@ -224,8 +143,8 @@ M._phq = function(line)
 	end
 end
 
-function M:_parse_header_query_ng()
-	return self:parse_matching_line_ng("%w", M._phq, function(k, v, what)
+function M:_parse_header_query()
+	return self:parse_matching_line("%w", M._phq, function(k, v, what)
 		if what == 1 then
 			self.parsed.request.headers[k] = v
 		elseif what == 2 then
@@ -234,33 +153,34 @@ function M:_parse_header_query_ng()
 	end)
 end
 
-function M:_parse_json_ng(line)
-	local l, body = self:_parse_body_ng(line, "^{")
+function M:_parse_json(line)
+	local l, body = self:_parse_body(line, "^{")
 	if body then
 		self.parsed.request.body = body
 	end
 	return l
 end
 
-function M:_parse_script_ng(line)
-	for i = self.iter.cursor, self.iter.len do
-		line = self.iter.lines[i]
+function M:_parse_script(line)
+	for i = self.cursor, self.len do
+		self.cursor = i
+
+		line = self.lines[i]
 		local first_char = string.sub(line, 1, 1)
 
-		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
+		if first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
 		else
-			self.iter.cursor = i
 			break
 		end
 	end
 
-	local l, body = self:_parse_body_ng(line, "^--{%%")
+	local l, body = self:_parse_body(line, "^--{%%")
 	if body then
 		self.parsed.request.script = body
 	else
 		-- or > {% (tree-sitter-http) %}
-		l, body = self:_parse_body_ng(line, "^>%s{%%")
+		l, body = self:_parse_body(line, "^>%s{%%")
 		if body then
 			self.parsed.request.script = body
 		end
@@ -268,224 +188,88 @@ function M:_parse_script_ng(line)
 	return l
 end
 
-function M:_parse_body_ng(line, body_start)
-	local start = self.iter.cursor
+function M:_parse_body(line, body_start)
+	local start = self.cursor
 
 	if not string.match(line, body_start) then
 		return line, nil
 	end
 
-	for i = self.iter.cursor, self.iter.len do
-		line = self.iter.lines[i]
+	for i = self.cursor, self.len do
+		line = self.lines[i]
 
 		-- until blank line
 		if string.match(line, "^%s*$") then
-			self.iter.cursor = i
-			return line, table.concat(self.iter.lines, "", start, i)
+			self.cursor = i
+			return line, table.concat(self.lines, "", start, i)
+		-- until comment line
+		elseif string.match(line, "^#") then
+			self.cursor = i
+			return line, table.concat(self.lines, "", start, i - 1)
 		end
 	end
 
-	self.iter.cursor = self.iter.len
-	return nil, table.concat(self.iter.lines, "", start, self.iter.len)
+	self.cursor = self.len
+	return nil, table.concat(self.lines, "", start, self.len)
 end
 
-function M.parse_request_ng(input)
-	local p = M.new(input)
-
-	p.parsed = {
-		request = {
-			query = {},
-			headers = {},
-		},
-		variables = {},
-		replacements = {},
-	}
-
-	local parsers = {
-		M._parse_variables_ng,
-		M._parse_method_url_ng,
-		M._parse_header_query_ng,
-		M._parse_json_ng,
-		M._parse_script_ng,
-	}
-
-	local line
-	for _, parse in ipairs(parsers) do
-		line = parse(p, line)
-		if not line then
-			return p.parsed
-		end
-	end
-
-	return p.parsed
-end
-
-function M:parse_matching_line_ng(match, parser, collect_result)
-	for i = self.iter.cursor, self.iter.len do
-		local line = self.iter.lines[i]
+function M:parse_matching_line(match, parser, collect_result)
+	for i = self.cursor, self.len do
+		local line = self.lines[i]
 		local first_char = string.sub(line, 1, 1)
 
-		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
+		if first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
 		elseif string.match(first_char, match) then
 			line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 			collect_result(parser(line))
 		else
-			self.iter.cursor = i
+			self.cursor = i
 			return line
 		end
 	end
 
-	self.iter.cursor = self.iter.len
+	self.cursor = self.len
 	return nil
 end
 
---
--- ----------------------------------------------------------------------------
+M._replace_variable = function(line, variables, replacements)
+	replacements = replacements or {}
 
-M._is_variable = function(line)
-	return string.sub(line, 1, 1) == "@"
-end
+	line = string.gsub(line, "{{(.-)}}", function(key)
+		local value
+		local symbol = key:sub(1, 1)
 
-function M:_parse_variable()
-	while true do
-		local line, is_variable = self.iter:next(M._is_variable)
-		if not line or is_variable == false then
-			return line
-		end
-
-		local k = string.match(line, "^@([%w%-_]+[%s]*)=")
-		if not k then
-			error("an empty variable name is not allowed: '" .. line .. "'", 0)
-		end
-
-		local v = string.sub(line, #k + 3) -- add '@' and '=' for the correct length
-		if not v then
-			error("an empty variable value is not allowed: '" .. line .. "'", 0)
-		end
-
-		k = vim.trim(k)
-		v = vim.trim(v)
-
-		-- CHECK duplicate
-		-- if self.parsed.variables[k] then
-		-- error("the variable key: '" .. key .. "' already exist")
-		-- end
-
-		self.parsed.variables[k] = v
-		-- TODO: a good idea ?!?!
-		-- self.iter.variables = self.parsed.variables
-	end
-end
-
-M._starts_with_letter = function(line)
-	local first_char = string.sub(line, 1, 1)
-	return (first_char >= "a" and first_char <= "z") or (first_char >= "A" and first_char <= "Z")
-end
-
-function M:_parse_method_url()
-	local line, is_mu = self.iter:next(M._starts_with_letter)
-	if not line or is_mu == false then
-		return line
-	end
-
-	local parts = line:gmatch("([^ ]+)")
-
-	local method = vim.trim(parts())
-	if not method:match("^[%aZ]+$") then
-		error("invalid method name: '" .. method .. "'. Only letters are allowed", 0)
-	end
-
-	local url = vim.trim(parts())
-	if string.sub(url, 1, 4) == "http" == false then
-		error("invalid url: '" .. url .. "'. Must staret with 'http'", 0)
-	end
-
-	self.parsed.request.method = method:upper()
-	self.parsed.request.url = url
-
-	return line
-end
-
-function M:_parse_headers_query()
-	while true do
-		local line, is_hq = self.iter:next(function(l)
-			local headers = string.match(l, "^([%w%-]+):")
-			if headers then
-				local v = string.sub(l, #headers + 2)
-				v = vim.trim(v)
-				if #v == 0 then
-					error("an empty  header value is not allowed", 0)
-				end
-				self.parsed.request.headers[headers] = v
-				return true
-			else
-				local query = string.match(l, "^([%w%-_%.]+[%s]*)=")
-				if query then
-					local v = string.sub(l, #query + 2)
-					v = vim.trim(v)
-					if #v == 0 then
-						error("an empty query value is not allowed", 0)
-					end
-					self.parsed.request.query[vim.trim(query)] = v
-					return true
-				end
-			end
-
-			return false
-		end)
-		if not line or is_hq == false then
-			return line
-		end
-	end
-end
-
--- parse definition:
---	return not processed line and current selected json
---	line == nil -> no more lines left
---	json == nil -> no json found
-function M:_parse_body(start, end_line)
-	local line, is_body = self.iter:next(start)
-	if not line or is_body == false then
-		return line
-	end
-
-	local body_str = ""
-	while true do
-		body_str = body_str .. line
-
-		line = self.iter.lines[self.iter.cursor]
-		if not line then
-			-- error("parsing body hast started, but not ended: " .. body_str, 0)
-			return line, body_str
-		elseif string.sub(line, 1, #end_line) == end_line then
-			return line, body_str .. line
+		-- environment variable
+		if symbol == "$" then
+			value = os.getenv(key:sub(2):upper())
+			table.insert(replacements, { from = key, to = value, type = "env" })
+		-- commmand
+		elseif symbol == ">" then
+			value = exec.cmd(key:sub(2))
+			table.insert(replacements, { from = key, to = value, type = "cmd" })
+		-- prompt
+		elseif symbol == ":" then
+			value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
+			table.insert(replacements, { from = key, to = value, type = "prompt" })
+		-- variable
 		else
-			-- TODO: a good idea ?!?!
-			-- line = v.replace_variable(self.variables, line, {}, {}) -- replacements, global_variables
-			self.iter.cursor = self.iter.cursor + 1
+			value = variables[key]
+			if value then
+				table.insert(replacements, { from = key, to = value, type = "var" })
+			else
+				value = M.global_variables[key]
+				if not value then
+					error("invalid variable key: " .. key, 0)
+				end
+				table.insert(replacements, { from = key, to = value, type = "global_var" })
+			end
 		end
-	end
-end
 
-local start_json = function(line)
-	return string.sub(line, 1, 1) == "{" and #line == 1
-end
+		return value
+	end)
 
-function M:_parse_json_body()
-	local line, str = self:_parse_body(start_json, "}")
-	self.parsed.request.body = str
-	return line
-end
-
-local start_script = function(line)
-	return string.sub(line, 1, 4) == "--{%" and #line == 4
-end
-
-function M:_parse_script_body()
-	local line, str = self:_parse_body(start_script, "--%}")
-	self.parsed.request.script = str
-	return line
+	return line, replacements
 end
 
 return M

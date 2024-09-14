@@ -84,10 +84,4 @@ function M.replace_variable(variables, line, replacements, global_variables)
 	return M.replace_variable(variables, new_line, replacements)
 end
 
-function M.replace_variable_ng(line)
-	return string.gsub(line, "{{(.-)}}", function(val)
-		return M.execute(val)
-	end)
-end
-
 return M

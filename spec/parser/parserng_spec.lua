@@ -43,6 +43,12 @@ describe("parse:", function()
 			' "name": "me"',
 			"}",
 			"",
+			"--{%",
+			-- "> {%",
+			"  local json = ctx.json_body()",
+			'  ctx.set("id", json.data.id)',
+			"--%}",
+			"",
 		}
 		local r = p.parse_request(input)
 

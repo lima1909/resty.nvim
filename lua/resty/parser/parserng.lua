@@ -235,10 +235,44 @@ function M:_parse_header_query_ng()
 end
 
 function M:_parse_json_ng(line)
+	local l, body = self:_parse_body_ng(line, "^{")
+	if body then
+		self.parsed.request.body = body
+	end
+	return l
+end
+
+function M:_parse_script_ng(line)
+	for i = self.iter.cursor, self.iter.len do
+		line = self.iter.lines[i]
+		local first_char = string.sub(line, 1, 1)
+
+		if not first_char or first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		else
+			self.iter.cursor = i
+			break
+		end
+	end
+
+	local l, body = self:_parse_body_ng(line, "^--{%%")
+	if body then
+		self.parsed.request.script = body
+	else
+		-- or > {% (tree-sitter-http) %}
+		l, body = self:_parse_body_ng(line, "^>%s{%%")
+		if body then
+			self.parsed.request.script = body
+		end
+	end
+	return l
+end
+
+function M:_parse_body_ng(line, body_start)
 	local start = self.iter.cursor
 
-	if string.sub(line, 1, 1) ~= "{" then
-		return line
+	if not string.match(line, body_start) then
+		return line, nil
 	end
 
 	for i = self.iter.cursor, self.iter.len do
@@ -247,14 +281,12 @@ function M:_parse_json_ng(line)
 		-- until blank line
 		if string.match(line, "^%s*$") then
 			self.iter.cursor = i
-			self.parsed.request.body = table.concat(self.iter.lines, "", start, i)
-			return line
+			return line, table.concat(self.iter.lines, "", start, i)
 		end
 	end
 
-	self.parsed.request.body = table.concat(self.iter.lines, "", start, self.iter.len)
 	self.iter.cursor = self.iter.len
-	return nil
+	return nil, table.concat(self.iter.lines, "", start, self.iter.len)
 end
 
 function M.parse_request_ng(input)
@@ -274,7 +306,7 @@ function M.parse_request_ng(input)
 		M._parse_method_url_ng,
 		M._parse_header_query_ng,
 		M._parse_json_ng,
-		-- M._parse_script_body,
+		M._parse_script_ng,
 	}
 
 	local line

@@ -75,26 +75,34 @@ end
 local WITH_COMMENT = "[#%.]*"
 
 -- ([A-Z]+) (.-) HTTP/(%d%.%d)\r?\n
-local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
+-- local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
+local REQUEST = "^([%w]+)[%s]+([%w%_-:/]+)%?([%w-_=&]*)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
 
 function M:_parse_method_url(line)
 	self.cursor = self.cursor + 1
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 
-	local m, u, h = string.match(line, REQUEST)
-	if not m then
+	local method, url, query, http_version = string.match(line, REQUEST)
+	if not method then
 		error("invalid method in line: " .. line, 0)
 	end
-	if not u then
+	if not url then
 		error("invalid url in line: " .. line, 0)
 	end
-	-- valdiate h HTTP/1 ,0.9, 2
+	-- validate h HTTP/1 ,0.9, 2
 
-	self.parsed.request.method = m
-	self.parsed.request.url = u
+	-- separate the query parameter, if exist
+	if query then
+		for k, v in string.gmatch(query, "([^&=?]+)=([^&=?]+)") do
+			self.parsed.request.query[k] = v
+		end
+	end
 
-	if h and #h > 0 then
-		self.parsed.request.http_version = h
+	self.parsed.request.method = method
+	self.parsed.request.url = url
+
+	if http_version and #http_version > 0 then
+		self.parsed.request.http_version = http_version
 	end
 
 	return line

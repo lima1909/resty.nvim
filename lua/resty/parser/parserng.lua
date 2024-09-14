@@ -104,13 +104,13 @@ function M.parse_request(input)
 
 	if p.iter.cursor < #p.iter.lines then
 		-- handle this, maybe with: vim.api.nvim_buf_set_extmark
-		print(
-			"Hint: Process only: "
-				.. p.iter.cursor
-				.. " from possible: "
-				.. #p.iter.lines
-				.. " lines. The remaining lines are ignored."
-		)
+		-- print(
+		-- 	"Hint: Process only: "
+		-- 		.. p.iter.cursor
+		-- 		.. " from possible: "
+		-- 		.. #p.iter.lines
+		-- 		.. " lines. The remaining lines are ignored."
+		-- )
 	end
 
 	return p.parsed
@@ -175,10 +175,12 @@ function M:_parse_variables_ng(_)
 	end)
 end
 
+-- ([A-Z]+) (.-) HTTP/(%d%.%d)\r?\n
 local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
 
 function M:_parse_method_url_ng(line)
 	self.iter.cursor = self.iter.cursor + 1
+	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 
 	local m, u, h = string.match(line, REQUEST)
 	if not m then
@@ -233,28 +235,24 @@ function M:_parse_header_query_ng()
 end
 
 function M:_parse_json_ng(line)
-	local body = nil
+	local start = self.iter.cursor
 
-	if string.match(line, "({)[%s]*") then
-		body = line
-		self.iter.cursor = self.iter.cursor + 1
-	else
+	if string.sub(line, 1, 1) ~= "{" then
 		return line
 	end
 
 	for i = self.iter.cursor, self.iter.len do
 		line = self.iter.lines[i]
-		local first_char = string.sub(line, 1, 1)
 
-		if first_char == "}" and string.match(line, "(})[%s]*") then
+		-- until blank line
+		if string.match(line, "^%s*$") then
 			self.iter.cursor = i
-			self.parsed.request.body = body .. line
+			self.parsed.request.body = table.concat(self.iter.lines, "", start, i)
 			return line
-		else
-			body = body .. line
 		end
 	end
 
+	self.parsed.request.body = table.concat(self.iter.lines, "", start, self.iter.len)
 	self.iter.cursor = self.iter.len
 	return nil
 end

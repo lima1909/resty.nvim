@@ -4,19 +4,19 @@ local format = require("resty.output.format")
 -- local var = require("resty.parser.variables")
 
 describe("parse:", function()
-	-- it("json", function()
-	-- 	local s = os.clock()
-	-- 	local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
-	-- 	local e = os.clock() - s
-	-- 	print("time: " .. format.duration(e))
-	-- end)
+	it("json", function()
+		local s = os.clock()
+		local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
+		local e = os.clock() - s
+		print("time json decode: " .. format.duration(e))
+	end)
 
 	it("replace variables", function()
 		local s = os.clock()
 		local line, replaced = p._replace_variable("abc: {{$USER}}, {{var}}, {{> echo -n 'yeh'}}", { var = "from var" })
 		local e = os.clock() - s
 
-		print(line .. ": " .. format.duration(e))
+		print("time replace line: " .. format.duration(e))
 		assert.are.same("abc: " .. os.getenv("USER") .. ", from var, yeh", line)
 		assert.are.same({ from = "$USER", to = os.getenv("USER"), type = "env" }, replaced[1])
 		assert.are.same({ from = "var", to = "from var", type = "var" }, replaced[2])
@@ -26,9 +26,11 @@ describe("parse:", function()
 	it("parse ng", function()
 		local input = {
 			"@key1={{$USER}} # comment",
+			"@host = my-h_ost",
+			"",
 			"@id = 42",
 			"",
-			"GET http://my-h_ost?myid=9&other=a # comment ",
+			"GET http://{{host}}?myid=9&other=a # comment ",
 			"",
 			"accept: application/json # comment",
 			"foo: =bar; blub",
@@ -38,7 +40,7 @@ describe("parse:", function()
 			"# comment",
 			"# comment",
 			"{",
-			' "name": "me" ',
+			' "name": "me"',
 			"}",
 			"",
 		}
@@ -50,7 +52,7 @@ describe("parse:", function()
 
 		local e = os.clock() - s
 
-		print("--> time: " .. format.duration(e))
+		print("--> parse request time: " .. format.duration(e))
 		print(vim.inspect(r))
 	end)
 

@@ -28,9 +28,11 @@ describe("parse:", function()
 	end)
 
 	it("parse ng", function()
+		local os_user = os.getenv("USER")
+
 		local input = {
 			"",
-			"@key1={{$USER}} # comment",
+			"@os_user={{$USER}} # comment",
 			"@host = my-h_ost",
 			"",
 			"@id = 42",
@@ -59,7 +61,7 @@ describe("parse:", function()
 
 		local e = os.clock() - s
 
-		assert.are.same({ host = "my-h_ost", id = "42", key1 = "obelix" }, r.variables)
+		assert.are.same({ host = "my-h_ost", id = "42", os_user = os_user }, r.variables)
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
@@ -74,7 +76,7 @@ describe("parse:", function()
 			url = "http://my-h_ost?myid=9&other=a",
 		}, r.request)
 		assert.are.same({
-			{ from = "$USER", to = "obelix", type = "env" },
+			{ from = "$USER", to = os_user, type = "env" },
 			{ from = "host", to = "my-h_ost", type = "var" },
 			{ from = "id", to = "42", type = "var" },
 		}, r.replacements)

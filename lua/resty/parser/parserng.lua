@@ -73,9 +73,59 @@ function M.parse_request(input)
 end
 
 local WITH_COMMENT = "[#%.]*"
+local WS = "([%s]*)"
+local WS1 = "([%s]+)"
+local REST = WS .. "(.*)"
 
--- ([A-Z]+) (.-) HTTP/(%d%.%d)\r?\n
--- local REQUEST = "^([%w]+)[%s]+([%w%_-:/%?=&]+)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
+M.H = vim.diagnostic.severity.HINT
+M.I = vim.diagnostic.severity.INFO
+M.W = vim.diagnostic.severity.WARN
+M.E = vim.diagnostic.severity.ERROR
+
+local REQ = "^([%w]+)" .. WS1 .. "([%w%d%_%.%?=&-:/{}]+)" .. WS .. "([HTTP%/%.%d]*)" .. REST
+
+local methods =
+	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
+
+function M._parse_pure_method_url(line)
+	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQ)
+
+	if not m then
+		return nil, { M.E, 1, "http method is not defined: " .. line }
+	elseif not ws1 then
+		return nil, { M.E, #m, "expected white space after http method: " .. line }
+	elseif not url then
+		return nil, { M.E, #m + #ws1, "url is not defined: " .. line }
+	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
+		return nil, { M.E, #m + #ws1 + #url + #ws2 + #hv + #ws3, "is not a valid comment: " .. comment }
+	end
+
+	local r = { method = m, url = url }
+	if hv ~= "" then
+		r.http_version = hv
+	end
+
+	-- TODO:
+	-- replace variables in url (and query)
+	-- separate url and query
+	-- separate the query parameter, if exist
+	-- local query_start = string.find(url, "?")
+	-- if query_start then
+	-- 	local query = string.sub(url, query_start + 1)
+	-- 	url = string.sub(url, 1, query_start - 1)
+	-- 	r.request.query = {}
+	-- 	for k, v in string.gmatch(query, "([^&=?]+)=([^&=?]+)") do
+	-- 		r.request.query[k] = v
+	-- 	end
+	-- end
+
+	if methods[m] ~= "" then
+		return r, { M.I, 1, "unknown http method: " .. m }
+	else
+		return r, nil
+	end
+end
+
 local REQUEST = "^([%w]+)[%s]+([%w%_-:/]+)%?([%w-_=&]*)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
 
 function M:_parse_method_url(line)
@@ -108,22 +158,26 @@ function M:_parse_method_url(line)
 	return line
 end
 
-local VARIABLE = "^@([^%s^=^#]+)[%s]*=[%s]*([^#^%s]+)" .. WITH_COMMENT
+local VARIABLE = "^@([%w%_-]+)" .. WS .. "([=]?)" .. WS .. "([^#^%s]*)" .. REST
 
-M._pv = function(line)
-	local k, v = string.match(line, VARIABLE)
-	if not k then
-		error("invalid variable name in line: " .. line, 0)
-	end
-	if not v then
-		error("invalid variable value in line: " .. line, 0)
+function M._parse_pure_variable(line)
+	local k, ws1, qm, ws2, v, ws3, comment = string.match(line, VARIABLE)
+
+	if not k or k == "" then
+		return nil, nil, { M.E, 1, "variable key is not defined: " .. line }
+	elseif not qm or qm == "" then
+		return k, nil, { M.E, #k + #ws1, "questionmark is not defined: " .. line }
+	elseif not v or v == "" then
+		return k, nil, { M.E, #k + #ws1 + #qm + #ws2, "variable value is not defined: " .. line }
+	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
+		return k, v, { M.I, #k + #ws1 + #qm + #ws2 + #v + #ws3, "is not a valid comment: " .. comment }
 	end
 
-	return k, v
+	return k, v, nil
 end
 
 function M:_parse_variables(_)
-	return self:parse_matching_line("@", M._pv, function(k, v)
+	return self:parse_matching_line("@", M._parse_pure_variable, function(k, v)
 		self.parsed.variables[k] = v
 	end)
 end

@@ -4,6 +4,104 @@ local format = require("resty.output.format")
 -- local var = require("resty.parser.variables")
 
 describe("parse:", function()
+	-- it("foo", function()
+	-- local dummy = "^([%a]+)[%s]*([%d]+)[%s]*([%w%c%p%s%x]*)"
+	-- local s = os.clock()
+	-- local m, d, c = string.match("GET 3     comment | {	", dummy)
+	-- m = m:upper()
+	-- local found = false
+	-- if methods[m] then
+	-- 	found = true
+	-- end
+	-- local e = os.clock() - s
+	-- print("--" .. tostring(found) .. " " .. format.duration(e))
+	-- print("digit: " .. d)
+	-- print("comment: -" .. c .. "-")
+	--
+	-- local dummy = "(?[%w-_=&]*)"
+	-- local r = string.match("k=v&k2=v2", dummy)
+	-- 	local dummy = "(.*)"
+	-- 	local r = string.match("", dummy)
+	-- 	print("--" .. tostring(r) .. "--")
+	-- end)
+
+	it("parse pure variables", function()
+		local k, v, e = p._parse_pure_variable("@key=value")
+		assert.is_nil(e)
+		assert.are.same("key", k)
+		assert.are.same("value", v)
+
+		k, v, e = p._parse_pure_variable("@k_e-y = va_lu-e2")
+		assert.is_nil(e)
+		assert.are.same("k_e-y", k)
+		assert.are.same("va_lu-e2", v)
+
+		k, v, e = p._parse_pure_variable("@key={{$USER}}")
+		assert.is_nil(e)
+		assert.are.same("key", k)
+		assert.are.same("{{$USER}}", v)
+
+		k, v, e = p._parse_pure_variable("@key=value # comment")
+		assert.is_nil(e)
+		assert.are.same("key", k)
+		assert.are.same("value", v)
+		--
+		-- errors
+		_, _, e = p._parse_pure_variable("@={{$USER}}")
+		assert.is_not_nil(e)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same("variable key is not defined: @={{$USER}}", e[3])
+
+		k, _, e = p._parse_pure_variable("@key")
+		assert.are.same("key", k)
+		assert.is_not_nil(e)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same("questionmark is not defined: @key", e[3])
+
+		k, _, e = p._parse_pure_variable("@key=")
+		assert.are.same("key", k)
+		assert.is_not_nil(e)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same("variable value is not defined: @key=", e[3])
+
+		k, v, e = p._parse_pure_variable("@key=value  foo")
+		assert.are.same("key", k)
+		assert.are.same("value", v)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same("is not a valid comment: foo", e[3])
+	end)
+
+	it("parse pure method url", function()
+		local r, e = p._parse_pure_method_url("GET http://lo-cal_host")
+		assert.is_nil(e)
+		assert.are.same({ method = "GET", url = "http://lo-cal_host" }, r)
+
+		r, e = p._parse_pure_method_url("GET http://localhost HTTP/1")
+		assert.are.same({ method = "GET", url = "http://localhost", http_version = "HTTP/1" }, r)
+		assert.is_nil(e)
+
+		r, e = p._parse_pure_method_url("GET http://localhost?k1=v1&k2=v2")
+		assert.is_nil(e)
+		assert.are.same({ method = "GET", url = "http://localhost?k1=v1&k2=v2" }, r)
+
+		r, e = p._parse_pure_method_url("GET http://{{host}}")
+		assert.is_nil(e)
+		assert.are.same({ method = "GET", url = "http://{{host}}" }, r)
+
+		--
+		-- error or hints
+		r, e = p._parse_pure_method_url("Foo http://127.0.0.1:8080")
+		assert.is_not_nil(e)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same(e[3], "unknown http method: Foo")
+		assert.are.same({ method = "Foo", url = "http://127.0.0.1:8080" }, r)
+
+		r, e = p._parse_pure_method_url("GET http://localhost HTTP/1  foo")
+		assert.is_not_nil(e)
+		---@diagnostic disable-next-line: need-check-nil
+		assert.are.same(e[3], "is not a valid comment: foo")
+	end)
+
 	it("json", function()
 		local s = os.clock()
 		local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')

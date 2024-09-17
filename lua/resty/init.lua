@@ -90,11 +90,17 @@ M.favorite = function(favorite, bufnr)
 	end
 end
 
+-- local parserng = require("resty.parser.parserng")
+-- local format = require("resty.output.format")
+
 M._run = function(lines, row, bufnr)
 	local parser_result = parser.parse(lines, row)
 	if diagnostic.show(bufnr, parser_result) then
 		return
 	end
+
+	-- local rng = parserng.parse(lines, row)
+	-- print("time parseng request: " .. format.duration(rng.duration))
 
 	-- save the last result
 	M.last_parser_result = parser_result

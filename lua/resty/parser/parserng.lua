@@ -1,28 +1,42 @@
-function MyInsertCompletion(findstart, base)
-	print("..." .. tostring(findstart))
-	if findstart == 1 then
-		-- Return the start position for completion
-		local line = vim.fn.getline(".")
-		local start = vim.fn.col(".") - 1
-		while start > 0 and line:sub(start, start):match("%w") do
-			start = start - 1
-		end
-		return start
-	else
-		-- Return a list of matches
-		local suggestions = { "apple", "banana", "cherry", "date", "elderberry" }
-		return vim.tbl_filter(function(val)
-			return vim.startswith(val, base)
-		end, suggestions)
-	end
-end
-
--- Set the omnifunc to your custom completion function
-vim.bo.omnifunc = "v:lua.MyInsertCompletion"
--- To use the custom completion in insert mode, type: Ctrl-X Ctrl-O
-
 local exec = require("resty.exec")
 local util = require("resty.util")
+
+local function diag_info(column, msg)
+	return { col = column, message = msg, severity = vim.diagnostic.severity.INFO }
+end
+
+local function diag_err(column, msg)
+	return { col = column, message = msg, severity = vim.diagnostic.severity.ERROR }
+end
+
+local function find_request(lines, selected)
+	local len = #lines
+
+	local start_req = 1
+	local end_req = len
+
+	-- start
+	if selected ~= 1 then
+		for i = selected, 1, -1 do
+			if string.sub(lines[i], 1, 3) == "###" then
+				start_req = i + 1
+				break
+			end
+		end
+	end
+
+	-- end
+	if selected ~= len then
+		for i = selected, len do
+			if string.sub(lines[i], 1, 3) == "###" then
+				end_req = i - 1
+				break
+			end
+		end
+	end
+
+	return start_req, end_req
+end
 
 local M = { global_variables = {} }
 
@@ -31,20 +45,33 @@ M.set_global_variables = function(gvars)
 end
 
 function M.new(input)
-	local lines = util.input_to_lines(input)
-
 	return setmetatable({
-		lines = lines,
-		cursor = 1,
-		len = #lines,
+		lines = util.input_to_lines(input),
 		parsed = {},
 	}, { __index = M })
 end
 
-function M.parse_request(input)
+function M.parse(input, selected)
+	local start = os.clock()
+
 	local p = M.new(input)
 
-	p.parsed = {
+	selected = selected or 1
+	if selected > #p.lines then
+		error("the selected line: " .. selected .. " is greater then the given lines: " .. #p.lines, 0)
+	end
+
+	local r = p:parse_request(find_request(p.lines, selected))
+	r.duration = os.clock() - start
+
+	return r
+end
+
+function M:parse_request(from, to)
+	self.cursor = from or 1
+	self.len = to or #self.lines
+
+	self.parsed = {
 		request = {
 			query = {},
 			headers = {},
@@ -63,41 +90,36 @@ function M.parse_request(input)
 
 	local line
 	for _, parse in ipairs(parsers) do
-		line = parse(p, line)
+		line = parse(self, line)
 		if not line then
-			return p.parsed
+			return self.parsed
 		end
 	end
 
-	return p.parsed
+	return self.parsed
 end
 
-local WITH_COMMENT = "[#%.]*"
 local WS = "([%s]*)"
 local WS1 = "([%s]+)"
 local REST = WS .. "(.*)"
-
-M.H = vim.diagnostic.severity.HINT
-M.I = vim.diagnostic.severity.INFO
-M.W = vim.diagnostic.severity.WARN
-M.E = vim.diagnostic.severity.ERROR
 
 local REQ = "^([%w]+)" .. WS1 .. "([%w%d%_%.%?=&-:/{}]+)" .. WS .. "([HTTP%/%.%d]*)" .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
 
-function M._parse_pure_method_url(line)
+function M._parse_line_method_url(line)
 	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQ)
 
 	if not m then
-		return nil, { M.E, 1, "http method is not defined: " .. line }
+		return nil, diag_err(1, "http method is missing ")
 	elseif not ws1 then
-		return nil, { M.E, #m, "expected white space after http method: " .. line }
+		return nil, diag_err(#m, "white space after http method is missing ")
 	elseif not url then
-		return nil, { M.E, #m + #ws1, "url is not defined: " .. line }
+		return nil, diag_err(#m + #ws1, "url is missing ")
 	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
-		return nil, { M.E, #m + #ws1 + #url + #ws2 + #hv + #ws3, "is not a valid comment: " .. comment }
+		return nil,
+			diag_info(#m + #ws1 + #url + #ws2 + #hv + #ws3, "invalid input after the request definition: " .. comment)
 	end
 
 	local r = { method = m, url = url }
@@ -120,39 +142,27 @@ function M._parse_pure_method_url(line)
 	-- end
 
 	if methods[m] ~= "" then
-		return r, { M.I, 1, "unknown http method: " .. m }
+		return r, diag_info(1, "unknown http method: " .. m)
 	else
 		return r, nil
 	end
 end
 
-local REQUEST = "^([%w]+)[%s]+([%w%_-:/]+)%?([%w-_=&]*)[%s]*([%w%/%.%d]*)" .. WITH_COMMENT
-
 function M:_parse_method_url(line)
 	self.cursor = self.cursor + 1
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 
-	local method, url, query, http_version = string.match(line, REQUEST)
-	if not method then
-		error("invalid method in line: " .. line, 0)
-	end
-	if not url then
-		error("invalid url in line: " .. line, 0)
-	end
-	-- validate h HTTP/1 ,0.9, 2
+	local req, err = M._parse_line_method_url(line)
 
-	-- separate the query parameter, if exist
-	if query then
-		for k, v in string.gmatch(query, "([^&=?]+)=([^&=?]+)") do
-			self.parsed.request.query[k] = v
+	if req then
+		self.parsed.request.method = req.method
+		self.parsed.request.url = req.url
+
+		if req.http_version and #req.http_version > 0 then
+			self.parsed.request.http_version = req.http_version
 		end
-	end
-
-	self.parsed.request.method = method
-	self.parsed.request.url = url
-
-	if http_version and #http_version > 0 then
-		self.parsed.request.http_version = http_version
+	else
+		print("Error: " .. vim.inspect(err))
 	end
 
 	return line
@@ -160,27 +170,30 @@ end
 
 local VARIABLE = "^@([%w%_-]+)" .. WS .. "([=]?)" .. WS .. "([^#^%s]*)" .. REST
 
-function M._parse_pure_variable(line)
-	local k, ws1, qm, ws2, v, ws3, comment = string.match(line, VARIABLE)
+function M._parse_line_variable(line)
+	local k, ws1, eq, ws2, v, ws3, comment = string.match(line, VARIABLE)
 
 	if not k or k == "" then
-		return nil, nil, { M.E, 1, "variable key is not defined: " .. line }
-	elseif not qm or qm == "" then
-		return k, nil, { M.E, #k + #ws1, "questionmark is not defined: " .. line }
+		return nil, nil, diag_err(1, "variable key is missing")
+	elseif not eq or eq == "" then
+		return k, nil, diag_err(#k + #ws1, "equal char is missing")
 	elseif not v or v == "" then
-		return k, nil, { M.E, #k + #ws1 + #qm + #ws2, "variable value is not defined: " .. line }
+		return k, nil, diag_err(#k + #ws1 + #eq + #ws2, "variable value is missing")
 	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
-		return k, v, { M.I, #k + #ws1 + #qm + #ws2 + #v + #ws3, "is not a valid comment: " .. comment }
+		local col = #k + #ws1 + #eq + #ws2 + #v + #ws3
+		return k, v, diag_info(col, "invalid input after the request definition: " .. comment)
 	end
 
 	return k, v, nil
 end
 
 function M:_parse_variables(_)
-	return self:parse_matching_line("@", M._parse_pure_variable, function(k, v)
+	return self:parse_matching_line("@", M._parse_line_variable, function(k, v)
 		self.parsed.variables[k] = v
 	end)
 end
+
+local WITH_COMMENT = "[#%.]*"
 
 local HEADER = "^([%w][^%s^:^%#]*)[%s]*:[%s]*([^#]+)" .. WITH_COMMENT
 local QUERY = "^([%w][^%s^=^%#]*)[%s]*=[%s]*([^#]+)" .. WITH_COMMENT
@@ -335,3 +348,26 @@ M._replace_variable = function(line, variables, replacements)
 end
 
 return M
+
+-- function MyInsertCompletion(findstart, base)
+-- 	print("..." .. tostring(findstart))
+-- 	if findstart == 1 then
+-- 		-- Return the start position for completion
+-- 		local line = vim.fn.getline(".")
+-- 		local start = vim.fn.col(".") - 1
+-- 		while start > 0 and line:sub(start, start):match("%w") do
+-- 			start = start - 1
+-- 		end
+-- 		return start
+-- 	else
+-- 		-- Return a list of matches
+-- 		local suggestions = { "apple", "banana", "cherry", "date", "elderberry" }
+-- 		return vim.tbl_filter(function(val)
+-- 			return vim.startswith(val, base)
+-- 		end, suggestions)
+-- 	end
+-- end
+--
+-- -- Set the omnifunc to your custom completion function
+-- vim.bo.omnifunc = "v:lua.MyInsertCompletion"
+-- -- To use the custom completion in insert mode, type: Ctrl-X Ctrl-O

@@ -1,11 +1,11 @@
 local exec = require("resty.exec")
 local util = require("resty.util")
 
-local function diag_info(column, msg)
+local function info(column, msg)
 	return { col = column, message = msg, severity = vim.diagnostic.severity.INFO }
 end
 
-local function diag_err(column, msg)
+local function err(column, msg)
 	return { col = column, message = msg, severity = vim.diagnostic.severity.ERROR }
 end
 
@@ -55,23 +55,7 @@ function M.parse(input, selected)
 	local start = os.clock()
 
 	local p = M.new(input)
-
-	selected = selected or 1
-	if selected > #p.lines then
-		error("the selected line: " .. selected .. " is greater then the given lines: " .. #p.lines, 0)
-	end
-
-	local r = p:parse_request(find_request(p.lines, selected))
-	r.duration = os.clock() - start
-
-	return r
-end
-
-function M:parse_request(from, to)
-	self.cursor = from or 1
-	self.len = to or #self.lines
-
-	self.parsed = {
+	p.parsed = {
 		request = {
 			query = {},
 			headers = {},
@@ -79,6 +63,34 @@ function M:parse_request(from, to)
 		variables = {},
 		replacements = {},
 	}
+
+	selected = selected or 1
+	if selected > #p.lines then
+		-- error("the selected line: " .. selected .. " is greater then the given lines: " .. #p.lines, 0)
+		selected = #p.lines
+	elseif selected < 0 then
+		selected = 1
+	end
+
+	local s, e = find_request(p.lines, selected)
+
+	-- start > 1, means, there are global variables
+	if s > 1 then
+		p.cursor = 1
+		p.len = s - 1
+		p:_parse_variables()
+	end
+
+	local r = p:parse_request(s, e)
+
+	r.duration = os.clock() - start
+
+	return r
+end
+
+function M:parse_request(from, to)
+	self.cursor = from
+	self.len = to
 
 	local parsers = {
 		M._parse_variables,
@@ -112,14 +124,14 @@ function M._parse_line_method_url(line)
 	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQ)
 
 	if not m then
-		return nil, diag_err(1, "http method is missing ")
+		return nil, err(1, "http method is missing ")
 	elseif not ws1 then
-		return nil, diag_err(#m, "white space after http method is missing ")
+		return nil, err(#m, "white space after http method is missing ")
 	elseif not url then
-		return nil, diag_err(#m + #ws1, "url is missing ")
+		return nil, err(#m + #ws1, "url is missing ")
 	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
 		return nil,
-			diag_info(#m + #ws1 + #url + #ws2 + #hv + #ws3, "invalid input after the request definition: " .. comment)
+			info(#m + #ws1 + #url + #ws2 + #hv + #ws3, "invalid input after the request definition: " .. comment)
 	end
 
 	local r = { method = m, url = url }
@@ -142,7 +154,7 @@ function M._parse_line_method_url(line)
 	-- end
 
 	if methods[m] ~= "" then
-		return r, diag_info(1, "unknown http method: " .. m)
+		return r, info(1, "unknown http method: " .. m)
 	else
 		return r, nil
 	end
@@ -152,7 +164,7 @@ function M:_parse_method_url(line)
 	self.cursor = self.cursor + 1
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 
-	local req, err = M._parse_line_method_url(line)
+	local req, e = M._parse_line_method_url(line)
 
 	if req then
 		self.parsed.request.method = req.method
@@ -162,7 +174,7 @@ function M:_parse_method_url(line)
 			self.parsed.request.http_version = req.http_version
 		end
 	else
-		print("Error: " .. vim.inspect(err))
+		print("Error: " .. vim.inspect(e))
 	end
 
 	return line
@@ -174,14 +186,14 @@ function M._parse_line_variable(line)
 	local k, ws1, eq, ws2, v, ws3, comment = string.match(line, VARIABLE)
 
 	if not k or k == "" then
-		return nil, nil, diag_err(1, "variable key is missing")
+		return nil, nil, err(1, "variable key is missing")
 	elseif not eq or eq == "" then
-		return k, nil, diag_err(#k + #ws1, "equal char is missing")
+		return k, nil, err(#k + #ws1, "equal char is missing")
 	elseif not v or v == "" then
-		return k, nil, diag_err(#k + #ws1 + #eq + #ws2, "variable value is missing")
+		return k, nil, err(#k + #ws1 + #eq + #ws2, "variable value is missing")
 	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
 		local col = #k + #ws1 + #eq + #ws2 + #v + #ws3
-		return k, v, diag_info(col, "invalid input after the request definition: " .. comment)
+		return k, v, info(col, "invalid input after the request definition: " .. comment)
 	end
 
 	return k, v, nil

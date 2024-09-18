@@ -24,6 +24,7 @@ describe("parse:", function()
 	-- 	print("--" .. tostring(r) .. "--")
 	-- end)
 
+	-- -----------------------------------------------
 	it("parse pure variables", function()
 		local k, v, e = p._parse_line_variable("@key=value")
 		assert.is_nil(e)
@@ -120,10 +121,6 @@ describe("parse:", function()
 		assert.are.same({ from = "> echo -n 'yeh'", to = "yeh", type = "cmd" }, replaced[3])
 	end)
 
-	it("dummy - load require", function()
-		p.new("@key=val"):parse_request()
-	end)
-
 	it("parse ng", function()
 		local os_user = os.getenv("USER")
 
@@ -174,6 +171,57 @@ describe("parse:", function()
 		assert.are.same({
 			{ from = "$USER", to = os_user, type = "env" },
 			{ from = "host", to = "my-h_ost", type = "var" },
+			{ from = "id", to = "42", type = "var" },
+		}, r.replacements)
+
+		print("time parse request: " .. format.duration(r.duration))
+	end)
+
+	it("parse ng with global variables", function()
+		local input = {
+			"",
+			"@host = g_host_7",
+			"@id = 42",
+			"",
+			"###",
+			"@host = l_host_1",
+			"",
+			"GET http://{{host}}:7171 # comment ",
+			"",
+			"accept: application/json # comment",
+			"foo: =bar; blub",
+			"",
+			"qid = {{id}} # comment",
+			"",
+			"# comment",
+			'{ "name": "me" }',
+			"",
+			"# comment",
+			"--{%",
+			-- "> {%",
+			"  local json = ctx.json_body()",
+			'  ctx.set("id", json.data.id)',
+			"--%}",
+		}
+
+		local r = p.parse(input, 7)
+
+		assert.are.same({ host = "l_host_1", id = "42" }, r.variables)
+		assert.are.same({
+			body = '{ "name": "me" }',
+			headers = {
+				accept = "application/json ",
+				foo = "=bar; blub",
+			},
+			method = "GET",
+			query = {
+				qid = "42 ",
+			},
+			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
+			url = "http://l_host_1:7171",
+		}, r.request)
+		assert.are.same({
+			{ from = "host", to = "l_host_1", type = "var" },
 			{ from = "id", to = "42", type = "var" },
 		}, r.replacements)
 

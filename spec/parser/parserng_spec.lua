@@ -1,40 +1,25 @@
+---@diagnostic disable: need-check-nil
+
 local assert = require("luassert")
 local p = require("resty.parser.parserng")
 local format = require("resty.output.format")
 
 describe("parse:", function()
-	-- it("foo", function()
-	-- local dummy = "^([%a]+)[%s]*([%d]+)[%s]*([%w%c%p%s%x]*)"
-	-- local s = os.clock()
-	-- local m, d, c = string.match("GET 3     comment | {	", dummy)
-	-- m = m:upper()
-	-- local found = false
-	-- if methods[m] then
-	-- 	found = true
-	-- end
-	-- local e = os.clock() - s
-	-- print("--" .. tostring(found) .. " " .. format.duration(e))
-	-- print("digit: " .. d)
-	-- print("comment: -" .. c .. "-")
-	--
-	-- local dummy = "(?[%w-_=&]*)"
-	-- local r = string.match("k=v&k2=v2", dummy)
-	-- 	local dummy = "(.*)"
-	-- 	local r = string.match("", dummy)
-	-- 	print("--" .. tostring(r) .. "--")
-	-- end)
-
-	-- -----------------------------------------------
-	it("parse pure variables", function()
+	it("parse line variables", function()
 		local k, v, e = p._parse_line_variable("@key=value")
 		assert.is_nil(e)
 		assert.are.same("key", k)
 		assert.are.same("value", v)
 
-		k, v, e = p._parse_line_variable("@k_e-y = va_lu-e2")
+		k, v, e = p._parse_line_variable("@key=value # comment")
+		assert.is_nil(e)
+		assert.are.same("key", k)
+		assert.are.same("value ", v)
+
+		k, v, e = p._parse_line_variable("@k_e-y = va_lu-e  2")
 		assert.is_nil(e)
 		assert.are.same("k_e-y", k)
-		assert.are.same("va_lu-e2", v)
+		assert.are.same("va_lu-e  2", v)
 
 		k, v, e = p._parse_line_variable("@key={{$USER}}")
 		assert.is_nil(e)
@@ -44,35 +29,39 @@ describe("parse:", function()
 		k, v, e = p._parse_line_variable("@key=value # comment")
 		assert.is_nil(e)
 		assert.are.same("key", k)
-		assert.are.same("value", v)
-		--
+		assert.are.same("value ", v)
+
+		-- var with spacs
+		k, v, e = p._parse_line_variable("@key=value  foo")
+		assert.is_nil(e)
+		assert.are.same("key", k)
+		assert.are.same("value  foo", v)
+
 		-- errors
 		_, _, e = p._parse_line_variable("@={{$USER}}")
 		assert.is_not_nil(e)
-		---@diagnostic disable-next-line: need-check-nil
 		assert.are.same("variable key is missing", e.message)
+		assert.are.same(1, e.col)
 
 		k, _, e = p._parse_line_variable("@key")
 		assert.are.same("key", k)
 		assert.is_not_nil(e)
-		---@diagnostic disable-next-line: need-check-nil
 		assert.are.same("equal char is missing", e.message)
+		assert.are.same(4, e.col)
 
 		k, _, e = p._parse_line_variable("@key=")
 		assert.are.same("key", k)
 		assert.is_not_nil(e)
-		---@diagnostic disable-next-line: need-check-nil
 		assert.are.same("variable value is missing", e.message)
-
-		k, v, e = p._parse_line_variable("@key=value  foo")
-		assert.are.same("key", k)
-		assert.are.same("value", v)
-		---@diagnostic disable-next-line: need-check-nil
-		assert.are.same("invalid input after the request definition: foo", e.message)
+		assert.are.same(5, e.col)
 	end)
 
-	it("parse pure method url", function()
+	it("parse line method url", function()
 		local r, e = p._parse_line_method_url("GET http://lo-cal_host")
+		assert.is_nil(e)
+		assert.are.same({ method = "GET", url = "http://lo-cal_host" }, r)
+
+		r, e = p._parse_line_method_url("GET http://lo-cal_host #comment")
 		assert.is_nil(e)
 		assert.are.same({ method = "GET", url = "http://lo-cal_host" }, r)
 
@@ -92,14 +81,74 @@ describe("parse:", function()
 		-- error or hints
 		r, e = p._parse_line_method_url("Foo http://127.0.0.1:8080")
 		assert.is_not_nil(e)
-		---@diagnostic disable-next-line: need-check-nil
 		assert.are.same(e.message, "unknown http method: Foo")
+		assert.are.same(1, e.col)
 		assert.are.same({ method = "Foo", url = "http://127.0.0.1:8080" }, r)
 
 		r, e = p._parse_line_method_url("GET http://localhost HTTP/1  foo")
 		assert.is_not_nil(e)
-		---@diagnostic disable-next-line: need-check-nil
 		assert.are.same(e.message, "invalid input after the request definition: foo")
+		assert.are.same(29, e.col)
+	end)
+
+	it("parse line header and query", function()
+		local k, v, is, e = p._parse_line_header_query("accept: application/json")
+		assert.is_nil(e)
+		assert.are.same(p.is_header, is)
+		assert.are.same("accept", k)
+		assert.are.same("application/json", v)
+
+		k, v, is, e = p._parse_line_header_query("accept: application/json # my comment")
+		assert.is_nil(e)
+		assert.are.same(p.is_header, is)
+		assert.are.same("accept", k)
+		assert.are.same("application/json ", v)
+
+		k, v, is, e = p._parse_line_header_query("f_o-o: a=b")
+		assert.is_nil(e)
+		assert.are.same(p.is_header, is)
+		assert.are.same("f_o-o", k)
+		assert.are.same("a=b", v)
+
+		k, v, is, e = p._parse_line_header_query("foo: a; b")
+		assert.is_nil(e)
+		assert.are.same(p.is_header, is)
+		assert.are.same("foo", k)
+		assert.are.same("a; b", v)
+
+		k, v, is, e = p._parse_line_header_query("id = 42")
+		assert.is_nil(e)
+		assert.are.same(p.is_query, is)
+		assert.are.same("id", k)
+		assert.are.same("42", v)
+
+		-- error or hints
+		k, v, is, e = p._parse_line_header_query("1id  ")
+		assert.are.same(0, is)
+		assert.is_nil(k)
+		assert.is_nil(v)
+		assert.are.same("valid header or query key is missing", e.message)
+
+		k, v, is, e = p._parse_line_header_query("ID  ")
+		assert.are.same(0, is)
+		assert.is_nil(k)
+		assert.is_nil(v)
+		assert.are.same("valid header or query key is missing", e.message)
+		assert.are.same(1, e.col)
+
+		k, v, is, e = p._parse_line_header_query("id  ")
+		assert.are.same(0, is)
+		assert.are.same("id", k)
+		assert.is_nil(v)
+		assert.are.same("invalid delimiter: ''. Only supported ':' for headers or '=' for queries", e.message)
+		assert.are.same(1, e.col)
+
+		k, v, is, e = p._parse_line_header_query("id = ")
+		assert.are.same(p.is_query, is)
+		assert.are.same("id", k)
+		assert.is_nil(v)
+		assert.are.same("query value is missing", e.message)
+		assert.are.same(5, e.col)
 	end)
 
 	it("json", function()
@@ -126,7 +175,7 @@ describe("parse:", function()
 
 		local input = {
 			"",
-			"@os_user={{$USER}} # comment",
+			"@os_user={{$USER}}# comment",
 			"@host = my-h_ost",
 			"",
 			"@id = 42",
@@ -181,7 +230,7 @@ describe("parse:", function()
 		local input = {
 			"",
 			"@host = g_host_7",
-			"@id = 42",
+			"@baz = ba r",
 			"",
 			"###",
 			"@host = l_host_1",
@@ -191,7 +240,7 @@ describe("parse:", function()
 			"accept: application/json # comment",
 			"foo: =bar; blub",
 			"",
-			"qid = {{id}} # comment",
+			"baz = {{baz}}# comment",
 			"",
 			"# comment",
 			'{ "name": "me" }',
@@ -206,7 +255,7 @@ describe("parse:", function()
 
 		local r = p.parse(input, 7)
 
-		assert.are.same({ host = "l_host_1", id = "42" }, r.variables)
+		assert.are.same({ host = "l_host_1", baz = "ba r" }, r.variables)
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
@@ -215,14 +264,14 @@ describe("parse:", function()
 			},
 			method = "GET",
 			query = {
-				qid = "42 ",
+				baz = "ba r",
 			},
 			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
 			url = "http://l_host_1:7171",
 		}, r.request)
 		assert.are.same({
 			{ from = "host", to = "l_host_1", type = "var" },
-			{ from = "id", to = "42", type = "var" },
+			{ from = "baz", to = "ba r", type = "var" },
 		}, r.replacements)
 
 		print("time parse request: " .. format.duration(r.duration))

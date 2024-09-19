@@ -72,6 +72,7 @@ function M.parse(input, selected)
 		selected = 1
 	end
 
+	-- find the selected request
 	local s, e = find_request(p.lines, selected)
 
 	-- start > 1, means, there are global variables
@@ -115,13 +116,17 @@ local WS = "([%s]*)"
 local WS1 = "([%s]+)"
 local REST = WS .. "(.*)"
 
-local REQ = "^([%w]+)" .. WS1 .. "([%w%d%_%.%?=&-:/{}]+)" .. WS .. "([HTTP%/%.%d]*)" .. REST
+local KEY = "[%w%_-]*"
+local KEY1 = "[%w%_-]+"
+local VALUE = "([^#]*)"
+
+local REQUEST = "^([%w]+)" .. WS1 .. "([%w%d%_%.%?=&-:/{}]+)" .. WS .. "([HTTP%/%.%d]*)" .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
 
 function M._parse_line_method_url(line)
-	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQ)
+	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQUEST)
 
 	if not m then
 		return nil, err(1, "http method is missing ")
@@ -180,7 +185,7 @@ function M:_parse_method_url(line)
 	return line
 end
 
-local VARIABLE = "^@([%w%_-]+)" .. WS .. "([=]?)" .. WS .. "([^#^%s]*)" .. REST
+local VARIABLE = "^@(" .. KEY1 .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
 function M._parse_line_variable(line)
 	local k, ws1, eq, ws2, v, ws3, comment = string.match(line, VARIABLE)
@@ -188,11 +193,11 @@ function M._parse_line_variable(line)
 	if not k or k == "" then
 		return nil, nil, err(1, "variable key is missing")
 	elseif not eq or eq == "" then
-		return k, nil, err(#k + #ws1, "equal char is missing")
+		return k, nil, err(1 + #k + #ws1, "equal char is missing")
 	elseif not v or v == "" then
-		return k, nil, err(#k + #ws1 + #eq + #ws2, "variable value is missing")
+		return k, nil, err(1 + #k + #ws1 + #eq + #ws2, "variable value is missing")
 	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
-		local col = #k + #ws1 + #eq + #ws2 + #v + #ws3
+		local col = 1 + #k + #ws1 + #eq + #ws2 + #v + #ws3
 		return k, v, info(col, "invalid input after the request definition: " .. comment)
 	end
 
@@ -205,36 +210,51 @@ function M:_parse_variables(_)
 	end)
 end
 
-local WITH_COMMENT = "[#%.]*"
+local HEADER = "^([%l]" .. KEY .. ")" .. WS .. "([:]?)" .. WS .. VALUE .. REST
+local QUERY = "^([%l]" .. KEY .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
-local HEADER = "^([%w][^%s^:^%#]*)[%s]*:[%s]*([^#]+)" .. WITH_COMMENT
-local QUERY = "^([%w][^%s^=^%#]*)[%s]*=[%s]*([^#]+)" .. WITH_COMMENT
+M.is_header = 1
+M.is_query = 2
 
-M._phq = function(line)
-	local what = 2 -- query
+function M._parse_line_header_query(line)
+	local is = 0
 
-	local k, v = string.match(line, HEADER)
-	if not k then
-		k, v = string.match(line, QUERY)
-		if not k then
-			error("invalid header or query key in line: " .. line, 0)
+	local k, ws1, d, ws2, v, _, _ = string.match(line, HEADER)
+	if not k or k == "" then
+		return nil, nil, 0, err(1, "valid header or query key is missing")
+	end
+
+	if d and d == ":" then
+		is = M.is_header
+	else
+		k, ws1, d, ws2, v, _, _ = string.match(line, QUERY)
+		if d and d == "=" then
+			is = M.is_query
+		else
+			return k,
+				nil,
+				0,
+				err(1, "invalid delimiter: '" .. d .. "'. Only supported ':' for headers or '=' for queries")
 		end
-	else
-		what = 1 --header
 	end
 
-	if not v then
-		error("invalid value in line: " .. line, 0)
-	else
-		return k, v, what
+	if not v or v == "" then
+		local s = "query"
+		if is == M.is_header then
+			s = "header"
+		end
+
+		return k, nil, is, err(#k + #ws1 + #d + #ws2, s .. " value is missing")
 	end
+
+	return k, v, is, nil
 end
 
 function M:_parse_header_query()
-	return self:parse_matching_line("%w", M._phq, function(k, v, what)
-		if what == 1 then
+	return self:parse_matching_line("%w", M._parse_line_header_query, function(k, v, is)
+		if is == M.is_header then
 			self.parsed.request.headers[k] = v
-		elseif what == 2 then
+		else
 			self.parsed.request.query[k] = v
 		end
 	end)

@@ -139,24 +139,21 @@ function M._parse_line_method_url(line)
 			info(#m + #ws1 + #url + #ws2 + #hv + #ws3, "invalid input after the request definition: " .. comment)
 	end
 
-	local r = { method = m, url = url }
+	local r = { method = m, url = url, query = {} }
 	if hv ~= "" then
 		r.http_version = hv
 	end
 
-	-- TODO:
-	-- replace variables in url (and query)
 	-- separate url and query
 	-- separate the query parameter, if exist
-	-- local query_start = string.find(url, "?")
-	-- if query_start then
-	-- 	local query = string.sub(url, query_start + 1)
-	-- 	url = string.sub(url, 1, query_start - 1)
-	-- 	r.request.query = {}
-	-- 	for k, v in string.gmatch(query, "([^&=?]+)=([^&=?]+)") do
-	-- 		r.request.query[k] = v
-	-- 	end
-	-- end
+	local qm = string.find(url, "?")
+	if qm then
+		local q = string.sub(url, qm + 1)
+		r.url = string.sub(url, 1, qm - 1)
+		for k, v in string.gmatch(q, "([^=&]+)=([^&]+)") do
+			r.query[k] = v
+		end
+	end
 
 	if methods[m] ~= "" then
 		return r, info(1, "unknown http method: " .. m)
@@ -172,12 +169,8 @@ function M:_parse_method_url(line)
 	local req, e = M._parse_line_method_url(line)
 
 	if req then
-		self.parsed.request.method = req.method
-		self.parsed.request.url = req.url
-
-		if req.http_version and #req.http_version > 0 then
-			self.parsed.request.http_version = req.http_version
-		end
+		self.parsed.request = req
+		self.parsed.request.headers = {}
 	else
 		print("Error: " .. vim.inspect(e))
 	end
@@ -210,52 +203,43 @@ function M:_parse_variables(_)
 	end)
 end
 
-local HEADER = "^([%l]" .. KEY .. ")" .. WS .. "([:]?)" .. WS .. VALUE .. REST
-local QUERY = "^([%l]" .. KEY .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
-
-M.is_header = 1
-M.is_query = 2
+local HEADER = "^([%a]" .. KEY .. ")" .. WS .. "([:]?)" .. WS .. VALUE .. REST
+local QUERY = "^([%a]" .. KEY .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
 function M._parse_line_header_query(line)
-	local is = 0
-
 	local k, ws1, d, ws2, v, _, _ = string.match(line, HEADER)
 	if not k or k == "" then
-		return nil, nil, 0, err(1, "valid header or query key is missing")
+		return nil, err(1, "header key or query key is missing")
 	end
 
-	if d and d == ":" then
-		is = M.is_header
+	if d == ":" then
+		-- is a header
 	else
 		k, ws1, d, ws2, v, _, _ = string.match(line, QUERY)
-		if d and d == "=" then
-			is = M.is_query
+		if d == "=" then
+			-- is a query
 		else
-			return k,
-				nil,
-				0,
-				err(1, "invalid delimiter: '" .. d .. "'. Only supported ':' for headers or '=' for queries")
+			return { key = k }, err(#k + #ws1, "invalid query delimiter: " .. tostring(d) .. " expected: '='")
 		end
 	end
 
-	if not v or v == "" then
-		local s = "query"
-		if is == M.is_header then
-			s = "header"
-		end
-
-		return k, nil, is, err(#k + #ws1 + #d + #ws2, s .. " value is missing")
+	if v == "" then
+		return { key = k, del = d }, err(#k + #ws1 + #d + #ws2, "header value or query value is missing")
 	end
 
-	return k, v, is, nil
+	return { key = k, del = d, val = v }, nil
 end
 
 function M:_parse_header_query()
-	return self:parse_matching_line("%w", M._parse_line_header_query, function(k, v, is)
-		if is == M.is_header then
-			self.parsed.request.headers[k] = v
+	return self:parse_matching_line("%w", M._parse_line_header_query, function(r, e)
+		if not e then
+			if r.del == ":" then
+				self.parsed.request.headers[r.key] = r.val
+			else
+				self.parsed.request.query[r.key] = r.val
+			end
 		else
-			self.parsed.request.query[k] = v
+			vim.notify(e.message, e.severity)
 		end
 	end)
 end

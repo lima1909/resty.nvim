@@ -59,23 +59,23 @@ describe("parse:", function()
 	it("parse line method url", function()
 		local r, e = p._parse_line_method_url("GET http://lo-cal_host")
 		assert.is_nil(e)
-		assert.are.same({ method = "GET", url = "http://lo-cal_host" }, r)
+		assert.are.same({ method = "GET", url = "http://lo-cal_host", query = {} }, r)
 
 		r, e = p._parse_line_method_url("GET http://lo-cal_host #comment")
 		assert.is_nil(e)
-		assert.are.same({ method = "GET", url = "http://lo-cal_host" }, r)
+		assert.are.same({ method = "GET", url = "http://lo-cal_host", query = {} }, r)
 
 		r, e = p._parse_line_method_url("GET http://localhost HTTP/1")
-		assert.are.same({ method = "GET", url = "http://localhost", http_version = "HTTP/1" }, r)
+		assert.are.same({ method = "GET", url = "http://localhost", http_version = "HTTP/1", query = {} }, r)
 		assert.is_nil(e)
 
 		r, e = p._parse_line_method_url("GET http://localhost?k1=v1&k2=v2")
 		assert.is_nil(e)
-		assert.are.same({ method = "GET", url = "http://localhost?k1=v1&k2=v2" }, r)
+		assert.are.same({ method = "GET", url = "http://localhost", query = { k1 = "v1", k2 = "v2" } }, r)
 
 		r, e = p._parse_line_method_url("GET http://{{host}}")
 		assert.is_nil(e)
-		assert.are.same({ method = "GET", url = "http://{{host}}" }, r)
+		assert.are.same({ method = "GET", url = "http://{{host}}", query = {} }, r)
 
 		--
 		-- error or hints
@@ -83,7 +83,7 @@ describe("parse:", function()
 		assert.is_not_nil(e)
 		assert.are.same(e.message, "unknown http method: Foo")
 		assert.are.same(1, e.col)
-		assert.are.same({ method = "Foo", url = "http://127.0.0.1:8080" }, r)
+		assert.are.same({ method = "Foo", url = "http://127.0.0.1:8080", query = {} }, r)
 
 		r, e = p._parse_line_method_url("GET http://localhost HTTP/1  foo")
 		assert.is_not_nil(e)
@@ -92,67 +92,64 @@ describe("parse:", function()
 	end)
 
 	it("parse line header and query", function()
-		local k, v, is, e = p._parse_line_header_query("accept: application/json")
+		local r, e = p._parse_line_header_query("accept: application/json")
 		assert.is_nil(e)
-		assert.are.same(p.is_header, is)
-		assert.are.same("accept", k)
-		assert.are.same("application/json", v)
+		assert.are.same(":", r.del)
+		assert.are.same("accept", r.key)
+		assert.are.same("application/json", r.val)
 
-		k, v, is, e = p._parse_line_header_query("accept: application/json # my comment")
+		r, e = p._parse_line_header_query("Content-type: application/json ; charset=UTF-8")
 		assert.is_nil(e)
-		assert.are.same(p.is_header, is)
-		assert.are.same("accept", k)
-		assert.are.same("application/json ", v)
+		assert.are.same(":", r.del)
+		assert.are.same("Content-type", r.key)
+		assert.are.same("application/json ; charset=UTF-8", r.val)
 
-		k, v, is, e = p._parse_line_header_query("f_o-o: a=b")
+		r, e = p._parse_line_header_query("accept: application/json # my comment")
 		assert.is_nil(e)
-		assert.are.same(p.is_header, is)
-		assert.are.same("f_o-o", k)
-		assert.are.same("a=b", v)
+		assert.are.same(":", r.del)
+		assert.are.same("accept", r.key)
+		assert.are.same("application/json ", r.val)
 
-		k, v, is, e = p._parse_line_header_query("foo: a; b")
+		r, e = p._parse_line_header_query("f_o-o: a=b")
 		assert.is_nil(e)
-		assert.are.same(p.is_header, is)
-		assert.are.same("foo", k)
-		assert.are.same("a; b", v)
+		assert.are.same(":", r.del)
+		assert.are.same("f_o-o", r.key)
+		assert.are.same("a=b", r.val)
 
-		k, v, is, e = p._parse_line_header_query("id = 42")
+		r, e = p._parse_line_header_query("foo: a; b")
 		assert.is_nil(e)
-		assert.are.same(p.is_query, is)
-		assert.are.same("id", k)
-		assert.are.same("42", v)
+		assert.are.same(":", r.del)
+		assert.are.same("foo", r.key)
+		assert.are.same("a; b", r.val)
 
-		-- error or hints
-		k, v, is, e = p._parse_line_header_query("1id  ")
-		assert.are.same(0, is)
-		assert.is_nil(k)
-		assert.is_nil(v)
-		assert.are.same("valid header or query key is missing", e.message)
+		r, e = p._parse_line_header_query("id = 42")
+		assert.is_nil(e)
+		assert.are.same("=", r.del)
+		assert.are.same("id", r.key)
+		assert.are.same("42", r.val)
 
-		k, v, is, e = p._parse_line_header_query("ID  ")
-		assert.are.same(0, is)
-		assert.is_nil(k)
-		assert.is_nil(v)
-		assert.are.same("valid header or query key is missing", e.message)
+		-- -- error or hints
+		r, e = p._parse_line_header_query("1id  ")
+		assert.is_nil(r)
+		assert.are.same("header key or query key is missing", e.message)
 		assert.are.same(1, e.col)
 
-		k, v, is, e = p._parse_line_header_query("id  ")
-		assert.are.same(0, is)
-		assert.are.same("id", k)
-		assert.is_nil(v)
-		assert.are.same("invalid delimiter: ''. Only supported ':' for headers or '=' for queries", e.message)
-		assert.are.same(1, e.col)
+		r, e = p._parse_line_header_query("ID  ")
+		assert.are.same("ID", r.key)
+		assert.are.same("invalid query delimiter:  expected: '='", e.message)
+		assert.are.same(4, e.col)
 
-		k, v, is, e = p._parse_line_header_query("id = ")
-		assert.are.same(p.is_query, is)
-		assert.are.same("id", k)
-		assert.is_nil(v)
-		assert.are.same("query value is missing", e.message)
+		r, e = p._parse_line_header_query("id = ")
+		assert.are.same("=", r.del)
+		assert.are.same("id", r.key)
+		assert.is_nil(r.val)
+		assert.are.same("header value or query value is missing", e.message)
 		assert.are.same(5, e.col)
 	end)
 
 	it("json", function()
 		local s = os.clock()
+		-- "GET http://{{host}}:7171 # comment ",
 		local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
 		local e = os.clock() - s
 		print("time json decode: " .. format.duration(e))
@@ -180,8 +177,7 @@ describe("parse:", function()
 			"",
 			"@id = 42",
 			"",
-			-- "GET http://{{host}}:7171?myid=9&ot_he-r=a # comment ",
-			"GET http://{{host}}:7171 # comment ",
+			"GET http://{{host}}:7171?myid={{id}}&ot_he-r=a # comment ",
 			"",
 			"accept: application/json # comment",
 			"foo: =bar; blub",
@@ -211,8 +207,8 @@ describe("parse:", function()
 			method = "GET",
 			query = {
 				qid = "42 ",
-				-- myid = "9",
-				-- ["ot_he-r"] = "a",
+				myid = "42",
+				["ot_he-r"] = "a",
 			},
 			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
 			url = "http://my-h_ost:7171",
@@ -220,6 +216,7 @@ describe("parse:", function()
 		assert.are.same({
 			{ from = "$USER", to = os_user, type = "env" },
 			{ from = "host", to = "my-h_ost", type = "var" },
+			{ from = "id", to = "42", type = "var" },
 			{ from = "id", to = "42", type = "var" },
 		}, r.replacements)
 

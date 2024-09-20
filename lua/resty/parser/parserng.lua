@@ -2,11 +2,11 @@ local exec = require("resty.exec")
 local util = require("resty.util")
 
 local function info(column, msg)
-	return { col = column, message = msg, severity = vim.diagnostic.severity.INFO }
+	return { col = 0, end_col = column, message = msg, severity = vim.diagnostic.severity.INFO }
 end
 
 local function err(column, msg)
-	return { col = column, message = msg, severity = vim.diagnostic.severity.ERROR }
+	return { col = 0, end_col = column, message = msg, severity = vim.diagnostic.severity.ERROR }
 end
 
 local function find_request(lines, selected)
@@ -28,7 +28,7 @@ local function find_request(lines, selected)
 	-- end
 	if selected ~= len then
 		for i = selected, len do
-			if string.sub(lines[i], 1, 3) == "###" then
+			if string.sub(lines[i], 1, 3) == "###" and i ~= selected then
 				end_req = i - 1
 				break
 			end
@@ -62,6 +62,7 @@ function M.parse(input, selected)
 		},
 		variables = {},
 		replacements = {},
+		diagnostics = {},
 	}
 
 	selected = selected or 1
@@ -112,6 +113,16 @@ function M:parse_request(from, to)
 	return self.parsed
 end
 
+function M:add_diagnostic(diag)
+	diag.lnum = self.cursor - 1 -- NOTE: lnum is 0 indexed, end readed_lines starts by 1
+	table.insert(self.parsed.diagnostics, diag)
+	return self
+end
+
+function M:has_errors()
+	return #self.parsed.diagnostics > 0
+end
+
 local WS = "([%s]*)"
 local WS1 = "([%s]+)"
 local REST = WS .. "(.*)"
@@ -144,8 +155,7 @@ function M._parse_line_method_url(line)
 		r.http_version = hv
 	end
 
-	-- separate url and query
-	-- separate the query parameter, if exist
+	-- separate url and query, if exist
 	local qm = string.find(url, "?")
 	if qm then
 		local q = string.sub(url, qm + 1)
@@ -156,25 +166,26 @@ function M._parse_line_method_url(line)
 	end
 
 	if methods[m] ~= "" then
-		return r, info(1, "unknown http method: " .. m)
+		return r, info(#m, "unknown http method: " .. m)
 	else
 		return r, nil
 	end
 end
 
 function M:_parse_method_url(line)
-	self.cursor = self.cursor + 1
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
-
 	local req, e = M._parse_line_method_url(line)
 
 	if req then
 		self.parsed.request = req
 		self.parsed.request.headers = {}
-	else
-		print("Error: " .. vim.inspect(e))
 	end
 
+	if e then
+		self:add_diagnostic(e)
+	end
+
+	self.cursor = self.cursor + 1
 	return line
 end
 
@@ -198,8 +209,14 @@ function M._parse_line_variable(line)
 end
 
 function M:_parse_variables(_)
-	return self:parse_matching_line("@", M._parse_line_variable, function(k, v)
-		self.parsed.variables[k] = v
+	return self:parse_matching_line("@", M._parse_line_variable, function(k, v, e)
+		if k then
+			self.parsed.variables[k] = v
+		end
+
+		if e then
+			self:add_diagnostic(e)
+		end
 	end)
 end
 
@@ -224,7 +241,13 @@ function M._parse_line_header_query(line)
 	end
 
 	if v == "" then
-		return { key = k, del = d }, err(#k + #ws1 + #d + #ws2, "header value or query value is missing")
+		local s = "value"
+		if d == ":" then
+			s = "header value"
+		elseif d == "=" then
+			s = "query value"
+		end
+		return { key = k, del = d }, err(#k + #ws1 + #d + #ws2, s .. " is missing")
 	end
 
 	return { key = k, del = d, val = v }, nil
@@ -239,7 +262,7 @@ function M:_parse_header_query()
 				self.parsed.request.query[r.key] = r.val
 			end
 		else
-			vim.notify(e.message, e.severity)
+			self:add_diagnostic(e)
 		end
 	end)
 end
@@ -308,6 +331,7 @@ function M:parse_matching_line(match, parser, collect_result)
 	for i = self.cursor, self.len do
 		local line = self.lines[i]
 		local first_char = string.sub(line, 1, 1)
+		self.cursor = i
 
 		if first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
@@ -315,7 +339,6 @@ function M:parse_matching_line(match, parser, collect_result)
 			line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 			collect_result(parser(line))
 		else
-			self.cursor = i
 			return line
 		end
 	end

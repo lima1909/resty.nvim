@@ -41,19 +41,19 @@ describe("parse:", function()
 		_, _, e = p._parse_line_variable("@={{$USER}}")
 		assert.is_not_nil(e)
 		assert.are.same("variable key is missing", e.message)
-		assert.are.same(1, e.col)
+		assert.are.same(1, e.end_col)
 
 		k, _, e = p._parse_line_variable("@key")
 		assert.are.same("key", k)
 		assert.is_not_nil(e)
 		assert.are.same("equal char is missing", e.message)
-		assert.are.same(4, e.col)
+		assert.are.same(4, e.end_col)
 
 		k, _, e = p._parse_line_variable("@key=")
 		assert.are.same("key", k)
 		assert.is_not_nil(e)
 		assert.are.same("variable value is missing", e.message)
-		assert.are.same(5, e.col)
+		assert.are.same(5, e.end_col)
 	end)
 
 	it("parse line method url", function()
@@ -82,13 +82,13 @@ describe("parse:", function()
 		r, e = p._parse_line_method_url("Foo http://127.0.0.1:8080")
 		assert.is_not_nil(e)
 		assert.are.same(e.message, "unknown http method: Foo")
-		assert.are.same(1, e.col)
+		assert.are.same(3, e.end_col)
 		assert.are.same({ method = "Foo", url = "http://127.0.0.1:8080", query = {} }, r)
 
 		r, e = p._parse_line_method_url("GET http://localhost HTTP/1  foo")
 		assert.is_not_nil(e)
 		assert.are.same(e.message, "invalid input after the request definition: foo")
-		assert.are.same(29, e.col)
+		assert.are.same(29, e.end_col)
 	end)
 
 	it("parse line header and query", function()
@@ -132,19 +132,19 @@ describe("parse:", function()
 		r, e = p._parse_line_header_query("1id  ")
 		assert.is_nil(r)
 		assert.are.same("header key or query key is missing", e.message)
-		assert.are.same(1, e.col)
+		assert.are.same(1, e.end_col)
 
 		r, e = p._parse_line_header_query("ID  ")
 		assert.are.same("ID", r.key)
 		assert.are.same("invalid query delimiter:  expected: '='", e.message)
-		assert.are.same(4, e.col)
+		assert.are.same(4, e.end_col)
 
 		r, e = p._parse_line_header_query("id = ")
 		assert.are.same("=", r.del)
 		assert.are.same("id", r.key)
 		assert.is_nil(r.val)
-		assert.are.same("header value or query value is missing", e.message)
-		assert.are.same(5, e.col)
+		assert.are.same("query value is missing", e.message)
+		assert.are.same(5, e.end_col)
 	end)
 
 	it("json", function()
@@ -272,5 +272,48 @@ describe("parse:", function()
 		}, r.replacements)
 
 		print("time parse request: " .. format.duration(r.duration))
+	end)
+
+	it("parse ng - error", function()
+		local input = {
+			"",
+			"@id = ",
+			"",
+			"GETT http://host:7171",
+			"",
+			"accept :  ",
+		}
+
+		local r = p.parse(input)
+		assert.are.same(3, #r.diagnostics)
+		assert.are.same({
+			{
+				col = 0,
+				end_col = 6,
+				lnum = 1,
+				message = "variable value is missing",
+				severity = 1,
+			},
+			{
+				col = 0,
+				end_col = 4,
+				lnum = 3,
+				message = "unknown http method: GETT",
+				severity = 3,
+			},
+			{
+				col = 0,
+				end_col = 10,
+				lnum = 5,
+				message = "header value is missing",
+				severity = 1,
+			},
+		}, r.diagnostics)
+		assert.are.same({
+			headers = {},
+			query = {},
+			method = "GETT",
+			url = "http://host:7171",
+		}, r.request)
 	end)
 end)

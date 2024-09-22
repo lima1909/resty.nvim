@@ -1,12 +1,12 @@
 local exec = require("resty.exec")
 local util = require("resty.util")
 
-local function info(column, msg)
-	return { col = 0, end_col = column, message = msg, severity = vim.diagnostic.severity.INFO }
+local function info(msg, col, end_col)
+	return { col = col, end_col = end_col, message = msg, severity = vim.diagnostic.severity.INFO }
 end
 
-local function err(column, msg)
-	return { col = 0, end_col = column, message = msg, severity = vim.diagnostic.severity.ERROR }
+local function err(msg, col, end_col)
+	return { col = col, end_col = end_col, message = msg, severity = vim.diagnostic.severity.ERROR }
 end
 
 local function find_request(lines, selected)
@@ -44,17 +44,14 @@ M.set_global_variables = function(gvars)
 	M.global_variables = vim.tbl_deep_extend("force", M.global_variables, gvars)
 end
 
-function M.new(input)
-	return setmetatable({
-		lines = util.input_to_lines(input),
-		parsed = {},
-	}, { __index = M })
-end
-
 function M.parse(input, selected)
 	local start = os.clock()
 
-	local p = M.new(input)
+	-- local p = M.new(input)
+	local p = setmetatable({
+		lines = util.input_to_lines(input),
+	}, { __index = M })
+
 	p.parsed = {
 		request = {
 			query = {},
@@ -83,11 +80,10 @@ function M.parse(input, selected)
 		p:_parse_variables()
 	end
 
-	local r = p:parse_request(s, e)
+	p:parse_request(s, e)
+	p.parsed.duration = os.clock() - start
 
-	r.duration = os.clock() - start
-
-	return r
+	return p
 end
 
 function M:parse_request(from, to)
@@ -96,8 +92,8 @@ function M:parse_request(from, to)
 
 	local parsers = {
 		M._parse_variables,
-		M._parse_method_url,
-		M._parse_header_query,
+		M._parse_request_definition,
+		M._parse_headers_queries,
 		M._parse_json,
 		M._parse_script,
 	}
@@ -109,17 +105,18 @@ function M:parse_request(from, to)
 			return self.parsed
 		end
 	end
-
-	return self.parsed
 end
 
 function M:add_diagnostic(diag)
-	diag.lnum = self.cursor - 1 -- NOTE: lnum is 0 indexed, end readed_lines starts by 1
-	table.insert(self.parsed.diagnostics, diag)
+	if diag then
+		diag.lnum = self.cursor - 1 -- NOTE: lnum is 0 indexed, end readed_lines starts by 1
+		table.insert(self.parsed.diagnostics, diag)
+	end
+
 	return self
 end
 
-function M:has_errors()
+function M:has_diagnostics()
 	return #self.parsed.diagnostics > 0
 end
 
@@ -127,143 +124,151 @@ local WS = "([%s]*)"
 local WS1 = "([%s]+)"
 local REST = WS .. "(.*)"
 
-local KEY = "[%w%_-]*"
-local KEY1 = "[%w%_-]+"
-local VALUE = "([^#]*)"
+-- request definition
+local METHOD = "^([%a]+)"
+local URL = "([^%?=&#%s]+)"
+local URL_QUERY = "([^%s#]*)"
+local HTTP_VERSION = "([HTTP%/%.%d]*)"
 
-local REQUEST = "^([%w]+)" .. WS1 .. "([%w%d%_%.%?=&-:/{}]+)" .. WS .. "([HTTP%/%.%d]*)" .. REST
+local REQUEST = METHOD .. WS1 .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
 
-function M._parse_line_method_url(line)
-	local m, ws1, url, ws2, hv, ws3, comment = string.match(line, REQUEST)
+function M.parse_request_definition(line)
+	local m, ws1, url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
 	if not m then
-		return nil, err(1, "http method is missing ")
+		line = vim.trim(line)
+		if #line > 0 then
+			return nil, err("url is missing", 0, #line)
+		end
+		return nil, err("http method is missing ", 0, 1)
 	elseif not ws1 then
-		return nil, err(#m, "white space after http method is missing ")
+		return nil, err("white space after http method is missing ", 0, #m)
 	elseif not url then
-		return nil, err(#m + #ws1, "url is missing ")
-	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
+		return nil, err("url is missing ", 0, #m + #ws1)
+	elseif rest and #rest > 0 and not string.match(rest, "[%s]*#") then
 		return nil,
-			info(#m + #ws1 + #url + #ws2 + #hv + #ws3, "invalid input after the request definition: " .. comment)
+			info("invalid input after the request definition: " .. rest, 0, #m + #ws1 + #url + #q + #ws2 + #hv + #ws3)
 	end
 
-	local r = { method = m, url = url, query = {} }
+	local r = { method = m, url = url }
 	if hv ~= "" then
 		r.http_version = hv
 	end
 
 	-- separate url and query, if exist
-	local qm = string.find(url, "?")
-	if qm then
-		local q = string.sub(url, qm + 1)
-		r.url = string.sub(url, 1, qm - 1)
+	if q ~= "" then
+		if string.sub(q, 1, 1) ~= "?" then
+			return r, err("invalid query in url, must start with a '?'", 0, #m + #ws1 + #url)
+		end
+
+		r.query = {}
+		q = string.sub(q, 2)
 		for k, v in string.gmatch(q, "([^=&]+)=([^&]+)") do
 			r.query[k] = v
 		end
 	end
 
 	if methods[m] ~= "" then
-		return r, info(#m, "unknown http method: " .. m)
+		return r, info("unknown http method: " .. m, 0, #m)
 	else
 		return r, nil
 	end
 end
 
-function M:_parse_method_url(line)
+function M:_parse_request_definition(line)
 	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
-	local req, e = M._parse_line_method_url(line)
+	local req, d = M.parse_request_definition(line)
 
 	if req then
-		self.parsed.request = req
-		self.parsed.request.headers = {}
+		self.parsed.request.method = req.method
+		self.parsed.request.url = req.url
+		self.parsed.request.http_version = req.http_version
+		self.parsed.request.query = req.query or {}
 	end
 
-	if e then
-		self:add_diagnostic(e)
-	end
-
+	self:add_diagnostic(d)
 	self.cursor = self.cursor + 1
+
 	return line
 end
 
-local VARIABLE = "^@(" .. KEY1 .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
+function M.parse_key_value(line, match, kind, space)
+	-- space for @ by variable is 1 otherwise 0
+	space = space or 0
 
-function M._parse_line_variable(line)
-	local k, ws1, eq, ws2, v, ws3, comment = string.match(line, VARIABLE)
+	local key, ws1, delimiter, ws2, value, ws3, rest = string.match(line, match)
 
-	if not k or k == "" then
-		return nil, nil, err(1, "variable key is missing")
-	elseif not eq or eq == "" then
-		return k, nil, err(1 + #k + #ws1, "equal char is missing")
-	elseif not v or v == "" then
-		return k, nil, err(1 + #k + #ws1 + #eq + #ws2, "variable value is missing")
-	elseif comment and #comment > 0 and not string.match(comment, "[%s]*#") then
-		local col = 1 + #k + #ws1 + #eq + #ws2 + #v + #ws3
-		return k, v, info(col, "invalid input after the request definition: " .. comment)
+	if not key then
+		return nil, nil, nil, err("valid " .. kind .. " key is missing", 0, space)
+	elseif delimiter == "" then
+		return key, nil, nil, err(kind .. " delimiter is missing", 0, space + #key + #ws1)
+	elseif value == "" then
+		return key, nil, delimiter, err(kind .. " value is missing", 0, space + #key + #ws1 + #delimiter + #ws2)
+	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
+		local col = space + #key + #ws1 + #delimiter + #ws2 + #value + #ws3
+		return key, value, delimiter, info("invalid input after the request definition: " .. rest, 0, col)
 	end
 
-	return k, v, nil
+	return key, value, delimiter, nil
+end
+
+local VKEY = "^@([%a][%w%-_]*)"
+local VVALUE = "([%w%-_%%{}:$>]*)"
+local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
+
+function M.parse_variable(line)
+	return M.parse_key_value(line, VARIABLE, "variable", 1)
 end
 
 function M:_parse_variables(_)
-	return self:parse_matching_line("@", M._parse_line_variable, function(k, v, e)
+	return self:parse_matching_line("@", M.parse_variable, function(k, v, _, e)
 		if k then
 			self.parsed.variables[k] = v
 		end
 
-		if e then
-			self:add_diagnostic(e)
-		end
+		self:add_diagnostic(e)
 	end)
 end
 
-local HEADER = "^([%a]" .. KEY .. ")" .. WS .. "([:]?)" .. WS .. VALUE .. REST
-local QUERY = "^([%a]" .. KEY .. ")" .. WS .. "([=]?)" .. WS .. VALUE .. REST
+local HKEY = "^([%a][!#$%%&'*+%^_`|~%w%-%.]+)"
+local HVALUE = "([^#]*)"
+local HEADER = HKEY .. WS .. "([:]?)" .. WS .. HVALUE .. REST
 
-function M._parse_line_header_query(line)
-	local k, ws1, d, ws2, v, _, _ = string.match(line, HEADER)
-	if not k or k == "" then
-		return nil, err(1, "header key or query key is missing")
-	end
-
-	if d == ":" then
-		-- is a header
-	else
-		k, ws1, d, ws2, v, _, _ = string.match(line, QUERY)
-		if d == "=" then
-			-- is a query
-		else
-			return { key = k }, err(#k + #ws1, "invalid query delimiter: " .. tostring(d) .. " expected: '='")
-		end
-	end
-
-	if v == "" then
-		local s = "value"
-		if d == ":" then
-			s = "header value"
-		elseif d == "=" then
-			s = "query value"
-		end
-		return { key = k, del = d }, err(#k + #ws1 + #d + #ws2, s .. " is missing")
-	end
-
-	return { key = k, del = d, val = v }, nil
+function M.parse_header(line)
+	return M.parse_key_value(line, HEADER, "header")
 end
 
-function M:_parse_header_query()
-	return self:parse_matching_line("%w", M._parse_line_header_query, function(r, e)
+local QKEY = "^([%a][%w%-_%%]*)"
+local QVALUE = "([%w%-_%%{}]*)"
+local QUERY = QKEY .. WS .. "([=]?)" .. WS .. QVALUE .. REST
+
+function M.parse_query(line)
+	return M.parse_key_value(line, QUERY, "query")
+end
+
+function M._parse_header_query(line)
+	local k, v, d, e = M.parse_key_value(line, HEADER, "header")
+	if d == ":" then
+		return k, v, d, e
+	end
+
+	return M.parse_key_value(line, QUERY, "query")
+end
+
+function M:_parse_headers_queries()
+	return self:parse_matching_line("%w", M._parse_header_query, function(k, v, d, e)
 		if not e then
-			if r.del == ":" then
-				self.parsed.request.headers[r.key] = r.val
+			if d == ":" then
+				self.parsed.request.headers[k] = v
 			else
-				self.parsed.request.query[r.key] = r.val
+				self.parsed.request.query[k] = v
 			end
-		else
-			self:add_diagnostic(e)
 		end
+
+		self:add_diagnostic(e)
 	end)
 end
 

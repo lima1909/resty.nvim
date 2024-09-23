@@ -135,7 +135,6 @@ function M.parse_request_definition(line)
 	local m, ws1, url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
 	if not m then
-		line = vim.trim(line)
 		return nil, err("http method is missing ", 0, 1)
 	elseif ws1 == "" then
 		return nil, err("white space after http method is missing", 0, #m)

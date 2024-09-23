@@ -47,24 +47,19 @@ end
 function M.parse(input, selected)
 	local start = os.clock()
 
-	-- local p = M.new(input)
 	local p = setmetatable({
 		lines = util.input_to_lines(input),
+		parsed = {
+			request = {},
+			variables = {},
+			replacements = {},
+			diagnostics = {},
+		},
 	}, { __index = M })
 
-	p.parsed = {
-		request = {
-			query = {},
-			headers = {},
-		},
-		variables = {},
-		replacements = {},
-		diagnostics = {},
-	}
-
-	selected = selected or 1
-	if selected > #p.lines then
-		-- error("the selected line: " .. selected .. " is greater then the given lines: " .. #p.lines, 0)
+	if not selected then
+		selected = 1
+	elseif selected > #p.lines then
 		selected = #p.lines
 	elseif selected < 0 then
 		selected = 1
@@ -81,6 +76,8 @@ function M.parse(input, selected)
 	end
 
 	p:parse_request(s, e)
+	p:replace_variables()
+
 	p.parsed.duration = os.clock() - start
 
 	return p
@@ -121,16 +118,15 @@ function M:has_diagnostics()
 end
 
 local WS = "([%s]*)"
-local WS1 = "([%s]+)"
 local REST = WS .. "(.*)"
 
 -- request definition
 local METHOD = "^([%a]+)"
-local URL = "([^%?=&#%s]+)"
+local URL = "([^%?=&#%s]*)"
 local URL_QUERY = "([^%s#]*)"
 local HTTP_VERSION = "([HTTP%/%.%d]*)"
 
-local REQUEST = METHOD .. WS1 .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. REST
+local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
@@ -140,15 +136,12 @@ function M.parse_request_definition(line)
 
 	if not m then
 		line = vim.trim(line)
-		if #line > 0 then
-			return nil, err("url is missing", 0, #line)
-		end
 		return nil, err("http method is missing ", 0, 1)
-	elseif not ws1 then
-		return nil, err("white space after http method is missing ", 0, #m)
-	elseif not url then
-		return nil, err("url is missing ", 0, #m + #ws1)
-	elseif rest and #rest > 0 and not string.match(rest, "[%s]*#") then
+	elseif ws1 == "" then
+		return nil, err("white space after http method is missing", 0, #m)
+	elseif url == "" then
+		return nil, err("url is missing", 0, #m + #ws1)
+	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		return nil,
 			info("invalid input after the request definition: " .. rest, 0, #m + #ws1 + #url + #q + #ws2 + #hv + #ws3)
 	end
@@ -179,19 +172,10 @@ function M.parse_request_definition(line)
 end
 
 function M:_parse_request_definition(line)
-	line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 	local req, d = M.parse_request_definition(line)
-
-	if req then
-		self.parsed.request.method = req.method
-		self.parsed.request.url = req.url
-		self.parsed.request.http_version = req.http_version
-		self.parsed.request.query = req.query or {}
-	end
-
+	self.parsed.request = req or {}
 	self:add_diagnostic(d)
 	self.cursor = self.cursor + 1
-
 	return line
 end
 
@@ -259,6 +243,9 @@ function M._parse_header_query(line)
 end
 
 function M:_parse_headers_queries()
+	self.parsed.request.headers = {}
+	self.parsed.request.query = self.parsed.request.query or {}
+
 	return self:parse_matching_line("%w", M._parse_header_query, function(k, v, d, e)
 		if not e then
 			if d == ":" then
@@ -273,11 +260,8 @@ function M:_parse_headers_queries()
 end
 
 function M:_parse_json(line)
-	local l, body = self:_parse_body(line, "^{")
-	if body then
-		self.parsed.request.body = body
-	end
-	return l
+	line, self.parsed.request.body = self:_parse_body(line, "^{")
+	return line
 end
 
 function M:_parse_script(line)
@@ -316,14 +300,13 @@ function M:_parse_body(line, body_start)
 
 	for i = self.cursor, self.len do
 		line = self.lines[i]
+		self.cursor = i
 
 		-- until blank line
 		if string.match(line, "^%s*$") then
-			self.cursor = i
 			return line, table.concat(self.lines, "", start, i)
 		-- until comment line
 		elseif string.match(line, "^#") then
-			self.cursor = i
 			return line, table.concat(self.lines, "", start, i - 1)
 		end
 	end
@@ -341,7 +324,6 @@ function M:parse_matching_line(match, parser, collect_result)
 		if first_char == "" or first_char == "#" or line:match("^%s") then
 			-- do nothing, comment or empty line
 		elseif string.match(first_char, match) then
-			line = M._replace_variable(line, self.parsed.variables, self.parsed.replacements)
 			collect_result(parser(line))
 		else
 			return line
@@ -389,6 +371,31 @@ M._replace_variable = function(line, variables, replacements)
 	end)
 
 	return line, replacements
+end
+
+function M:replace_variables()
+	if not self.parsed.variables and #self.parsed.variables == 0 then
+		return
+	end
+
+	-- replace variables in variables-values
+	for k, v in pairs(self.parsed.variables) do
+		self.parsed.variables[k] = M._replace_variable(v, self.parsed.variables, self.parsed.replacements)
+	end
+
+	-- replace variables in url
+	self.parsed.request.url =
+		M._replace_variable(self.parsed.request.url, self.parsed.variables, self.parsed.replacements)
+
+	-- replace variables in query-values
+	for k, v in pairs(self.parsed.request.query) do
+		self.parsed.request.query[k] = M._replace_variable(v, self.parsed.variables, self.parsed.replacements)
+	end
+
+	-- replace variables in headers-values
+	for k, v in pairs(self.parsed.request.headers) do
+		self.parsed.request.headers[k] = M._replace_variable(v, self.parsed.variables, self.parsed.replacements)
+	end
 end
 
 return M

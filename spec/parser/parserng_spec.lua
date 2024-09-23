@@ -93,10 +93,15 @@ describe("parse:", function()
 
 		--
 		-- error or hints
+		r, e = p.parse_request_definition("GET")
+		assert.is_not_nil(e)
+		assert.are.same(e.message, "white space after http method is missing")
+		assert.are.same(3, e.end_col)
+
 		r, e = p.parse_request_definition("GET ")
 		assert.is_not_nil(e)
 		assert.are.same(e.message, "url is missing")
-		assert.are.same(3, e.end_col)
+		assert.are.same(4, e.end_col)
 
 		r, e = p.parse_request_definition("Foo http://127.0.0.1:8080")
 		assert.is_not_nil(e)
@@ -256,7 +261,7 @@ describe("parse:", function()
 			"foo: =bar; blub",
 			"",
 			"foo%3Abar=value", -- is foo followed by a column : encoded
-			"qid = {{id}} # comment",
+			"qid = {{id}} # {{:dummy}}", -- please ignore the :dummy variable
 			"",
 			"# comment",
 			'{ "name": "me" }',

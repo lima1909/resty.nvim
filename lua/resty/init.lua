@@ -100,7 +100,7 @@ M._run = function(lines, row, bufnr)
 	end
 
 	-- local rng = parserng.parse(lines, row)
-	-- print("time parseng request: " .. format.duration(rng.duration))
+	-- print("time parseng request: " .. format.duration(rng.parsed.duration))
 
 	-- save the last result
 	M.last_parser_result = parser_result

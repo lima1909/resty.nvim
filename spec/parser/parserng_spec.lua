@@ -413,4 +413,16 @@ describe("parse:", function()
 			url = "http://host:7171",
 		}, r.parsed.request)
 	end)
+
+	it("parse ng - error: missing URL", function()
+		local input = {
+			"",
+			"@id = 7",
+			"",
+		}
+
+		local ok, err = pcall(p.parse, input)
+		assert.is_false(ok)
+		assert.are.same("no request URL found between row: 1 and 3", err)
+	end)
 end)

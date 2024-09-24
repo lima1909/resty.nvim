@@ -76,6 +76,12 @@ function M.parse(input, selected)
 	end
 
 	p:parse_request(s, e)
+	if not p.parsed.request.url then
+		error("no request URL found between row: " .. s .. " and " .. e, 0)
+	elseif not p.parsed.request.method then
+		p.parsed.request.method = "GET"
+	end
+
 	p:replace_variables()
 
 	p.parsed.duration = os.clock() - start

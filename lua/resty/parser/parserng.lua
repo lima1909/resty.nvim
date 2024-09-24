@@ -172,7 +172,14 @@ end
 
 function M:_parse_request_definition(line)
 	local req, d = M.parse_request_definition(line)
-	self.parsed.request = req or {}
+	if req then
+		self.parsed.request.method = req.method
+		self.parsed.request.url = req.url
+		self.parsed.request.http_version = req.http_version
+		if req.query then
+			self.parsed.request.query = req.query
+		end
+	end
 	self:add_diagnostic(d)
 	self.cursor = self.cursor + 1
 	return line
@@ -198,9 +205,10 @@ function M.parse_key_value(line, match, kind, space)
 	return key, value, delimiter, nil
 end
 
-local VKEY = "^@([%a][%w%-_]*)"
+local VKEY = "^@([%a][%w%-_%.]*)"
 local VVALUE = "([%w%-_%%{}:$>]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
+local CFG = "cfg."
 
 function M.parse_variable(line)
 	return M.parse_key_value(line, VARIABLE, "variable", 1)
@@ -209,7 +217,16 @@ end
 function M:_parse_variables(_)
 	return self:parse_matching_line("@", M.parse_variable, function(k, v, _, e)
 		if k then
-			self.parsed.variables[k] = v
+			if vim.startswith(k, CFG) then
+				local c = string.sub(k, 5)
+				if c == "" then
+					self:add_diagnostic(err("empty cfg variable is not allowed", 0, #k))
+				else
+					self.parsed.request[c] = v
+				end
+			else
+				self.parsed.variables[k] = v
+			end
 		end
 
 		self:add_diagnostic(e)

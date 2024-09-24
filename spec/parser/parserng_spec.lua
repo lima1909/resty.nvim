@@ -12,6 +12,11 @@ describe("parse:", function()
 		assert.are.same("key", k)
 		assert.are.same("value", v)
 
+		k, v, _, e = p.parse_variable("@k = v")
+		assert.is_nil(e)
+		assert.are.same("k", k)
+		assert.are.same("v", v)
+
 		k, v, _, e = p.parse_variable("@key=value # comment")
 		assert.is_nil(e)
 		assert.are.same("key", k)
@@ -42,6 +47,13 @@ describe("parse:", function()
 		assert.are.same("key", k)
 		assert.are.same("value", v)
 
+		-- cfg variable
+		k, v, _, e = p.parse_variable("@cfg.insecure = true")
+		assert.is_nil(e)
+		assert.are.same("cfg.insecure", k)
+		assert.are.same("true", v)
+
+		--
 		-- errors
 		_, _, _, e = p.parse_variable("@")
 		assert.is_not_nil(e)
@@ -310,6 +322,8 @@ describe("parse:", function()
 			"@host = g_host_7",
 			"@baz = bar",
 			"",
+			"@cfg.insecure = true",
+			"",
 			"###",
 			"@host = l_host_1",
 			"",
@@ -331,7 +345,7 @@ describe("parse:", function()
 			"--%}",
 		}
 
-		local r = p.parse(input, 7)
+		local r = p.parse(input, 10)
 
 		assert.is_false(r:has_diagnostics())
 		assert.are.same({ host = "l_host_1", baz = "bar" }, r.parsed.variables)
@@ -347,6 +361,7 @@ describe("parse:", function()
 			},
 			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
 			url = "http://l_host_1:7171",
+			insecure = "true",
 		}, r.parsed.request)
 		assert.are.same({
 			{ from = "host", to = "l_host_1", type = "var" },

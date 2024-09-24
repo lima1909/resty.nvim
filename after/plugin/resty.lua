@@ -1,0 +1,2 @@
+-- add resty completion
+-- require("cmp").register_source("resty", require("resty.extension.resty-cmp").new())

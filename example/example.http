@@ -8,7 +8,6 @@ GET https://reqres.in/api/users/2
 
 ### #GET to jsonplaceholder 
 GET https://jsonplaceholder.typicode.com/comments
-
 # headers
 accept: application/json  
 

@@ -205,14 +205,14 @@ function M.parse_key_value(line, match, kind, space)
 		return key, nil, delimiter, err(kind .. " value is missing", 0, space + #key + #ws1 + #delimiter + #ws2)
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		local col = space + #key + #ws1 + #delimiter + #ws2 + #value + #ws3
-		return key, value, delimiter, info("invalid input after the request definition: " .. rest, 0, col)
+		return key, value, delimiter, info("invalid input after the " .. kind .. ": " .. rest, 0, col)
 	end
 
 	return key, value, delimiter, nil
 end
 
 local VKEY = "^@([%a][%w%-_%.]*)"
-local VVALUE = "([%w%-_%%{}:$>]*)"
+local VVALUE = "([^%s#]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
 
 function M.parse_variable(line)
@@ -278,15 +278,35 @@ function M:_parse_headers_queries()
 end
 
 function M:_parse_json(line)
-	line, self.parsed.request.body = self:_parse_body(line, "^{")
+	if string.match(line, "^{") then
+		local start = self.cursor
+
+		for i = start + 1, self.len do
+			line = self.lines[i]
+
+			-- until blank line
+			if string.match(line, "^%s*$") then
+				self.cursor = i
+				self.parsed.request.body = table.concat(self.lines, "", start, i)
+				return line
+			-- until comment line
+			elseif string.match(line, "^#") then
+				self.cursor = i
+				self.parsed.request.body = table.concat(self.lines, "", start, i - 1)
+				return line
+			end
+		end
+	end
+
+	self.cursor = self.len
 	return line
 end
 
 function M:_parse_script(line)
+	-- ignore empty and comment lines
 	for i = self.cursor, self.len do
-		self.cursor = i
-
 		line = self.lines[i]
+		self.cursor = i
 		local first_char = string.sub(line, 1, 1)
 
 		if first_char == "" or first_char == "#" or line:match("^%s") then
@@ -296,41 +316,23 @@ function M:_parse_script(line)
 		end
 	end
 
-	local l, body = self:_parse_body(line, "^--{%%")
-	if body then
-		self.parsed.request.script = body
-	else
-		-- or > {% (tree-sitter-http) %}
-		l, body = self:_parse_body(line, "^>%s{%%")
-		if body then
-			self.parsed.request.script = body
-		end
-	end
-	return l
-end
+	-- or > {% (tree-sitter-http) %}
+	if string.match(line, "^--{%%%s*$") then
+		-- ignore this line
+		local start = self.cursor + 1
 
-function M:_parse_body(line, body_start)
-	local start = self.cursor
-
-	if not string.match(line, body_start) then
-		return line, nil
-	end
-
-	for i = self.cursor, self.len do
-		line = self.lines[i]
-		self.cursor = i
-
-		-- until blank line
-		if string.match(line, "^%s*$") then
-			return line, table.concat(self.lines, "", start, i)
-		-- until comment line
-		elseif string.match(line, "^#") then
-			return line, table.concat(self.lines, "", start, i - 1)
+		for i = start, self.len do
+			line = self.lines[i]
+			self.cursor = i
+			if string.match(line, "^--%%}%s*$") then
+				-- ignore this line
+				self.parsed.request.script = table.concat(self.lines, "\n", start, i - 1)
+				return line
+			end
 		end
 	end
 
-	self.cursor = self.len
-	return nil, table.concat(self.lines, "", start, self.len)
+	return line
 end
 
 function M:parse_matching_line(match, parser, collect_result)
@@ -348,7 +350,6 @@ function M:parse_matching_line(match, parser, collect_result)
 		end
 	end
 
-	self.cursor = self.len
 	return nil
 end
 

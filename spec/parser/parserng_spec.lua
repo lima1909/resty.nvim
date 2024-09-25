@@ -47,6 +47,11 @@ describe("parse:", function()
 		assert.are.same("key", k)
 		assert.are.same("value", v)
 
+		k, v, _, e = p.parse_variable("@host = host.org")
+		assert.is_nil(e)
+		assert.are.same("host", k)
+		assert.are.same("host.org", v)
+
 		-- cfg variable
 		k, v, _, e = p.parse_variable("@cfg.insecure = true")
 		assert.is_nil(e)
@@ -284,6 +289,7 @@ describe("parse:", function()
 			"  local json = ctx.json_body()",
 			'  ctx.set("id", json.data.id)',
 			"--%}",
+			"",
 		}
 
 		local r = p.parse(input)
@@ -303,7 +309,7 @@ describe("parse:", function()
 				myid = "42",
 				["ot_he-r"] = "a",
 			},
-			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
+			script = '  local json = ctx.json_body()\n  ctx.set("id", json.data.id)',
 			url = "http://my-h_ost:7171",
 		}, r.parsed.request)
 		assert.are.same({
@@ -360,7 +366,7 @@ describe("parse:", function()
 			query = {
 				baz = "bar",
 			},
-			script = '--{%  local json = ctx.json_body()  ctx.set("id", json.data.id)--%}',
+			script = '  local json = ctx.json_body()\n  ctx.set("id", json.data.id)',
 			url = "http://l_host_1:7171",
 			insecure = "true",
 		}, r.parsed.request)

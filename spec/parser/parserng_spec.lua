@@ -323,6 +323,7 @@ describe("parse:", function()
 			"@baz = bar",
 			"",
 			"@cfg.insecure = true",
+			"@cfg.= blub",
 			"",
 			"###",
 			"@host = l_host_1",
@@ -348,7 +349,7 @@ describe("parse:", function()
 		local r = p.parse(input, 10)
 
 		assert.is_false(r:has_diagnostics())
-		assert.are.same({ host = "l_host_1", baz = "bar" }, r.parsed.variables)
+		assert.are.same({ host = "l_host_1", baz = "bar", ["cfg."] = "blub" }, r.parsed.variables)
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {

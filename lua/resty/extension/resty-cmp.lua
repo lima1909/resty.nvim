@@ -1,3 +1,5 @@
+-- https://www.jonashietala.se/blog/2024/05/26/autocomplete_with_nvim-cmp/
+
 local cmp = require("cmp")
 --
 -- WARN: register: in after/plugin/resty.lua the completion

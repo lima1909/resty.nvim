@@ -214,7 +214,6 @@ end
 local VKEY = "^@([%a][%w%-_%.]*)"
 local VVALUE = "([%w%-_%%{}:$>]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
-local CFG = "cfg."
 
 function M.parse_variable(line)
 	return M.parse_key_value(line, VARIABLE, "variable", 1)
@@ -223,13 +222,10 @@ end
 function M:_parse_variables(_)
 	return self:parse_matching_line("@", M.parse_variable, function(k, v, _, e)
 		if k then
-			if vim.startswith(k, CFG) then
-				local c = string.sub(k, 5)
-				if c == "" then
-					self:add_diagnostic(err("empty cfg variable is not allowed", 0, #k))
-				else
-					self.parsed.request[c] = v
-				end
+			local key = string.match(k, "cfg%.(.*)")
+			if key and key ~= "" then
+				-- configure the request
+				self.parsed.request[key] = v
 			else
 				self.parsed.variables[k] = v
 			end

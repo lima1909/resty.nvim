@@ -2,14 +2,14 @@ local exec = require("resty.exec")
 
 local M = { global_variables = {} }
 
-M.new = function()
+M.new = function(replace_variables)
 	return setmetatable({
 		-- ast = { request = {} },
 		request = { query = {}, headers = {} },
 		variables = {},
 		replacements = {},
 		diagnostics = {},
-		parse_duration = 0,
+		replace_variables = replace_variables,
 	}, { __index = M })
 end
 
@@ -30,42 +30,11 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 	return self
 end
 
-function M:replace_variables()
-	if next(self.variables) == nil then
-		self.duration = self.parse_duration
-		return self
+function M:replace_variable(line, lnum)
+	if self.replace_variables == false then
+		return line
 	end
 
-	local start = os.clock()
-
-	if not self.request.url then
-		-- error("no request URL found between row: " .. s .. " and " .. e, 0)
-		error("no request URL found between row: ", 0)
-	end
-
-	-- replace variables in variables-values
-	for k, v in pairs(self.variables) do
-		self.variables[k] = self:_replace_variable(v)
-	end
-
-	-- replace variables in url
-	self.request.url = self:_replace_variable(self.request.url)
-
-	-- replace variables in query-values
-	for k, v in pairs(self.request.query) do
-		self.request.query[k] = self:_replace_variable(v)
-	end
-
-	-- replace variables in headers-values
-	for k, v in pairs(self.request.headers) do
-		self.request.headers[k] = self:_replace_variable(v)
-	end
-
-	self.duration = (os.clock() - start) + self.parse_duration
-	return self
-end
-
-function M:_replace_variable(line)
 	return string.gsub(line, "{{(.-)}}", function(key)
 		local value
 		local symbol = key:sub(1, 1)
@@ -90,8 +59,7 @@ function M:_replace_variable(line)
 			else
 				value = M.global_variables[key]
 				if not value then
-					-- TODO: replace this error
-					error("invalid variable key: " .. key, 0)
+					self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
 				end
 				table.insert(self.replacements, { from = key, to = value, type = "global_var" })
 			end

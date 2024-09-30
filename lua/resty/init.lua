@@ -99,8 +99,11 @@ M._run = function(lines, row, bufnr)
 		return
 	end
 
-	-- local rng = parserng.parse(lines, row):replace_variables()
+	-- local rng = parserng.parse(lines, row)
 	-- print("time parsengng request: " .. format.duration(rng.duration))
+	-- if diagnostic.show(bufnr, rng) then
+	-- 	return
+	-- end
 
 	-- save the last result
 	M.last_parser_result = parser_result

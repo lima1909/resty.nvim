@@ -39,13 +39,19 @@ M.set_global_variables = function(gvars)
 	result.global_variables = vim.tbl_deep_extend("force", result.global_variables, gvars)
 end
 
-M.parse = function(input, selected)
+M.default_opts = {
+	replace_variables = true,
+}
+
+M.parse = function(input, selected, opts)
 	local start = os.clock()
 
 	local parser = setmetatable({
 		lines = util.input_to_lines(input),
-		r = result.new(),
+		opts = vim.tbl_deep_extend("force", M.default_opts, opts or {}),
 	}, { __index = M })
+
+	parser.r = result.new(parser.opts.replace_variables)
 
 	if not selected then
 		selected = 1
@@ -67,7 +73,7 @@ M.parse = function(input, selected)
 
 	parser:parse_definition(s, e)
 
-	parser.r.parse_duration = os.clock() - start
+	parser.r.duration = os.clock() - start
 	return parser.r
 end
 
@@ -142,6 +148,8 @@ function M:_parse_request()
 		req.http_version = hv
 	end
 
+	req.url = self.r:replace_variable(req.url, lnum)
+
 	-- separate url and query, if exist
 	if q ~= "" then
 		if string.sub(q, 1, 1) ~= "?" then
@@ -202,7 +210,7 @@ function M:_parse_variables()
 				-- configure the request
 				self.r.request[key] = v
 			else
-				self.r.variables[k] = v
+				self.r.variables[k] = self.r:replace_variable(v, lnum)
 			end
 		end
 	end
@@ -249,9 +257,9 @@ function M:_parse_headers_queries()
 			end
 
 			if d == ":" then
-				self.r.request.headers[k] = v
+				self.r.request.headers[k] = self.r:replace_variable(v, lnum)
 			else
-				self.r.request.query[k] = v
+				self.r.request.query[k] = self.r:replace_variable(v, lnum)
 			end
 		end
 	end

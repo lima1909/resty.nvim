@@ -6,8 +6,8 @@ local result = require("resty.parser.result")
 local format = require("resty.output.format")
 
 describe("parse:", function()
-	local function parse(input)
-		return p.parse("GET http://host\n" .. input)
+	local function parse(input, selected, opts)
+		return p.parse("GET http://host\n" .. input, selected, opts)
 	end
 
 	it("json", function()
@@ -21,10 +21,10 @@ describe("parse:", function()
 		local s = os.clock()
 		local r = result.new()
 		r.variables = { var = "from var" }
-		local line = r:_replace_variable("abc: {{$USER}}, {{var}}, {{> echo -n 'yeh'}}")
+		local line = r:replace_variable("abc: {{$USER}}, {{var}}, {{> echo -n 'yeh'}}")
 		local e = os.clock() - s
 
-		-- print("time replace line: " .. format.duration(e))
+		print("time replace line: " .. format.duration(e))
 		assert.are.same("abc: " .. os.getenv("USER") .. ", from var, yeh", line)
 		assert.are.same({ from = "$USER", to = os.getenv("USER"), type = "env" }, r.replacements[1])
 		assert.are.same({ from = "var", to = "from var", type = "var" }, r.replacements[2])
@@ -54,7 +54,7 @@ describe("parse:", function()
 			r.request
 		)
 
-		r = p.parse("GET http://{{host}}:{{port}}")
+		r = p.parse("GET http://{{host}}:{{port}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ method = "GET", url = "http://{{host}}:{{port}}", query = {}, headers = {} }, r.request)
 
@@ -122,15 +122,15 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ ["k_e-y"] = "va_lu-e2" }, r.variables)
 
-		r = p.parse("@key={{$USER}}")
+		r = p.parse("@key={{$USER}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{$USER}}" }, r.variables)
 
-		r = p.parse("@key={{>value}}")
+		r = p.parse("@key={{>value}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{>value}}" }, r.variables)
 
-		r = p.parse("@key={{:value}}")
+		r = p.parse("@key={{:value}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{:value}}" }, r.variables)
 
@@ -193,7 +193,7 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ ["Content-type"] = "application/json ; charset=UTF-8" }, r.request.headers)
 
-		r = parse("accept: {{var}}")
+		r = parse("accept: {{var}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ accept = "{{var}}" }, r.request.headers)
 
@@ -248,11 +248,11 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "ab%2042" }, r.request.query)
 
-		r = parse("id = {{id}}")
+		r = parse("id = {{id}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "{{id}}" }, r.request.query)
 
-		r = parse("id = {{id}}# comment")
+		r = parse("id = {{id}}# comment", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "{{id}}" }, r.request.query)
 
@@ -320,8 +320,8 @@ describe("parse:", function()
   local json = ctx.json_body()
   ctx.set("id", json.data.id)
 --%}
-	
-]])
+
+	]])
 		assert.is_false(r:has_diag())
 		assert.are.same('  local json = ctx.json_body()\n  ctx.set("id", json.data.id)', r.request.script)
 
@@ -338,8 +338,6 @@ describe("parse:", function()
 	end)
 
 	it("parse ng", function()
-		-- local os_user = os.getenv("USER")
-
 		local input = {
 			"",
 			"@os_user={{$USER}}# comment",
@@ -367,7 +365,7 @@ describe("parse:", function()
 			"",
 		}
 
-		local r = p.parse(input)
+		local r = p.parse(input, 1, { replace_variables = false })
 
 		assert.is_false(r:has_diag())
 		assert.are.same({ host = "my-h_ost", id = "42", os_user = "{{$USER}}" }, r.variables)
@@ -387,18 +385,19 @@ describe("parse:", function()
 			script = '  local json = ctx.json_body()\n  ctx.set("id", json.data.id)',
 			url = "http://{{host}}:7171",
 		}, r.request)
+		assert.are.same({}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.parse_duration))
-		r:replace_variables()
 		print("time parse request: " .. format.duration(r.duration))
 
+		-- with replace variables
+		r = p.parse(input)
 		assert.are.same({
 			{ from = "$USER", to = os.getenv("USER"), type = "env" },
 			{ from = "host", to = "my-h_ost", type = "var" },
 			{ from = "id", to = "42", type = "var" },
-			{ from = "id", to = "42", type = "var" },
-			-- }, r:replace_variables().replacements)
 		}, r.replacements)
+
+		print("time parse request: " .. format.duration(r.duration))
 	end)
 
 	it("parse ng with global variables", function()
@@ -431,7 +430,7 @@ describe("parse:", function()
 			"--%}",
 		}
 
-		local r = p.parse(input, 10)
+		local r = p.parse(input, 10, { replace_variables = false })
 
 		assert.is_false(r:has_diag())
 		assert.are.same({ host = "l_host_1", baz = "bar", ["cfg."] = "blub" }, r.variables)
@@ -449,16 +448,18 @@ describe("parse:", function()
 			url = "http://{{host}}:7171",
 			insecure = "true",
 		}, r.request)
+		assert.are.same({}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.parse_duration))
-
-		r:replace_variables()
 		print("time parse request: " .. format.duration(r.duration))
+
+		-- with replace variables
+		r = p.parse(input, 10)
 		assert.are.same({
 			{ from = "host", to = "l_host_1", type = "var" },
 			{ from = "baz", to = "bar", type = "var" },
-			-- }, r:replace_variables().replacements)
 		}, r.replacements)
+
+		print("time parse request: " .. format.duration(r.duration))
 	end)
 
 	it("parse ng - error", function()
@@ -499,26 +500,26 @@ describe("parse:", function()
 		assert.are.same({ method = "GETT", url = "http://host:7171", query = {}, headers = {} }, r.request)
 	end)
 
-	it("parse ng - error: missing URL", function()
-		-- assert.Error.matches(function()
-		-- 	local input = {
-		-- 		"",
-		-- 		"@id = 7",
-		-- 		"",
-		-- 	}
-		--
-		-- 	p.parse(input):replace_variables()
-		-- end, "no request URL found between row: ")
-
-		local input = {
-			"",
-			"@id = 7",
-			"",
-		}
-
-		local r = p.parse(input)
-		local ok, err = pcall(result.replace_variables, r)
-		assert.is_false(ok)
-		assert.are.same("no request URL found between row: ", err)
-	end)
+	-- it("parse ng - error: missing URL", function()
+	-- 	-- assert.Error.matches(function()
+	-- 	-- 	local input = {
+	-- 	-- 		"",
+	-- 	-- 		"@id = 7",
+	-- 	-- 		"",
+	-- 	-- 	}
+	-- 	--
+	-- 	-- 	p.parse(input):replace_variables()
+	-- 	-- end, "no request URL found between row: ")
+	--
+	-- 	local input = {
+	-- 		"",
+	-- 		"@id = 7",
+	-- 		"",
+	-- 	}
+	--
+	-- 	local r = p.parse(input)
+	-- 	local ok, err = pcall(result.replace_variables, r)
+	-- 	assert.is_false(ok)
+	-- 	-- assert.are.same("no request URL found between row: ", err)
+	-- end)
 end)

@@ -1,7 +1,7 @@
 ---@diagnostic disable: need-check-nil
 
 local assert = require("luassert")
-local p = require("resty.parser.parserngng")
+local p = require("resty.parser.parserng")
 local result = require("resty.parser.result")
 local format = require("resty.output.format")
 

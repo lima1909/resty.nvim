@@ -7,7 +7,8 @@ local parserng = require("resty.parser.parserng")
 
 local M = {
 	windows = {
-		[1] = {
+		{
+			id = 1,
 			keymap = "b",
 			name = "body",
 			show_window_content = function(slf)
@@ -27,7 +28,8 @@ local M = {
 				end
 			end,
 		},
-		[2] = {
+		{
+			id = 2,
 			keymap = "h",
 			name = "headers",
 			show_window_content = function(slf)
@@ -35,7 +37,8 @@ local M = {
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.response.headers)
 			end,
 		},
-		[3] = {
+		{
+			id = 3,
 			keymap = "i",
 			name = "info",
 			show_window_content = function(slf)
@@ -45,10 +48,6 @@ local M = {
 
 				-- RESPONSE AND META
 				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"",
-					"## Response: ",
-					"",
-					"- state: " .. slf.meta.status_str,
 					"",
 					"## Meta:",
 					"",
@@ -65,6 +64,39 @@ local M = {
 					"```",
 					vim.inspect(slf.curl.args),
 					"```",
+				})
+			end,
+		},
+		{
+			id = 4,
+			keymap = "?",
+			name = "?",
+			show_window_content = function(slf)
+				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
+
+				vim.api.nvim_buf_set_lines(slf.bufnr, 0, -1, false, {
+					"## Key shortcuts:",
+					"",
+					"### Result view:",
+					"",
+					"| view      | short cut | description         |",
+					"|-----------|-----------|---------------------|",
+					"| `body`    |   `b`     | response body       |",
+					"| `headers` |   `h`     | response headers    |",
+					"| `info`    |   `i`     | request information |",
+					"| `?`       |   `?`     | help                |",
+					"",
+					"### Body view:",
+					"",
+					"| short cut | description                   | ",
+					"|-----------|-------------------------------|",
+					"| `p`       | json pretty print             |",
+					"| `q`       | jq query                      |",
+					"| `r`       | reset to the origininal json  |",
+					"",
+					"`jq` must be installed!",
+					"",
+					"__Hint:__ with `cc` can the curl call canceled.",
 				})
 			end,
 		},
@@ -118,6 +150,15 @@ local window_key_mappings = {
 		end,
 		desc = "toggle folding, if activated",
 	},
+	-- ["?"] = {
+	-- 	win_ids = { 1, 2, 3 },
+	-- 	rhs = function()
+	-- 		vim.lsp.util.open_floating_preview({
+	-- 			"# hello",
+	-- 		}, "markdown")
+	-- 	end,
+	-- 	desc = "show help for the current key shortcuts",
+	-- },
 }
 
 function M.new(config)

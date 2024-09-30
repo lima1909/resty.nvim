@@ -253,9 +253,9 @@ function M:write_to_buffer(bufnr)
 	end
 
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-		"## Request:",
-		"",
-		"```http",
+		-- "## Request:",
+		-- "",
+		"```http request",
 		req.method .. " " .. req.url .. query_str,
 	})
 

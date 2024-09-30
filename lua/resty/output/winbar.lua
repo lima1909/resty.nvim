@@ -18,7 +18,7 @@ local function winbar_str(menu_entries, selected_entry, status_def, duration_str
 	local selected = selected_entry or 0
 
 	local winbar = "| "
-	for _, entry in pairs(menu_entries) do
+	for _, entry in ipairs(menu_entries) do
 		winbar = winbar .. menu_entry(entry, entry.id == selected) .. " | "
 	end
 
@@ -32,12 +32,12 @@ end
 
 local function init_winbar_menu_and_windows_keymaps(output)
 	local menu = {}
-	for id, win in pairs(output.windows) do
-		table.insert(menu, { id = id, text = win.name })
+	for _, win in ipairs(output.windows) do
+		table.insert(menu, { id = win.id, text = win.name })
 
 		-- create keymaps for the given window
 		vim.keymap.set("n", win.keymap, function()
-			output:select_window(id)
+			output:select_window(win.id)
 		end, { buffer = output.bufnr, silent = true })
 	end
 

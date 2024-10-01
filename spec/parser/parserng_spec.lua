@@ -470,6 +470,7 @@ describe("parse:", function()
 		local input = {
 			"",
 			"@id = ",
+			"@foo=",
 			"",
 			"GETT http://host:7171",
 			"",
@@ -488,15 +489,22 @@ describe("parse:", function()
 			},
 			{
 				col = 0,
+				end_col = 5,
+				lnum = 2,
+				message = "variable value is missing",
+				severity = 1,
+			},
+			{
+				col = 0,
 				end_col = 4,
-				lnum = 3,
+				lnum = 4,
 				message = "unknown http method",
 				severity = 3,
 			},
 			{
 				col = 0,
 				end_col = 10,
-				lnum = 5,
+				lnum = 6,
 				message = "header value is missing",
 				severity = 1,
 			},

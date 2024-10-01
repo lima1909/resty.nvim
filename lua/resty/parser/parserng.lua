@@ -89,8 +89,10 @@ function M:parse_definition(from, to)
 		M._parse_script,
 	}
 
+	local line
 	for _, parse in ipairs(parsers) do
-		if not parse(self) then
+		line = parse(self, line)
+		if not line then
 			break
 		end
 	end
@@ -116,15 +118,10 @@ local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. REST
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
 
-function M:_parse_request()
-	local line, _ = self:_ignore_lines()
-	if not line then
-		return nil
-	end
-
-	local req = self.r.request
+function M:_parse_request(line)
 	local lnum = self.cursor
 	self.cursor = self.cursor + 1
+	local req = self.r.request
 
 	local ws1, ws2, ws3, rest, q, hv
 	req.method, ws1, req.url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
@@ -181,7 +178,7 @@ local VKEY = "^@([%a][%w%-_%.]*)"
 local VVALUE = "([^%s#]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
 
-function M:_parse_variables()
+function M:_parse_variables(_)
 	for lnum = self.cursor, self.len do
 		local line = self.lines[lnum]
 		local first_char = string.sub(line, 1, 1)
@@ -197,24 +194,23 @@ function M:_parse_variables()
 
 			if not k then
 				self.r:add_diag(ERR, "valid variable key is missing", 0, 1, lnum)
-				return line
 			elseif d == "" then
 				self.r:add_diag(ERR, "variable delimiter is missing", 0, 1 + #k + #ws1, lnum)
-				return line
 			elseif v == "" then
 				self.r:add_diag(ERR, "variable value is missing", 0, 1 + #k + #ws1 + #d + #ws2, lnum)
-				return line
 			elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 				local col = 1 + #k + #ws1 + #d + #ws2 + #v + #ws3
 				self.r:add_diag(INF, "invalid input after the variable: " .. rest, 0, col, lnum)
 			end
 
-			local key = string.match(k, "cfg%.(.*)")
-			if key and key ~= "" then
-				-- configure the request
-				self.r.request[key] = v
-			else
-				self.r.variables[k] = self.r:replace_variable(v, lnum)
+			if k and v ~= "" then
+				local key = string.match(k, "cfg%.(.*)")
+				if key and key ~= "" then
+					-- configure the request
+					self.r.request[key] = v
+				else
+					self.r.variables[k] = self.r:replace_variable(v, lnum)
+				end
 			end
 		end
 	end
@@ -243,14 +239,12 @@ function M:_parse_headers_queries()
 
 			if d == "" then
 				self.r:add_diag(ERR, "header: ':' or query: '=' delimiter is missing", 0, #k + #ws1, lnum)
-				return
 			elseif v == "" then
 				local kind = "header"
 				if d == "=" then
 					kind = "query"
 				end
 				self.r:add_diag(ERR, kind .. " value is missing", 0, #k + #ws1 + #d + #ws2, lnum)
-				return
 			elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 				local col = #k + #ws1 + #d + #ws2 + #v + #ws3
 				local kind = "header"
@@ -260,10 +254,12 @@ function M:_parse_headers_queries()
 				self.r:add_diag(INF, "invalid input after the " .. kind .. ": " .. rest, 0, col, lnum)
 			end
 
-			if d == ":" then
-				self.r.request.headers[k] = self.r:replace_variable(v, lnum)
-			else
-				self.r.request.query[k] = self.r:replace_variable(v, lnum)
+			if v ~= "" then
+				if d == ":" then
+					self.r.request.headers[k] = self.r:replace_variable(v, lnum)
+				else
+					self.r.request.query[k] = self.r:replace_variable(v, lnum)
+				end
 			end
 		end
 	end

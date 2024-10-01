@@ -10,6 +10,10 @@ describe("parse:", function()
 		return p.parse("GET http://host\n" .. input, selected, opts)
 	end
 
+	local function parse_var(input, selected, opts)
+		return p.parse(input .. "\nGET http://host", selected, opts)
+	end
+
 	it("json", function()
 		local s = os.clock()
 		local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
@@ -106,57 +110,57 @@ describe("parse:", function()
 	end)
 
 	it("parse variables", function()
-		local r = p.parse("@key=value")
+		local r = parse_var("@key=value")
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value" }, r.variables)
 
-		r = p.parse("@k = v")
+		r = parse_var("@k = v")
 		assert.is_false(r:has_diag())
 		assert.are.same({ k = "v" }, r.variables)
 
-		r = p.parse("@key=value # comment")
+		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value" }, r.variables)
 
-		r = p.parse("@k_e-y = va_lu-e2")
+		r = parse_var("@k_e-y = va_lu-e2")
 		assert.is_false(r:has_diag())
 		assert.are.same({ ["k_e-y"] = "va_lu-e2" }, r.variables)
 
-		r = p.parse("@key={{$USER}}", 1, { replace_variables = false })
+		r = parse_var("@key={{$USER}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{$USER}}" }, r.variables)
 
-		r = p.parse("@key={{>value}}", 1, { replace_variables = false })
+		r = parse_var("@key={{>value}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{>value}}" }, r.variables)
 
-		r = p.parse("@key={{:value}}", 1, { replace_variables = false })
+		r = parse_var("@key={{:value}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "{{:value}}" }, r.variables)
 
-		r = p.parse("@key=value # comment")
+		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value" }, r.variables)
 
-		r = p.parse("@host = host.org")
+		r = parse_var("@host = host.org")
 		assert.is_false(r:has_diag())
 		assert.are.same({ host = "host.org" }, r.variables)
 
-		r = p.parse("@key=value # comment\n@host = host.org")
+		r = parse_var("@key=value # comment\n@host = host.org")
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value", host = "host.org" }, r.variables)
 
-		r = p.parse("# comment \n@key=value \n	\n@host = host.org")
+		r = parse_var("# comment \n@key=value \n	\n@host = host.org")
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value", host = "host.org" }, r.variables)
 
-		r = p.parse("@key=value\n@host = host.org\nfoo=bar")
+		r = parse_var("@key=value\n@host = host.org\nfoo=bar")
 		assert.are.same({ key = "value", host = "host.org" }, r.variables)
 
 		-- cfg variable
-		r = p.parse("@cfg.insecure = true")
+		r = parse_var("@cfg.insecure = true")
 		assert.is_false(r:has_diag())
-		assert.are.same({ insecure = "true", query = {}, headers = {} }, r.request)
+		assert.are.same({ insecure = "true", method = "GET", url = "http://host", query = {}, headers = {} }, r.request)
 
 		--
 		-- errors
@@ -321,7 +325,7 @@ describe("parse:", function()
   ctx.set("id", json.data.id)
 --%}
 
-	]])
+]])
 		assert.is_false(r:has_diag())
 		assert.are.same('  local json = ctx.json_body()\n  ctx.set("id", json.data.id)', r.request.script)
 
@@ -500,26 +504,18 @@ describe("parse:", function()
 		assert.are.same({ method = "GETT", url = "http://host:7171", query = {}, headers = {} }, r.request)
 	end)
 
-	-- it("parse ng - error: missing URL", function()
-	-- 	-- assert.Error.matches(function()
-	-- 	-- 	local input = {
-	-- 	-- 		"",
-	-- 	-- 		"@id = 7",
-	-- 	-- 		"",
-	-- 	-- 	}
-	-- 	--
-	-- 	-- 	p.parse(input):replace_variables()
-	-- 	-- end, "no request URL found between row: ")
-	--
-	-- 	local input = {
-	-- 		"",
-	-- 		"@id = 7",
-	-- 		"",
-	-- 	}
-	--
-	-- 	local r = p.parse(input)
-	-- 	local ok, err = pcall(result.replace_variables, r)
-	-- 	assert.is_false(ok)
-	-- 	-- assert.are.same("no request URL found between row: ", err)
-	-- end)
+	it("parse ng - error: missing URL", function()
+		local input = {
+			"",
+			"@id = 7",
+			"",
+		}
+
+		local r = p.parse(input)
+		assert.is_true(r:has_diag())
+		local d = r.diagnostics[1]
+		assert.are.same("no request URL found", d.message)
+		assert.are.same(0, d.lnum)
+		assert.are.same(2, d.end_lnum)
+	end)
 end)

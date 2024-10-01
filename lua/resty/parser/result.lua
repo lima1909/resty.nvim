@@ -18,6 +18,10 @@ function M:has_diag()
 end
 
 function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
+	if end_lnum and end_lnum > 1 then
+		end_lnum = end_lnum - 1
+	end
+
 	table.insert(self.diagnostics, {
 		col = col,
 		end_col = end_col,

@@ -91,8 +91,12 @@ function M:parse_definition(from, to)
 
 	for _, parse in ipairs(parsers) do
 		if not parse(self) then
-			return self.parsed
+			break
 		end
+	end
+
+	if not self.r.request.url or self.r.request.url == "" then
+		self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
 	end
 end
 

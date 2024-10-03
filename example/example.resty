@@ -1,0 +1,42 @@
+# define global variables (valid for every request) 
+@user={{$USER}}  #  '$' mean: environment variable and save the value in the variable: 'user'
+
+# starts a new request definition with a name (starts with '#'), so you can use it as favorite
+### #name of this request
+@host = myhost # define a local variable (only valid for this request)
+@port = 4455
+
+GET http://{{host}}:{{port}}/users HTTP/1.1 # GET request with URL and (optional) HTTP-Version
+
+# headers
+Accept: application/json 
+Content-Type: text/html
+example: {{my-var}} # header with a replacement
+
+# query parameter
+id = {{id}} # replacement for 'id'
+count=1   # 'static' query parameter
+
+# another request definition without name (no favorite)
+###
+# URL contains the IP address and port
+GET http://127.0.0.1.1:8080
+
+### 
+# URL with query parameter
+POST  https://my-host?key=val&id={{id}} 
+
+# a json body
+{
+  "name" : "blub",
+  "yes": true,
+  "number": 4,
+  "foo": null
+}
+
+# a lua script body
+--{%
+  local h = 5
+--%}
+
+

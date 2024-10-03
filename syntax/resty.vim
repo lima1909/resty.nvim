@@ -26,11 +26,13 @@ highlight link restySection      Conditional
 " --- define variable with replacement ---
 syntax match restyReplace /\v\{\{.+\}\}/               contained 
 syntax match restyVariableChar "^@"                    nextGroup=restyVariable 
+syntax match restyVariableCharCfg "^@cfg."             nextGroup=restyVariable 
 syntax match restyVariable /\v([A-Za-z-])+\s*\=\s*.+/  contains=restyReplace,restyComment 
 
-highlight link restyReplace      Function 
-highlight link restyVariableChar Function
-highlight link restyVariable     Tag 
+highlight link restyReplace         Function 
+highlight link restyVariableChar    Function
+highlight link restyVariableCharCfg Function
+highlight link restyVariable        Tag 
 
 
 " --- define the request: method URL HTTP-Version ---

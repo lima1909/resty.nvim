@@ -1,5 +1,6 @@
 # define global variables (valid for every request) 
-@user={{$USER}}  #  '$' mean: environment variable and save the value in the variable: 'user'
+@user={{$USER}}      #  '$' mean: environment variable and save the value in the variable: 'user'
+@cfg.insecure = true # configure the curl command with the option 'insecure=true'
 
 # starts a new request definition with a name (starts with '#'), so you can use it as favorite
 ### #name of this request

@@ -316,6 +316,7 @@ function M:_parse_json()
 			json_end = self.cursor
 		end
 
+		self.r.meta.body = { starts = json_start, ends = json_end }
 		self.r.request.body = table.concat(self.lines, "", json_start, json_end)
 	end
 
@@ -339,6 +340,7 @@ function M:_parse_script()
 
 			if string.match(line, "^--%%}%s*$") then
 				-- ignore this line
+				self.r.meta.script = { starts = start, ends = i - 1 }
 				self.r.request.script = table.concat(self.lines, "\n", start, i - 1)
 				return line
 			end

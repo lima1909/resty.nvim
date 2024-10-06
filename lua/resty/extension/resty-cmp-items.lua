@@ -53,6 +53,40 @@ local M = {
 			cmp = { kind_hl_group = "Function", kind_text = "resty" },
 		},
 	},
+	headers = {
+		{
+			label = "accept: */*",
+			insertText = "Accept: */*",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+		{
+			label = "accept: application/json",
+			insertText = "Accept: application/json",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+		{
+			label = "accept: text/html",
+			insertText = "Accept: text/html",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+
+		{
+			label = "accept-charset: utf-8",
+			insertText = "Accept-Charset: utf-8",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+
+		{
+			label = "authorization: basic",
+			insertText = "Authorization: Basic ",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+		{
+			label = "authorization: Bearer",
+			insertText = "Authorization: Bearer ",
+			cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		},
+	},
 }
 
 return M

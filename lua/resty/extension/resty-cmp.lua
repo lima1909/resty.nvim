@@ -42,6 +42,18 @@ M.is_valid_variable_row = function(meta, lines, row)
 	return false
 end
 
+M.is_valid_headers_row = function(meta, row)
+	if not meta.request or meta.request >= row then
+		return false
+	elseif meta.body and row >= meta.body.starts then
+		return false
+	elseif meta.script and meta.script.starts >= row then
+		return false
+	end
+
+	return true
+end
+
 function M:complete(r, callback)
 	local line = r.context.cursor_before_line
 	local row = r.context.cursor.row
@@ -58,6 +70,8 @@ function M:complete(r, callback)
 			end
 		end
 		callback(entries)
+	elseif M.is_valid_headers_row(parsed.meta, row) then
+		callback(items.headers)
 	end
 end
 

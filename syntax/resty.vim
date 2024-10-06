@@ -15,29 +15,41 @@ endif
 " Error Define Operator Label Character 
 
 
-" --- define basic syntax comment and section ---
-syntax match restyComment "#.*$"                                      
-syntax match restySection "^###.*$"                                   
-
-highlight link restyComment      Comment
-highlight link restySection      Constant " Conditional
-
-
 " --- define variable with replacement ---
-syntax match restyReplace /\v\{\{.+\}\}/               contained 
 syntax match restyVariableChar "^@"                    nextGroup=restyVariable 
 syntax match restyVariableCharCfg "^@cfg."             nextGroup=restyVariable 
-syntax match restyVariable /\v([A-Za-z-_])+\s*\=\s*.+/  contains=restyReplace,restyComment 
+syntax match restyVariable /\v([A-Za-z-_])+\s*\=\s*.+/ contains=restyReplace,restyComment 
 
-highlight link restyReplace         Function 
 highlight link restyVariableChar    Function
 highlight link restyVariableCharCfg Function
-highlight link restyVariable        Tag 
+highlight link restyVariable        Delimiter " Tag 
+
+
+" --- define basic syntax comment and section ---
+syntax match restyReplace /\v\{\{.+\}\}/                contained 
+syntax match restyComment "#.*$" 
+syntax match restySection "^###.*$"                                   
+syntax match restyValue /\v\s*.+/                       contained contains=restyReplace,restyComment 
+syntax match restyKey /\v^([A-Za-z-_])+/                contained 
+syntax match restyColon /\v\s*:\s*/                     contained      
+syntax match restyEqual /\v\s*\=\s*/                    contained  
+
+highlight link restyReplace      Function 
+highlight link restyComment      Comment
+highlight link restySection      Constant " Conditional
+highlight link restyColon        Function " Delimiter
+highlight      restyEqual        guifg=#F5E0DC gui=NONE
+highlight link restyKey          Delimiter
+highlight link restyValue        Delimiter
+
+" --- headers and query ---
+syntax region restyHeader start=/\v^([A-Za-z-_])+\s*:\s*.+/  end=/\n/   contains=restyKey,restyColon,restyValue
+syntax region restyQuery  start=/\v^([A-Za-z-_])+\s*\=\s*.+/ end=/\n/   contains=restyKey,restyEqual,restyValue
 
 
 " --- define the request: method URL HTTP-Version ---
 syntax region restyRequest 
-    \ start=/^\(GET\|POST\|PUT\|DELETE\|HEAD\|OPTIONS\|PATCH|TRACE\)/ 
+    \ start=/^\(GET\|POST\|PUT\|DELETE\|HEAD\|OPTIONS\|PATCH|TRACE\)\s\s*h/ 
     \ end=/\n/ 
     \ contains=restyUrl,restyVersion,restyComment 
 
@@ -52,15 +64,11 @@ highlight link restyVersion   Tag
 highlight  restyUrl       guifg=#F5E0DC gui=italic ",underline
 
 
+" syntax match restyHeader /\v^([A-Za-z-])+:\s*.+/       contains=restyReplace,restyComment 
+" syntax match restyQuery /\v^([A-Za-z-])+\s*\=\s*.+/    contains=restyReplace,restyComment
 
-
-
-" --- headers and query ---
-syntax match restyHeader /\v^([A-Za-z-])+:\s*.+/       contains=restyReplace,restyComment 
-syntax match restyQuery /\v^([A-Za-z-])+\s*\=\s*.+/    contains=restyReplace,restyComment
-
-highlight link restyHeader       Delimiter 
-highlight link restyQuery        Tag
+" highlight link restyHeader       Delimiter 
+" highlight link restyQuery        Tag
 
 
 " syn include @JSON syntax/json.vim

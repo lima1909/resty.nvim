@@ -4,12 +4,12 @@ local M = { global_variables = {} }
 
 M.new = function(replace_variables)
 	return setmetatable({
-		-- ast = { request = {} },
 		request = { query = {}, headers = {} },
 		variables = {},
 		replacements = {},
 		diagnostics = {},
-		replace_variables = replace_variables,
+		meta = { area = {} },
+		cfg = { replace_variables = replace_variables },
 	}, { __index = M })
 end
 
@@ -35,7 +35,7 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 end
 
 function M:replace_variable(line, lnum)
-	if self.replace_variables == false then
+	if self.cfg.replace_variables == false then
 		return line
 	end
 

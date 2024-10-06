@@ -20,14 +20,14 @@ syntax match restyComment "#.*$"
 syntax match restySection "^###.*$"                                   
 
 highlight link restyComment      Comment
-highlight link restySection      Conditional
+highlight link restySection      Constant " Conditional
 
 
 " --- define variable with replacement ---
 syntax match restyReplace /\v\{\{.+\}\}/               contained 
 syntax match restyVariableChar "^@"                    nextGroup=restyVariable 
 syntax match restyVariableCharCfg "^@cfg."             nextGroup=restyVariable 
-syntax match restyVariable /\v([A-Za-z-])+\s*\=\s*.+/  contains=restyReplace,restyComment 
+syntax match restyVariable /\v([A-Za-z-_])+\s*\=\s*.+/  contains=restyReplace,restyComment 
 
 highlight link restyReplace         Function 
 highlight link restyVariableChar    Function

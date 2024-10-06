@@ -1,70 +1,64 @@
 -- https://www.jonashietala.se/blog/2024/05/26/autocomplete_with_nvim-cmp/
+local parser = require("resty.parser.parserng")
+local items = require("resty.extension.resty-cmp-items")
 
-local cmp = require("cmp")
---
--- WARN: register: in after/plugin/resty.lua the completion
---
 local M = {}
 
 M.new = function()
-	-- print("-- resty-cmp.new --")
 	return setmetatable({}, { __index = M })
 end
 
+M.get_trigger_characters = function()
+	-- c is the trigger for 'cfg'
+	return { "c" }
+end
+
+-- function M:get_keyword_pattern()
+-- 	return [[[@A-Za-z]\+]]
+-- end
+
+M.is_valid_variable_row = function(meta, lines, row)
+	local req_ends = meta.request or meta.area.ends
+	-- variables are always between start and request
+	if row >= meta.area.starts and row < req_ends then
+		return true
+	end
+
+	-- or global variables, possible from row 1 to not variable
+	for i, line in ipairs(lines) do
+		local c = string.sub(line, 1, 1)
+		if i > row then
+			return false
+		elseif c == "" or c == " " or c == "#" then
+			-- ignore
+		elseif i ~= row and c ~= "@" then
+			return false
+		elseif i == row and c == "@" then
+			-- current line
+			return true
+		end
+	end
+
+	return false
+end
+
 function M:complete(r, callback)
-	local input = r.context.cursor_before_line
-	print("-- " .. input)
-	-- print(vim.inspect(r))
+	local line = r.context.cursor_before_line
+	local row = r.context.cursor.row
 
-	local entries = {
-		{ word = "ab", label = "abc", menu = "[Resty]", cmp = { kind_hl_group = "@keyword.sql", kind_text = "sql" } },
-		{ label = "axyz", documentation = { kind = "markdown", value = [[
-# my help
-<hr>
-_text_ 
-* axyz
-		]] } },
-		{
-			label = "aoo",
-			insertText = "ooa",
-			kind = cmp.lsp.CompletionItemKind.Value,
-			menu = "[Resty]",
-			detail = "Details ...",
-			documentation = {
-				kind = "plaintext",
-				value = [[
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	local parsed = parser.parse_area(lines, row, { replace_variables = false })
 
-*MY-PLUGIN*                 Plugin documentation for My Plugin
-
-INTRODUCTION~
-
-This is a *brief introduction* to the plugin.
-
-- Item 1
-- Item 2
-
-USAGE~
-
-    :MyCommand
-
-Example:
-     :lua print("Hello, World!")
-
-Runs the main command of the plugin.
-
-OPTIONS~
-
-    'myoption'
-        Description of the option.
-
-See also |other-plugin| for related functionality.
-
-				]],
-			},
-		},
-	}
-
-	callback(entries)
+	if string.sub(line, 1, 2) == "@c" and M.is_valid_variable_row(parsed.meta, lines, row) then
+		local entries = {}
+		for _, item in ipairs(items.var_cfg) do
+			local key = string.sub(item.label, 6)
+			if not parsed.request[key] then
+				table.insert(entries, item)
+			end
+		end
+		callback(entries)
+	end
 end
 
 return M

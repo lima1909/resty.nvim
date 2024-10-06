@@ -4,35 +4,6 @@ local result = require("resty.parser.result")
 local INF = vim.diagnostic.severity.INFO
 local ERR = vim.diagnostic.severity.ERROR
 
-local function find_request(lines, selected)
-	local len = #lines
-
-	local start_req = 1
-	local end_req = len
-
-	-- start
-	if selected ~= 1 then
-		for i = selected, 1, -1 do
-			if string.sub(lines[i], 1, 3) == "###" then
-				start_req = i + 1
-				break
-			end
-		end
-	end
-
-	-- end
-	if selected ~= len then
-		for i = selected, len do
-			if string.sub(lines[i], 1, 3) == "###" and i ~= selected then
-				end_req = i - 1
-				break
-			end
-		end
-	end
-
-	return start_req, end_req
-end
-
 local M = {}
 
 M.set_global_variables = function(gvars)
@@ -43,38 +14,80 @@ M.default_opts = {
 	replace_variables = true,
 }
 
-M.parse = function(input, selected, opts)
-	local start = os.clock()
+M.new = function(input, selected, opts)
+	local lines = util.input_to_lines(input)
 
 	local parser = setmetatable({
-		lines = util.input_to_lines(input),
+		lines = lines,
+		len = #lines,
 		opts = vim.tbl_deep_extend("force", M.default_opts, opts or {}),
 	}, { __index = M })
 
-	parser.r = result.new(parser.opts.replace_variables)
-
 	if not selected then
 		selected = 1
-	elseif selected > #parser.lines then
-		selected = #parser.lines
+	elseif selected > parser.len then
+		selected = parser.len
 	elseif selected < 0 then
 		selected = 1
 	end
+	-- NOTE: maybe better on result?
+	parser.selected = selected
 
-	-- find the selected request
-	local s, e = find_request(parser.lines, selected)
+	parser.r = result.new(parser.opts.replace_variables)
 
-	-- start > 1, means, there are global variables
-	if s > 1 then
-		parser.cursor = 1
-		parser.len = s - 1
-		parser:_parse_variables()
+	return parser
+end
+
+function M:find_area()
+	self.r.meta.area.starts = 1
+	self.r.meta.area.ends = self.len
+
+	-- start
+	if self.selected ~= 1 then
+		for i = self.selected, 1, -1 do
+			if string.sub(self.lines[i], 1, 3) == "###" then
+				self.r.meta.area.starts = i + 1
+				break
+			end
+		end
 	end
 
-	parser:parse_definition(s, e)
+	-- end
+	if self.selected ~= self.len then
+		for i = self.selected, self.len do
+			if string.sub(self.lines[i], 1, 3) == "###" and i ~= self.selected then
+				self.r.meta.area.ends = i - 1
+				break
+			end
+		end
+	end
+
+	return self.r.meta.area.starts, self.r.meta.area.ends
+end
+
+M.parse = function(input, selected, opts)
+	local start = os.clock()
+
+	local parser = M.new(input, selected, opts)
+	parser:find_area()
+
+	-- start > 1, means, there are global variables
+	if parser.r.meta.area.starts > 1 then
+		parser.cursor = 1
+		parser.len = parser.r.meta.area.starts - 1
+		parser:_parse_variables(nil, true)
+	end
+
+	parser:parse_definition(parser.r.meta.area.starts, parser.r.meta.area.ends)
 
 	parser.r.duration = os.clock() - start
 	return parser.r
+end
+
+-- parse only the fined area (e.g. between two ###)
+M.parse_area = function(input, selected, opts)
+	local parser = M.new(input, selected, opts)
+	return parser:parse_definition(parser:find_area()).r
 end
 
 function M:parse_definition(from, to)
@@ -100,6 +113,8 @@ function M:parse_definition(from, to)
 	if not self.r.request.url or self.r.request.url == "" then
 		self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
 	end
+
+	return self
 end
 
 local WS = "([%s]*)"
@@ -133,7 +148,11 @@ function M:_parse_request(line)
 		self.r:add_diag(ERR, "white space after http method is missing", 0, #req.method, lnum)
 		return line
 	elseif req.url == "" then
-		self.r:add_diag(ERR, "url is missing", 0, #req.method + #ws1, lnum)
+		local msg = "url is missing"
+		if methods[req.method] ~= "" then
+			msg = "unknown http method and " .. msg
+		end
+		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url + #q, lnum)
 		return line
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		self.r:add_diag(
@@ -150,6 +169,7 @@ function M:_parse_request(line)
 	end
 
 	req.url = self.r:replace_variable(req.url, lnum)
+	self.r.meta.request = lnum
 
 	-- separate url and query, if exist
 	if q ~= "" then
@@ -178,12 +198,16 @@ local VKEY = "^@([%a][%w%-_%.]*)"
 local VVALUE = "([^%s#]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
 
-function M:_parse_variables(_)
+function M:_parse_variables(_, is_gloabel)
 	for lnum = self.cursor, self.len do
 		local line = self.lines[lnum]
 		local first_char = string.sub(line, 1, 1)
 
-		if first_char == "" or first_char == "#" or line:match("^%s") then
+		if is_gloabel and string.sub(line, 1, 3) == "###" then
+			-- stop searching for global variables if you find a new request
+			self.cursor = lnum
+			return line
+		elseif first_char == "" or first_char == "#" or line:match("^%s") then
 			-- ignore comment and blank line
 		elseif first_char ~= "@" then
 			self.cursor = lnum
@@ -204,9 +228,9 @@ function M:_parse_variables(_)
 			end
 
 			if k and v ~= "" then
-				local key = string.match(k, "cfg%.(.*)")
-				if key and key ~= "" then
-					-- configure the request
+				local key = string.sub(k, 1, 4)
+				if key == "cfg." and #k > 4 then
+					key = string.sub(k, 5)
 					self.r.request[key] = v
 				else
 					self.r.variables[k] = self.r:replace_variable(v, lnum)

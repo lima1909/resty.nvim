@@ -466,6 +466,41 @@ describe("parse:", function()
 		print("time parse request: " .. format.duration(r.duration))
 	end)
 
+	it("parse ng without request", function()
+		local input = [[
+@host={{$HOST}}
+
+###
+@myhost={{$HOST}}
+@port=2112
+
+GET http://myhost
+application: json
+id = 5
+
+###
+id = 3
+
+]]
+
+		local r = p.parse(input, 12, { replace_variables = false })
+
+		assert.is_true(r:has_diag())
+		assert.are.same({
+			{ col = 0, end_col = 4, lnum = 11, message = "unknown http method and url is missing", severity = 1 },
+			{ col = 0, end_col = 0, end_lnum = 13, lnum = 11, message = "no request URL found", severity = 1 },
+		}, r.diagnostics)
+		assert.are.same({ host = "{{$HOST}}" }, r.variables)
+		assert.are.same({
+			method = "id",
+			url = "",
+			headers = {},
+			query = {},
+		}, r.request)
+		assert.are.same({}, r.replacements)
+		assert.are.same({ ["area"] = { starts = 12, ends = 14 } }, r.meta)
+	end)
+
 	it("parse ng - error", function()
 		local input = {
 			"",

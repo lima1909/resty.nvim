@@ -8,14 +8,15 @@ M.new = function()
 	return setmetatable({}, { __index = M })
 end
 
-M.get_trigger_characters = function()
-	-- c is the trigger for 'cfg'
-	return { "c" }
-end
-
--- function M:get_keyword_pattern()
--- 	return [[[@A-Za-z]\+]]
+-- M.get_trigger_characters = function()
+-- 	-- c is the trigger for 'cfg'
+-- 	return { "c" }
 -- end
+
+-- matches any keyword character (alphanumeric or underscore).
+function M:get_keyword_pattern()
+	return [[\k\+]]
+end
 
 M.is_valid_variable_row = function(meta, lines, row)
 	local req_ends = meta.request or meta.area.ends
@@ -69,9 +70,30 @@ function M:complete(r, callback)
 				table.insert(entries, item)
 			end
 		end
+
 		callback(entries)
-	elseif M.is_valid_headers_row(parsed.meta, row) then
-		callback(items.headers)
+	-- start on the first column, no spaces
+	elseif line == "" or string.match(line, "^([%a]+)") and M.is_valid_headers_row(parsed.meta, row) then
+		-- callback(items.headers)
+		local entries = {}
+		for _, header in ipairs(items.headers) do
+			local k, v = string.match(header.insertText, "([^:]*)[:][%s]*(.*)")
+			k = vim.trim(k)
+			v = vim.trim(v)
+			-- print(k .. " " .. v)
+
+			local value = parsed.request.headers[k]
+			if value then
+				value = vim.trim(value)
+				if value ~= v then
+					table.insert(entries, header)
+				end
+			else
+				table.insert(entries, header)
+			end
+		end
+
+		callback(entries)
 	end
 end
 

@@ -1,5 +1,7 @@
 # define global variables (valid for every request) 
 @user={{$USER}}      #  '$' mean: environment variable and save the value in the variable: 'user'
+@id = 42
+
 @cfg.insecure = true # configure the curl command with the option 'insecure=true'
 
 # starts a new request definition with a name (starts with '#'), so you can use it as favorite
@@ -24,6 +26,8 @@ count=1   # 'static' query parameter
 GET http://127.0.0.1.1:8080
 
 ### 
+@id=7
+
 # URL with query parameter
 POST  https://my-host?key=val&id={{id}} 
 

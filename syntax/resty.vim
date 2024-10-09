@@ -18,10 +18,10 @@ endif
 
 
 " --- define basic syntax comment and section ---
-syntax match restyComment "#.*$" 
-syntax match restySection "^###"                        contained              
-syntax match restyFavorite /\v\s#.*/                    contained              
-syntax match restyReplace /\v\{\{.+\}\}/                contained 
+syntax match   restyComment "#.*$" 
+syntax match   restySection "^###"                      contained              
+syntax match   restyFavorite /\v\s#.*/                  contained              
+syntax region  restyReplace start=/\v\{\{/ end=/\v\}\}/ contained
 
 highlight link restyComment      Comment
 highlight link restySection      Constant 

@@ -41,8 +41,9 @@ vim.api.nvim_create_autocmd("CursorMoved", {
 			else
 				local value = parsed.variables[key]
 				if value then
+					local r = parsed.meta.variables[key]
 					vim.api.nvim_buf_set_extmark(0, hint_ns, row - 1, col, {
-						virt_text = { { "'" .. key .. "' = " .. value, "Hint" } },
+						virt_text = { { "'" .. key .. "' = " .. value .. " (from row: " .. r .. ")", "Hint" } },
 					})
 				else
 					vim.api.nvim_buf_set_extmark(0, hint_ns, row - 1, col, {

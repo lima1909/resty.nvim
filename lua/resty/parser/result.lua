@@ -8,7 +8,7 @@ M.new = function(replace_variables)
 		variables = {},
 		replacements = {},
 		diagnostics = {},
-		meta = { area = {} },
+		meta = { area = {}, variables = {} },
 		cfg = { replace_variables = replace_variables },
 	}, { __index = M })
 end

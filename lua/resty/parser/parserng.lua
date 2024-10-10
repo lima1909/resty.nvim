@@ -234,6 +234,7 @@ function M:_parse_variables(_, is_gloabel)
 					self.r.request[key] = v
 				else
 					self.r.variables[k] = self.r:replace_variable(v, lnum)
+					self.r.meta.variables[k] = lnum
 				end
 			end
 		end

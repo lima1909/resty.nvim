@@ -59,64 +59,64 @@ M.headers = {
 	{
 		label = "accept: */*",
 		insertText = "Accept: */*",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "accept: application/json",
 		insertText = "Accept: application/json",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "accept: text/html",
 		insertText = "Accept: text/html",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 
 	{
 		label = "accept-charset: utf-8",
 		insertText = "Accept-Charset: utf-8",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 
 	{
 		label = "authorization: basic",
 		insertText = "Authorization: Basic ",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "authorization: Bearer",
 		insertText = "Authorization: Bearer ",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "content-type: text/plain",
 		insertText = "Content-Type: text/plain",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "content-type: application/json ",
 		insertText = "Content-Type: application/json",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "cache-control: no-cache",
 		insertText = "Cache-Control: no-cache",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "connection: keep-alive",
 		insertText = "Connection: keep-alive",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "content-length: ",
 		insertText = "Content-Length: ",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 	{
 		label = "accept-encoding: gzip",
 		insertText = "Accept-Encoding: gzip",
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 }
 

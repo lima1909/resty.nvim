@@ -75,16 +75,20 @@ function M:complete(r, callback)
 	-- start on the first column, no spaces
 	elseif line == "" or string.match(line, "^([%a]+)") and M.is_valid_headers_row(parsed.meta, row) then
 		local entries = {}
-		-- for _, header in ipairs(items.headers) do
-		-- 	local k, v = string.match(header.insertText, "([^:]*)[:](.*)")
-		-- 	local value = parsed.request.headers[k]
-		-- 	if not value or v ~= value then
-		-- 		print("--" .. k .. " " .. tostring(v) .. " - " .. value)
-		-- 		table.insert(entries, header)
-		-- 	end
-		-- end
+		for _, header in ipairs(items.headers) do
+			local found = false
+			for _, v in ipairs(parsed.request.headers) do
+				if header.insertText == v then
+					found = true
+					break
+				end
+			end
 
-		print(vim.inspect(parsed.request.headers))
+			if found == false then
+				table.insert(entries, header)
+			end
+		end
+
 		callback(entries)
 	end
 end

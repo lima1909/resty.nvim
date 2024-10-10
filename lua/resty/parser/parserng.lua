@@ -281,7 +281,8 @@ function M:_parse_headers_queries()
 
 			if v ~= "" then
 				if d == ":" then
-					self.r.request.headers[k] = self.r:replace_variable(v, lnum)
+					v = self.r:replace_variable(v, lnum)
+					table.insert(self.r.request.headers, table.concat({ k, ws1, d, ws2, v }))
 				else
 					self.r.request.query[k] = self.r:replace_variable(v, lnum)
 				end

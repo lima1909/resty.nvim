@@ -191,27 +191,27 @@ describe("parse:", function()
 	it("parse header", function()
 		local r = parse("accept: application/json")
 		assert.is_false(r:has_diag())
-		assert.are.same({ accept = "application/json" }, r.request.headers)
+		assert.are.same({ "accept: application/json" }, r.request.headers)
 
 		r = parse("Content-type: application/json ; charset=UTF-8")
 		assert.is_false(r:has_diag())
-		assert.are.same({ ["Content-type"] = "application/json ; charset=UTF-8" }, r.request.headers)
+		assert.are.same({ "Content-type: application/json ; charset=UTF-8" }, r.request.headers)
 
 		r = parse("accept: {{var}}", 1, { replace_variables = false })
 		assert.is_false(r:has_diag())
-		assert.are.same({ accept = "{{var}}" }, r.request.headers)
+		assert.are.same({ "accept: {{var}}" }, r.request.headers)
 
 		r = parse("accept: application/json # my comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ accept = "application/json " }, r.request.headers)
+		assert.are.same({ "accept: application/json " }, r.request.headers)
 
 		r = parse("f_o-o: a=b")
 		assert.is_false(r:has_diag())
-		assert.are.same({ ["f_o-o"] = "a=b" }, r.request.headers)
+		assert.are.same({ "f_o-o: a=b" }, r.request.headers)
 
 		r = parse("foo: a; b")
 		assert.is_false(r:has_diag())
-		assert.are.same({ foo = "a; b" }, r.request.headers)
+		assert.are.same({ "foo: a; b" }, r.request.headers)
 
 		-- error or hints
 		r = parse("ID  ")
@@ -376,8 +376,8 @@ describe("parse:", function()
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
-				accept = "application/json ",
-				foo = "=bar; blub",
+				"accept: application/json ",
+				"foo: =bar; blub",
 			},
 			method = "GET",
 			query = {
@@ -419,6 +419,7 @@ describe("parse:", function()
 			"GET http://{{host}}:7171 # comment ",
 			"",
 			"accept: application/json # comment",
+			"accept-charset: utf-8",
 			"foo: =bar; blub",
 			"",
 			"baz = {{baz}}# comment",
@@ -441,8 +442,9 @@ describe("parse:", function()
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
-				accept = "application/json ",
-				foo = "=bar; blub",
+				"accept: application/json ",
+				"accept-charset: utf-8",
+				"foo: =bar; blub",
 			},
 			method = "GET",
 			query = {

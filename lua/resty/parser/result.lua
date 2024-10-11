@@ -34,7 +34,7 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 	return self
 end
 
-function M:replace_variable_key(key)
+function M:replace_variable_by_key(key)
 	local value
 	local symbol = key:sub(1, 1)
 
@@ -72,7 +72,7 @@ function M:replace_variable(line, lnum)
 	end
 
 	return string.gsub(line, "{{(.-)}}", function(key)
-		local value = self:replace_variable_key(key)
+		local value = self:replace_variable_by_key(key)
 		if not value then
 			self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
 		end

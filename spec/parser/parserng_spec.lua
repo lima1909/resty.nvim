@@ -115,7 +115,6 @@ describe("parse:", function()
 		assert.are.same({ key = "value" }, r.variables)
 
 		r = parse_var('@echo = {{>echo -n "1234"}}')
-		print(vim.inspect(r.diagnostics))
 		assert.is_false(r:has_diag())
 		assert.are.same({ echo = "1234" }, r.variables)
 
@@ -218,6 +217,10 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ "foo: a; b" }, r.request.headers)
 
+		r = parse("foo: {{> echo -n 'a; b'}}")
+		assert.is_false(r:has_diag())
+		assert.are.same({ "foo: a; b" }, r.request.headers)
+
 		-- error or hints
 		r = parse("ID  ")
 		assert.is_true(r:has_diag())
@@ -268,6 +271,10 @@ describe("parse:", function()
 		r = parse("id = 42 # comment")
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "42 " }, r.request.query)
+
+		r = parse("id = {{> echo -n '42'}}")
+		assert.is_false(r:has_diag())
+		assert.are.same({ id = "42" }, r.request.query)
 
 		-- error or hints
 		r = parse("id = ")

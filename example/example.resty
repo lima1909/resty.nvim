@@ -4,6 +4,11 @@
 
 @cfg.insecure = true # configure the curl command with the option 'insecure=true'
 
+### #give a star for this great project ;-)
+PUT https://api.github.com/user/starred/lima1909/resty.nvim
+Authorization: Bearer {{my-token}}
+Accept: application/vnd.github+json
+
 # starts a new request definition with a name (starts with '#'), so you can use it as favorite
 ### #name of this request
 @host = myhost # define a local variable (only valid for this request)

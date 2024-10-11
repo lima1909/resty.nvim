@@ -1,3 +1,8 @@
+### #give a star for this great project ;-)
+PUT https://api.github.com/user/starred/lima1909/resty.nvim
+Authorization: Bearer {{my-token}}
+Accept: application/vnd.github+json
+
 ### #Users ID=2
 GET https://reqres.in/api/users/2
 

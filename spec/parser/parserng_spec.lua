@@ -114,13 +114,18 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ key = "value" }, r.variables)
 
+		r = parse_var('@echo = {{>echo -n "1234"}}')
+		print(vim.inspect(r.diagnostics))
+		assert.is_false(r:has_diag())
+		assert.are.same({ echo = "1234" }, r.variables)
+
 		r = parse_var("@k = v")
 		assert.is_false(r:has_diag())
 		assert.are.same({ k = "v" }, r.variables)
 
 		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value" }, r.variables)
+		assert.are.same({ key = "value " }, r.variables)
 
 		r = parse_var("@k_e-y = va_lu-e2")
 		assert.is_false(r:has_diag())
@@ -140,7 +145,7 @@ describe("parse:", function()
 
 		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value" }, r.variables)
+		assert.are.same({ key = "value " }, r.variables)
 
 		r = parse_var("@host = host.org")
 		assert.is_false(r:has_diag())
@@ -148,11 +153,11 @@ describe("parse:", function()
 
 		r = parse_var("@key=value # comment\n@host = host.org")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value", host = "host.org" }, r.variables)
+		assert.are.same({ key = "value ", host = "host.org" }, r.variables)
 
 		r = parse_var("# comment \n@key=value \n	\n@host = host.org")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value", host = "host.org" }, r.variables)
+		assert.are.same({ key = "value ", host = "host.org" }, r.variables)
 
 		r = parse_var("@key=value\n@host = host.org\nfoo=bar")
 		assert.are.same({ key = "value", host = "host.org" }, r.variables)

@@ -34,39 +34,47 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 	return self
 end
 
+function M:replace_variable_key(key)
+	local value
+	local symbol = key:sub(1, 1)
+
+	-- environment variable
+	if symbol == "$" then
+		value = os.getenv(key:sub(2):upper())
+		table.insert(self.replacements, { from = key, to = value, type = "env" })
+	-- commmand
+	elseif symbol == ">" then
+		value = exec.cmd(key:sub(2))
+		table.insert(self.replacements, { from = key, to = value, type = "cmd" })
+	-- prompt
+	elseif symbol == ":" then
+		value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
+		table.insert(self.replacements, { from = key, to = value, type = "prompt" })
+	-- variable
+	else
+		value = self.variables[key]
+		if value then
+			table.insert(self.replacements, { from = key, to = value, type = "var" })
+		else
+			value = M.global_variables[key]
+			if value then
+				table.insert(self.replacements, { from = key, to = value, type = "global_var" })
+			end
+		end
+	end
+
+	return value
+end
+
 function M:replace_variable(line, lnum)
 	if self.cfg.replace_variables == false then
 		return line
 	end
 
 	return string.gsub(line, "{{(.-)}}", function(key)
-		local value
-		local symbol = key:sub(1, 1)
-
-		-- environment variable
-		if symbol == "$" then
-			value = os.getenv(key:sub(2):upper())
-			table.insert(self.replacements, { from = key, to = value, type = "env" })
-		-- commmand
-		elseif symbol == ">" then
-			value = exec.cmd(key:sub(2))
-			table.insert(self.replacements, { from = key, to = value, type = "cmd" })
-		-- prompt
-		elseif symbol == ":" then
-			value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
-			table.insert(self.replacements, { from = key, to = value, type = "prompt" })
-		-- variable
-		else
-			value = self.variables[key]
-			if value then
-				table.insert(self.replacements, { from = key, to = value, type = "var" })
-			else
-				value = M.global_variables[key]
-				if not value then
-					self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
-				end
-				table.insert(self.replacements, { from = key, to = value, type = "global_var" })
-			end
+		local value = self:replace_variable_key(key)
+		if not value then
+			self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
 		end
 
 		return value

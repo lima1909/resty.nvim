@@ -195,7 +195,7 @@ end
 -- variables
 -- ---------
 local VKEY = "^@([%a][%w%-_%.]*)"
-local VVALUE = "([^%s#]*)"
+local VVALUE = "([^#]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
 
 function M:_parse_variables(_, is_gloabel)

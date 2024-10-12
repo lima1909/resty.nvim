@@ -480,6 +480,33 @@ describe("parse:", function()
 		print("time parse request: " .. format.duration(r.duration))
 	end)
 
+	it("parse ng with check json body", function()
+		local input = {
+			"",
+			"@cfg.check_json_body = true",
+			"",
+			"POST http://host:7171 ",
+			"",
+			"{ ",
+			'"name" "me"',
+			"}",
+			"",
+		}
+
+		local r = p.parse(input)
+		assert.is_true(r:has_diag())
+		assert.are.same({
+			{
+				col = 0,
+				end_col = 0,
+				end_lnum = 7,
+				lnum = 5,
+				message = "json parsing error: Expected colon but found T_STRING at character 10",
+				severity = 1,
+			},
+		}, r.diagnostics)
+	end)
+
 	it("parse ng without request", function()
 		local input = [[
 @host={{$HOST}}

@@ -13,8 +13,7 @@ endif
 " Typedef  Statement Tag Title
 " Underlined Delimiter
 " Error Define Operator Label Character 
-
-
+" Directory " WarningMsg
 
 
 " --- define basic syntax comment and section ---
@@ -24,9 +23,9 @@ syntax match   restyFavorite /\v\s#.*/                  contained
 syntax region  restyReplace start=/\v\{\{/ end=/\v\}\}/ contained
 
 highlight link restyComment      Comment
-highlight link restySection      Constant 
-highlight      restyFavorite     guifg=DarkYellow  gui=italic
-highlight      restyReplace      guifg=DarkCyan    gui=NONE 
+highlight link restySection      WarningMsg " Constant 
+highlight link restyFavorite     Function 
+highlight link restyReplace      FoldColumn 
 
 
 " --- define variable with replacement ---
@@ -39,12 +38,12 @@ syntax match restyVarKeyCfg /\v^\@cfg\.([A-Za-z-_])+/   contained contains=resty
 syntax match restyColon /\v\s*:\s*/                     contained      
 syntax match restyEqual /\v\s*\=\s*/                    contained  
 
-highlight      restyColon        guifg=#F5E0DC     gui=NONE
-highlight      restyEqual        guifg=#F5E0DC     gui=NONE
-highlight link restyValue        Delimiter
+highlight link restyColon        Function 
+highlight link restyEqual        Constant
 highlight link restyKey          Delimiter
-highlight      restyVarChar      guifg=LightGray   gui=bold 
-highlight      restyVarCharCfg   guifg=LightGray   gui=bold  
+highlight      restyValue        guifg=DarkGray    gui=NONE
+highlight link restyVarChar      Delimiter
+highlight      restyVarCharCfg   guifg=DarkGray gui=bold
 highlight link restyVarKey       Delimiter
 highlight link restyVarKeyCfg    Delimiter
 
@@ -69,8 +68,8 @@ syntax match restyVersion /HTTP\/[0-9]\.[0-9]/                            contai
 
 highlight link restyRequest   Function 
 highlight link restyUrlQuery  Error 
-highlight link restyVersion   Tag 
-highlight link restyUrl       Constant
+highlight link restyVersion   Delimiter
+highlight link restyUrl       WarningMsg 
 
 
 " syntax match restyHeader /\v^([A-Za-z-])+:\s*.+/       contains=restyReplace,restyComment 

@@ -319,6 +319,8 @@ function M:_parse_json()
 
 		self.r.meta.body = { starts = json_start, ends = json_end }
 		self.r.request.body = table.concat(self.lines, "", json_start, json_end)
+
+		self.r:check_json_body_if_enabled(json_start, json_end)
 	end
 
 	return line

@@ -34,6 +34,15 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 	return self
 end
 
+function M:check_json_body_if_enabled(lnum, end_lnum)
+	if self.request["check_json_body"] == "true" then
+		local ok, err = pcall(vim.json.decode, self.request.body, {})
+		if ok == false then
+			self:add_diag(vim.diagnostic.severity.ERROR, "json parsing error: " .. err, 0, 0, lnum, end_lnum)
+		end
+	end
+end
+
 function M:replace_variable_by_key(key)
 	local value
 	local symbol = key:sub(1, 1)

@@ -1,9 +1,8 @@
 local parser = require("resty.parser.parserng")
-local result = require("resty.parser.result")
 
 vim.filetype.add({ extension = { resty = "resty" } })
 
-vim.api.nvim_set_hl(0, "HintReplace", { fg = "DarkGrey" })
+vim.api.nvim_set_hl(0, "HintReplace", { fg = "LightYellow" })
 vim.fn.sign_define("HintMarker", { text = "→", texthl = "WarningMsg", numhl = "WarningMsg" })
 
 local hintID = 7

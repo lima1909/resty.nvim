@@ -118,7 +118,8 @@ function M:parse_definition(from, to)
 end
 
 local WS = "([%s]*)"
-local REST = WS .. "(.*)"
+local REST = "(.*)"
+local VALUE = "([^#]*)"
 
 -- -------
 -- request
@@ -128,7 +129,7 @@ local URL = "([^%?=&#%s]*)"
 local URL_QUERY = "([^%s#]*)"
 local HTTP_VERSION = "([HTTP%/%.%d]*)"
 
-local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. REST
+local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. WS .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
@@ -195,8 +196,7 @@ end
 -- variables
 -- ---------
 local VKEY = "^@([%a][%w%-_%.]*)"
-local VVALUE = "([^#]*)"
-local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VVALUE .. REST
+local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
 function M:_parse_variables(_, is_gloabel)
 	for lnum = self.cursor, self.len do
@@ -213,7 +213,7 @@ function M:_parse_variables(_, is_gloabel)
 			self.cursor = lnum
 			return line
 		else
-			local k, ws1, d, ws2, v, ws3, rest = string.match(line, VARIABLE)
+			local k, ws1, d, ws2, v, rest = string.match(line, VARIABLE)
 			self.cursor = lnum + 1
 
 			if not k then
@@ -222,8 +222,8 @@ function M:_parse_variables(_, is_gloabel)
 				self.r:add_diag(ERR, "variable delimiter is missing", 0, 1 + #k + #ws1, lnum)
 			elseif v == "" then
 				self.r:add_diag(ERR, "variable value is missing", 0, 1 + #k + #ws1 + #d + #ws2, lnum)
-			elseif #rest > 0 and not string.match(rest, "[%s]*#") then
-				local col = 1 + #k + #ws1 + #d + #ws2 + #v + #ws3
+			elseif rest and rest ~= "" and not string.match(rest, "^#") then
+				local col = 1 + #k + #ws1 + #d + #ws2 + #v
 				self.r:add_diag(INF, "invalid input after the variable: " .. rest, 0, col, lnum)
 			end
 
@@ -245,8 +245,7 @@ end
 -- headers and queries
 -- -------------------
 local HQKEY = "([^=:%s]+)"
-local HQVALUE = "([^#]*)"
-local HEADER_QUERY = HQKEY .. WS .. "([:=]?)" .. WS .. HQVALUE .. REST
+local HEADER_QUERY = HQKEY .. WS .. "([:=]?)" .. WS .. VALUE .. REST
 
 function M:_parse_headers_queries()
 	for lnum = self.cursor, self.len do
@@ -260,7 +259,7 @@ function M:_parse_headers_queries()
 			return line
 		else
 			self.cursor = lnum + 1
-			local k, ws1, d, ws2, v, ws3, rest = string.match(line, HEADER_QUERY)
+			local k, ws1, d, ws2, v, rest = string.match(line, HEADER_QUERY)
 
 			if d == "" then
 				self.r:add_diag(ERR, "header: ':' or query: '=' delimiter is missing", 0, #k + #ws1, lnum)
@@ -270,8 +269,8 @@ function M:_parse_headers_queries()
 					kind = "query"
 				end
 				self.r:add_diag(ERR, kind .. " value is missing", 0, #k + #ws1 + #d + #ws2, lnum)
-			elseif #rest > 0 and not string.match(rest, "[%s]*#") then
-				local col = #k + #ws1 + #d + #ws2 + #v + #ws3
+			elseif rest and rest ~= "" and not string.match(rest, "^#") then
+				local col = #k + #ws1 + #d + #ws2 + #v
 				local kind = "header"
 				if d == "=" then
 					kind = "query"

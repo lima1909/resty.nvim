@@ -1,6 +1,25 @@
+vim.filetype.add({ extension = { resty = "resty" } })
+vim.diagnostic.config({ update_in_insert = true })
+
+local ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics")
 local parser = require("resty.parser.parserng")
 
-vim.filetype.add({ extension = { resty = "resty" } })
+vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+	pattern = { "*.resty" },
+	callback = function()
+		local bufnr = vim.api.nvim_get_current_buf()
+		vim.diagnostic.reset(ns_diagnostics, bufnr)
+
+		local parsed = parser.parse(
+			vim.api.nvim_buf_get_lines(bufnr, 0, -1, true),
+			vim.api.nvim_win_get_cursor(0)[1],
+			{ is_prompt_supported = false }
+		)
+		if parsed:has_diag() then
+			vim.diagnostic.set(ns_diagnostics, bufnr, parsed.diagnostics)
+		end
+	end,
+})
 
 vim.api.nvim_set_hl(0, "HintReplace", { fg = "LightYellow" })
 vim.fn.sign_define("HintMarker", { text = "→", texthl = "WarningMsg", numhl = "WarningMsg" })

@@ -32,13 +32,20 @@ describe("parse:", function()
 		assert.are.same({ from = "> echo -n 'yeh'", to = "yeh", type = "cmd" }, r.replacements[3])
 	end)
 
+	it("replace prompt variables", function()
+		local r = result.new({ is_prompt_supported = false })
+		local line = r:replace_variable("abc: {{: my prompt}}")
+		assert.is_false(r:has_diag())
+		assert.are.same("abc: {{: my prompt}}", line)
+	end)
+
 	it("get replace variable str", function()
 		local txt, lnum = p.get_replace_variable_str({ "no replace" }, 1, 0)
 		assert.is_nil(txt)
 		assert.is_nil(lnum)
 
 		txt, lnum = p.get_replace_variable_str({ "http://{{host}}" }, 1, 10)
-		assert.are.same("no value found for: host", txt)
+		assert.are.same("no value found for key: host", txt)
 		assert.is_nil(lnum)
 
 		txt, lnum = p.get_replace_variable_str({ "http://{{: host}}" }, 1, 10)
@@ -205,6 +212,16 @@ describe("parse:", function()
 		d = r.diagnostics[1]
 		assert.are.same("variable value is missing", d.message)
 		assert.are.same(5, d.end_col)
+
+		r = parse_var("@key={{x}}", 1, { replace_variables = true })
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("no value found for key: x", d.message)
+
+		r = parse_var("@key={{}}", 1, { replace_variables = true })
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("no key found", d.message)
 	end)
 
 	it("parse header", function()

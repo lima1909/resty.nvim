@@ -58,7 +58,10 @@ function M:replace_variable_by_key(key)
 	elseif symbol == ">" then
 		return exec.cmd(key:sub(2)), "cmd"
 	-- prompt
-	elseif symbol == ":" and self.opts.is_prompt_supported == true then
+	elseif symbol == ":" then
+		if self.opts.is_prompt_supported == false then
+			return nil, "prompt"
+		end
 		return vim.fn.input("Input for key " .. key:sub(2) .. ": "), "prompt"
 	-- variable
 	else
@@ -85,8 +88,12 @@ function M:replace_variable(line, lnum)
 		local value, type = self:replace_variable_by_key(key)
 		if value then
 			table.insert(self.replacements, { from = key, to = value, type = type })
+		elseif type == "prompt" then
+			-- ignore prompt
+		elseif key == "" then
+			self:add_diag(vim.diagnostic.severity.ERROR, "no key found", 0, 1000, lnum or 1)
 		else
-			self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
+			self:add_diag(vim.diagnostic.severity.ERROR, "no value found for key: " .. key, 0, 1000, lnum or 1)
 		end
 
 		return value

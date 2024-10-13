@@ -402,7 +402,10 @@ M.get_replace_variable_str = function(lines, row, col)
 			return "prompt variables are not supported for a preview"
 		end
 
-		return "no value found for: " .. key
+		if key == "" then
+			return "no key found"
+		end
+		return "no value found for key: " .. key
 	end
 end
 

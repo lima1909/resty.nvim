@@ -22,17 +22,32 @@ describe("parse:", function()
 	end)
 
 	it("replace variables", function()
-		local s = os.clock()
 		local r = result.new()
 		r.variables = { var = "from var" }
 		local line = r:replace_variable("abc: {{$USER}}, {{var}}, {{> echo -n 'yeh'}}")
-		local e = os.clock() - s
 
-		print("time replace line: " .. format.duration(e))
 		assert.are.same("abc: " .. os.getenv("USER") .. ", from var, yeh", line)
 		assert.are.same({ from = "$USER", to = os.getenv("USER"), type = "env" }, r.replacements[1])
 		assert.are.same({ from = "var", to = "from var", type = "var" }, r.replacements[2])
 		assert.are.same({ from = "> echo -n 'yeh'", to = "yeh", type = "cmd" }, r.replacements[3])
+	end)
+
+	it("get replace variable str", function()
+		local txt, lnum = p.get_replace_variable_str({ "no replace" }, 1, 0)
+		assert.is_nil(txt)
+		assert.is_nil(lnum)
+
+		txt, lnum = p.get_replace_variable_str({ "http://{{host}}" }, 1, 10)
+		assert.are.same("no value found for: host", txt)
+		assert.is_nil(lnum)
+
+		txt, lnum = p.get_replace_variable_str({ "http://{{: host}}" }, 1, 10)
+		assert.are.same("prompt variables are not supported for a preview", txt)
+		assert.is_nil(lnum)
+
+		txt, lnum = p.get_replace_variable_str({ "@host=my", "http://{{host}}" }, 2, 10)
+		assert.are.same("[1] host = my", txt)
+		assert.are.same(1, lnum)
 	end)
 
 	it("parse request definition", function()

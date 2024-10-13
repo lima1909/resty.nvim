@@ -49,35 +49,31 @@ function M:check_json_body_if_enabled(lnum, end_lnum)
 end
 
 function M:replace_variable_by_key(key)
-	local value
 	local symbol = key:sub(1, 1)
 
 	-- environment variable
 	if symbol == "$" then
-		value = os.getenv(key:sub(2):upper())
-		table.insert(self.replacements, { from = key, to = value, type = "env" })
+		return os.getenv(key:sub(2):upper()), "env"
 	-- commmand
 	elseif symbol == ">" then
-		value = exec.cmd(key:sub(2))
-		table.insert(self.replacements, { from = key, to = value, type = "cmd" })
+		return exec.cmd(key:sub(2)), "cmd"
 	-- prompt
 	elseif symbol == ":" and self.opts.is_prompt_supported == true then
-		value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
-		table.insert(self.replacements, { from = key, to = value, type = "prompt" })
+		return vim.fn.input("Input for key " .. key:sub(2) .. ": "), "prompt"
 	-- variable
 	else
-		value = self.variables[key]
+		local value = self.variables[key]
 		if value then
-			table.insert(self.replacements, { from = key, to = value, type = "var" })
+			return value, "var"
 		else
 			value = M.global_variables[key]
 			if value then
-				table.insert(self.replacements, { from = key, to = value, type = "global_var" })
+				return value, "global_var"
 			end
 		end
 	end
 
-	return value
+	return nil
 end
 
 function M:replace_variable(line, lnum)
@@ -86,8 +82,10 @@ function M:replace_variable(line, lnum)
 	end
 
 	return string.gsub(line, "{{(.-)}}", function(key)
-		local value = self:replace_variable_by_key(key)
-		if not value then
+		local value, type = self:replace_variable_by_key(key)
+		if value then
+			table.insert(self.replacements, { from = key, to = value, type = type })
+		else
 			self:add_diag(vim.diagnostic.severity.ERROR, "invalid variable key: " .. key, 0, 0, lnum or 1)
 		end
 

@@ -366,4 +366,44 @@ function M:_ignore_lines()
 	return nil, ""
 end
 
+M.get_replace_variable_str = function(lines, row, col)
+	local key = nil
+	for s, k, e in string.gmatch(lines[row], "(){{(.-)}}()") do
+		if s - 1 <= col and e - 1 > col then
+			key = k
+			break
+		end
+	end
+
+	-- early return, if not replacement exist in the current line
+	if not key then
+		return nil
+	end
+
+	local r = M.parse(lines, row, { is_prompt_supported = false })
+	local value = r.variables[key]
+
+	-- resolve environment and exec variable
+	if not value then
+		value = r:replace_variable_by_key(key)
+	end
+
+	if value then
+		local lnum_str = ""
+		-- environment or exec variables have no line number
+		local lnum = r.meta.variables[key]
+		if lnum then
+			lnum_str = "[" .. lnum .. "] "
+		end
+		return lnum_str .. key .. " = " .. value, lnum
+	else
+		local isPrompt = string.sub(key, 1, 1) == ":"
+		if isPrompt == true then
+			return "prompt variables are not supported for a preview"
+		end
+
+		return "no value found for: " .. key
+	end
+end
+
 return M

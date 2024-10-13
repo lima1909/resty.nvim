@@ -22,7 +22,7 @@ M.new = function(input, selected, opts)
 		selected = 1
 	elseif selected > parser.len then
 		selected = parser.len
-	elseif selected < 0 then
+	elseif selected <= 0 then
 		selected = 1
 	end
 	-- NOTE: maybe better on result?

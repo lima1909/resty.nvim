@@ -25,7 +25,8 @@ syntax region  restyReplace start=/\v\{\{/ end=/\v\}\}/ contained
 highlight link restyComment      Comment
 highlight link restySection      WarningMsg " Constant 
 highlight link restyFavorite     Function 
-highlight link restyReplace      FoldColumn 
+" highlight link restyReplace      FoldColumn 
+highlight      restyReplace      guifg=DarkGray    gui=NONE
 
 
 " --- define variable with replacement ---
@@ -40,10 +41,10 @@ syntax match restyEqual /\v\s*\=\s*/                    contained
 
 highlight link restyColon        Function 
 highlight link restyEqual        Constant
-highlight link restyKey          Delimiter
-highlight      restyValue        guifg=DarkGray    gui=NONE
+highlight link restyKey          Keyword
+" highlight      restyValue        guifg=DarkCyan    gui=italic
 highlight link restyVarChar      Delimiter
-highlight      restyVarCharCfg   guifg=DarkGray gui=bold
+highlight link restyVarCharCfg   Keyword
 highlight link restyVarKey       Delimiter
 highlight link restyVarKeyCfg    Delimiter
 

@@ -10,17 +10,12 @@ M.set_global_variables = function(gvars)
 	result.global_variables = vim.tbl_deep_extend("force", result.global_variables, gvars)
 end
 
-M.default_opts = {
-	replace_variables = true,
-}
-
 M.new = function(input, selected, opts)
 	local lines = util.input_to_lines(input)
 
 	local parser = setmetatable({
 		lines = lines,
 		len = #lines,
-		opts = vim.tbl_deep_extend("force", M.default_opts, opts or {}),
 	}, { __index = M })
 
 	if not selected then
@@ -33,7 +28,7 @@ M.new = function(input, selected, opts)
 	-- NOTE: maybe better on result?
 	parser.selected = selected
 
-	parser.r = result.new(parser.opts.replace_variables)
+	parser.r = result.new(opts)
 
 	return parser
 end

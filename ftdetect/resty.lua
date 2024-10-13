@@ -31,17 +31,12 @@ vim.api.nvim_create_autocmd("CursorMoved", {
 
 		if key then
 			local lines = vim.api.nvim_buf_get_lines(bufNr, 0, -1, true)
-			local r = parser.parse(lines, row)
+			local r = parser.parse(lines, row, { is_prompt_supported = false })
 			local value = r.variables[key]
 
 			-- resolve environment and exec variable
-			local isPrompt = false
 			if not value then
-				isPrompt = string.sub(key, 1, 1) == ":"
-				-- don't execute a prompt
-				if isPrompt == false then
-					value = r:replace_variable_by_key(key)
-				end
+				value = r:replace_variable_by_key(key)
 			end
 
 			if value then
@@ -58,6 +53,8 @@ vim.api.nvim_create_autocmd("CursorMoved", {
 				})
 			else
 				local text = "no value found for: " .. key
+				-- don't execute a prompt
+				local isPrompt = string.sub(key, 1, 1) == ":"
 				if isPrompt == true then
 					text = "prompt variables are not supported for a preview"
 				end

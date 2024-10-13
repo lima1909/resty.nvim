@@ -2,14 +2,19 @@ local exec = require("resty.exec")
 
 local M = { global_variables = {} }
 
-M.new = function(replace_variables)
+M.default_opts = {
+	replace_variables = true,
+	is_prompt_supported = true,
+}
+
+M.new = function(opts)
 	return setmetatable({
 		request = { query = {}, headers = {} },
 		variables = {},
 		replacements = {},
 		diagnostics = {},
 		meta = { area = {}, variables = {} },
-		cfg = { replace_variables = replace_variables },
+		opts = vim.tbl_deep_extend("force", M.default_opts, opts or {}),
 	}, { __index = M })
 end
 
@@ -56,7 +61,7 @@ function M:replace_variable_by_key(key)
 		value = exec.cmd(key:sub(2))
 		table.insert(self.replacements, { from = key, to = value, type = "cmd" })
 	-- prompt
-	elseif symbol == ":" then
+	elseif symbol == ":" and self.opts.is_prompt_supported == true then
 		value = vim.fn.input("Input for key " .. key:sub(2) .. ": ")
 		table.insert(self.replacements, { from = key, to = value, type = "prompt" })
 	-- variable
@@ -76,7 +81,7 @@ function M:replace_variable_by_key(key)
 end
 
 function M:replace_variable(line, lnum)
-	if self.cfg.replace_variables == false then
+	if self.opts.replace_variables == false then
 		return line
 	end
 

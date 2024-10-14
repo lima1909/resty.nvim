@@ -240,6 +240,12 @@ describe("parse:", function()
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
 		assert.are.same("no key found", d.message)
+
+		r = parse_var("@cfg.invalid = true")
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("invalid config key", d.message)
+		assert.are.same(12, d.end_col)
 	end)
 
 	it("parse header", function()

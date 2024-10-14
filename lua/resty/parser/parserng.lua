@@ -200,6 +200,8 @@ end
 local VKEY = "^@([%a][%w%-_%.]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
+local configures = { insecure = "", dry_run = "", timeout = "", proxy = "", check_json_body = "" }
+
 function M:_parse_variables(_, is_gloabel)
 	for lnum = self.cursor, self.len do
 		local line = self.lines[lnum]
@@ -233,7 +235,11 @@ function M:_parse_variables(_, is_gloabel)
 				local key = string.sub(k, 1, 4)
 				if key == "cfg." and #k > 4 then
 					key = string.sub(k, 5)
-					self.r.request[key] = v
+					if configures[key] == "" then
+						self.r.request[key] = v
+					else
+						self.r:add_diag(INF, "invalid config key", 0, 5 + #key, lnum)
+					end
 				else
 					self.r.variables[k] = self.r:replace_variable(v, lnum)
 					self.r.meta.variables[k] = lnum

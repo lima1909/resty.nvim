@@ -290,11 +290,13 @@ describe("parse:", function()
 		assert.are.same("header: ':' or query: '=' delimiter is missing", d.message)
 		assert.are.same(3, d.end_col)
 
-		-- is not a header, ignore this line
+		-- is not a header, error on the end of the parsing
 		r = parse("1id  ")
-		assert.is_false(r:has_diag())
-		assert.are.same({}, r.request.headers)
-		assert.are.same({}, r.request.query)
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("invalid input, this and the following lines are ignored", d.message)
+		assert.are.same(0, d.col)
+		assert.are.same(5, d.end_col)
 	end)
 
 	it("parse query", function()

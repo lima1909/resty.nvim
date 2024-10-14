@@ -95,6 +95,7 @@ function M:parse_definition(from, to)
 		M._parse_headers_queries,
 		M._parse_json,
 		M._parse_script,
+		M._parse_after_last,
 	}
 
 	local line
@@ -292,13 +293,12 @@ function M:_parse_headers_queries()
 end
 
 function M:_parse_json()
-	local json_start
-
 	local line, first_char = self:_ignore_lines()
+
 	if not line or first_char ~= "{" then
 		return line
 	else
-		json_start = self.cursor
+		local json_start = self.cursor
 		local with_break = false
 
 		for i = self.cursor + 1, self.len do
@@ -316,10 +316,8 @@ function M:_parse_json()
 		if with_break then
 			-- remove comment or empty line
 			json_end = self.cursor - 1
-		end
-		-- if only one line (without for loop) => start and end line is the same
-		if json_start == self.cursor then
-			json_end = self.cursor
+		else
+			self.cursor = self.cursor + 1
 		end
 
 		self.r.meta.body = { starts = json_start, ends = json_end }
@@ -350,6 +348,7 @@ function M:_parse_script()
 				-- ignore this line
 				self.r.meta.script = { starts = start, ends = i - 1 }
 				self.r.request.script = table.concat(self.lines, "\n", start, i - 1)
+				self.cursor = self.cursor + 1
 				return line
 			end
 		end
@@ -357,6 +356,31 @@ function M:_parse_script()
 		self.r:add_diag(ERR, "missing end of script", 0, 0, self.cursor)
 		return line
 	end
+end
+
+function M:_parse_after_last()
+	for i = self.cursor, self.len do
+		local line = self.lines[i]
+		local first_char = string.sub(line, 1, 1)
+
+		if first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		else
+			self.cursor = i
+			self.r:add_diag(
+				ERR,
+				"invalid input, this and the following lines are ignored",
+				0,
+				#line,
+				self.cursor,
+				self.len
+			)
+			return line
+		end
+	end
+
+	self.cursor = self.len
+	return nil
 end
 
 function M:_ignore_lines()

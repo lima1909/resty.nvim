@@ -341,36 +341,6 @@ describe("parser:", function()
 			},
 		})
 	end)
-
-	-- TODO: support body AFTER script, or get an error?
-	-- it("method url with script and body", function()
-	-- 	check(
-	-- 		{
-	-- 			"GET http://host",
-	-- 			"accept: application/json",
-	-- 			"",
-	-- 			body.script.open,
-	-- 			"print('Hey ...')",
-	-- 			body.script.close,
-	-- 			"",
-	-- 			"{",
-	-- 			"\t'name': 'John'",
-	-- 			"}",
-	-- 		},
-	-- 		1,
-	-- 		{
-	-- 			variables = {},
-	-- 			request = {
-	-- 				method = "GET",
-	-- 				url = "http://host",
-	-- 				body = "{\t'name': 'John'}",
-	-- 				headers = { "accept: application/json" },
-	-- 				query = {},
-	-- 				script = "print('Hey ...')",
-	-- 			},
-	-- 		}
-	-- 	)
-	-- end)
 end)
 
 describe("errors:", function()
@@ -436,11 +406,32 @@ describe("errors:", function()
 		})
 	end)
 
-	-- TODO: ignore variable definition, is this good?
-	-- it("invalid transition", function()
-	-- 	check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
-	-- 		message = "from current state: 'body' are only possible state(s): body, script",
-	-- 		lnum = 4,
-	-- 	})
-	-- end)
+	it("method url with script and body", function()
+		check(
+			{
+				"GET http://host",
+				"accept: application/json",
+				"",
+				body.script.open,
+				"print('Hey ...')",
+				body.script.close,
+				"",
+				"{",
+				"\t'name': 'John'",
+				"}",
+			},
+			1,
+			{
+				message = "invalid input, this and the following lines are ignored",
+				lnum = 7,
+			}
+		)
+	end)
+
+	it("invalid transition", function()
+		check({ "@key=value", "GET http://host", "{", "}", "", "@key2=value2" }, 2, {
+			message = "invalid input, this and the following lines are ignored",
+			lnum = 5,
+		})
+	end)
 end)

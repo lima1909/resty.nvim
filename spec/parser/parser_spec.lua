@@ -39,7 +39,7 @@ describe("parser:", function()
 	it("method url with variable", function()
 		check({ "@host=my-host # comment", "###", "GET http://{{host}}" }, 3, {
 			variables = { host = "my-host " },
-			request = { method = "GET", url = "http://my-host ", headers = {}, query = {} },
+			request = { method = "GET", url = "http://my-host", headers = {}, query = {} },
 		})
 	end)
 
@@ -126,35 +126,31 @@ describe("parser:", function()
 		})
 	end)
 
-	-- it("method url with body", function()
-	-- 	check({ "GET http://host", "  ", "{", "\t'name': 'John'", "}" }, 1, {
-	-- 		variables = {},
-	-- 		request = {
-	-- 			method = "GET",
-	-- 			url = "http://host",
-	-- 			headers = {},
-	-- 			query = {},
-	-- 			body = "{\t'name': 'John'}",
-	-- 		},
-	-- 	})
-	-- end)
+	it("method url with body", function()
+		check({ "GET http://host", "  ", "{", "\t'name': 'John'", "}" }, 1, {
+			variables = {},
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = {},
+				query = {},
+				body = "{\t'name': 'John'}",
+			},
+		})
+	end)
 
-	-- it("method url and header query with body", function()
-	-- 	check(
-	-- 		{ "GET http://host", "", "accept: application/json", "", "id=42", "  ", "{", "\t'name': 'John'", "}" },
-	-- 		9,
-	-- 		{
-	-- 			variables = {},
-	-- 			request = {
-	-- 				method = "GET",
-	-- 				url = "http://host",
-	-- 				headers = { "accept: application/json" },
-	-- 				query = { ["id"] = "42" },
-	-- 				body = "{\t'name': 'John'}",
-	-- 			},
-	-- 		}
-	-- 	)
-	-- end)
+	it("method url and header query with body", function()
+		check({ "GET http://host", "", "accept: application/json", "", "id=42", "  ", "{", "'name': 'John'", "}" }, 9, {
+			variables = {},
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = { "accept: application/json" },
+				query = { ["id"] = "42" },
+				body = "{'name': 'John'}",
+			},
+		})
+	end)
 
 	it("second method url and header query with body", function()
 		check(
@@ -248,26 +244,26 @@ describe("parser:", function()
 		)
 	end)
 
-	-- it("replace variable from command", function()
-	-- 	check(
-	-- 		{
-	-- 			"GET http://{{> echo -n 'echo-host'}}",
-	-- 			"accept: application/json",
-	-- 			"",
-	-- 			"cmd={{>echo -n 'my output'}}",
-	-- 		},
-	-- 		1,
-	-- 		{
-	-- 			variables = {},
-	-- 			request = {
-	-- 				method = "GET",
-	-- 				url = "http://echo-host",
-	-- 				headers = { "accept: application/json" },
-	-- 				query = { ["cmd"] = "my output" },
-	-- 			},
-	-- 		}
-	-- 	)
-	-- end)
+	it("replace variable from command", function()
+		check(
+			{
+				"GET http://{{> echo -n 'echo-host'}}",
+				"accept: application/json",
+				"",
+				"cmd={{>echo -n 'my output'}}",
+			},
+			1,
+			{
+				variables = {},
+				request = {
+					method = "GET",
+					url = "http://echo-host",
+					headers = { "accept: application/json" },
+					query = { ["cmd"] = "my output" },
+				},
+			}
+		)
+	end)
 
 	it("replace variable from variable from command", function()
 		check(
@@ -280,7 +276,7 @@ describe("parser:", function()
 				variables = { ["host"] = "my-host-from-var\n" },
 				request = {
 					method = "GET",
-					url = "http://my-host-from-var\n",
+					url = "http://my-host-from-var",
 					headers = {},
 					query = {},
 				},
@@ -293,48 +289,61 @@ describe("parser:", function()
 		assert.are.same({}, r.replacements)
 	end)
 
-	-- it("method url with script", function()
-	-- 	check({ "GET http://host", "  ", body.script.open, "-- comment", body.script.close }, 1, {
-	-- 		variables = {},
-	-- 		request = {
-	-- 			method = "GET",
-	-- 			url = "http://host",
-	-- 			headers = {},
-	-- 			query = {},
-	-- 			script = body.script.open .. "-- comment" .. body.script.close .. "\n",
-	-- 		},
-	-- 	})
-	-- end)
+	it("method url with script", function()
+		check({ "GET http://host", "  ", body.script.open, "-- comment", body.script.close }, 1, {
+			variables = {},
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = {},
+				query = {},
+				script = "-- comment",
+			},
+		})
+	end)
 
+	it("method url with body and script", function()
+		check(
+			{
+				"GET http://host",
+				"",
+				"{",
+				"\t'name': 'John'",
+				"}",
+				"",
+				body.script.open,
+				"print('Hey ...')",
+				body.script.close,
+			},
+			1,
+			{
+				variables = {},
+				request = {
+					method = "GET",
+					url = "http://host",
+					body = "{\t'name': 'John'}",
+					headers = {},
+					query = {},
+					script = "print('Hey ...')",
+				},
+			}
+		)
+	end)
+
+	it("wrong selection, but works", function()
+		check("GET http://host", 2, {
+			variables = {},
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = {},
+				query = {},
+			},
+		})
+	end)
+
+	-- TODO: support body AFTER script, or get an error?
 	-- it("method url with script and body", function()
-	-- 	check(
-	-- 		{
-	-- 			"GET http://host",
-	-- 			"",
-	-- 			"{",
-	-- 			"\t'name': 'John'",
-	-- 			"}",
-	-- 			"",
-	-- 			body.script.open,
-	-- 			"print('Hey ...')",
-	-- 			body.script.close,
-	-- 		},
-	-- 		1,
-	-- 		{
-	-- 			variables = {},
-	-- 			request = {
-	-- 				method = "GET",
-	-- 				url = "http://host",
-	-- 				body = "{\n\t'name': 'John'\n}\n",
-	-- 				headers = {},
-	-- 				query = {},
-	-- 				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
-	-- 			},
-	-- 		}
-	-- 	)
-	-- end)
-
-	-- it("method url with body and script ", function()
 	-- 	check(
 	-- 		{
 	-- 			"GET http://host",
@@ -354,10 +363,10 @@ describe("parser:", function()
 	-- 			request = {
 	-- 				method = "GET",
 	-- 				url = "http://host",
-	-- 				body = "{\n\t'name': 'John'\n}\n",
-	-- 				headers = { ["accept"] = "application/json" },
+	-- 				body = "{\t'name': 'John'}",
+	-- 				headers = { "accept: application/json" },
 	-- 				query = {},
-	-- 				script = body.script.open .. "\nprint('Hey ...')\n" .. body.script.close .. "\n",
+	-- 				script = "print('Hey ...')",
 	-- 			},
 	-- 		}
 	-- 	)
@@ -413,13 +422,6 @@ describe("errors:", function()
 		check("@key=", 1, { message = "variable value is missing", lnum = 0 })
 	end)
 
-	-- it("wrong selection", function()
-	-- 	check("GET http://host", 2, {
-	-- 		message = "the selected row: 2 is greater then the given rows: 1",
-	-- 		lnum = 0,
-	-- 	})
-	-- end)
-
 	it("selected in global variable", function()
 		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
 			message = "no request URL found",
@@ -427,13 +429,14 @@ describe("errors:", function()
 		})
 	end)
 
-	-- it("invalid transition, is not a method", function()
-	-- 	check({ "@key=value", "accept: application/json" }, 2, {
-	-- 		message = "invalid method name: 'accept:'. Only letters are allowed",
-	-- 		lnum = 1,
-	-- 	})
-	-- end)
+	it("invalid transition, is not a method", function()
+		check({ "@key=value", "accept: application/json" }, 2, {
+			message = "this is not a valid http method",
+			lnum = 1,
+		})
+	end)
 
+	-- TODO: ignore variable definition, is this good?
 	-- it("invalid transition", function()
 	-- 	check({ "@key=value", "GET http://host", "{", "}", "@key2=value2" }, 2, {
 	-- 		message = "from current state: 'body' are only possible state(s): body, script",

@@ -1,5 +1,4 @@
 local assert = require("luassert")
-local p = require("resty.parser")
 local d = require("resty.parser.delimiter")
 
 describe("find request:", function()

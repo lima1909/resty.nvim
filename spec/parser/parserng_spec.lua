@@ -107,6 +107,24 @@ describe("parse:", function()
 		assert.are.same(4, d.end_col)
 		assert.are.same({ method = "GET", url = "", query = {}, headers = {} }, r.request)
 
+		r = p.parse(":")
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same(d.message, "http method is missing or doesn't start with a letter")
+		assert.are.same(0, d.end_col)
+
+		r = p.parse("GEThttp ")
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same(d.message, "unknown http method and missing url")
+		assert.are.same(8, d.end_col)
+
+		r = p.parse("Foo: ")
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same(d.message, "this is not a valid http method")
+		assert.are.same(3, d.end_col)
+
 		r = p.parse("Foo http://127.0.0.1:8080")
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
@@ -443,6 +461,7 @@ describe("parse:", function()
 			{ from = "$USER", to = os.getenv("USER"), type = "env" },
 			{ from = "host", to = "my-h_ost", type = "var" },
 			{ from = "id", to = "42", type = "var" },
+			{ from = "id", to = "42", type = "var" }, -- for id exist two replacements
 		}, r.replacements)
 
 		print("time parse request: " .. format.duration(r.duration))
@@ -560,7 +579,7 @@ id = 3
 
 		assert.is_true(r:has_diag())
 		assert.are.same({
-			{ col = 0, end_col = 4, lnum = 11, message = "unknown http method and url is missing", severity = 1 },
+			{ col = 0, end_col = 4, lnum = 11, message = "unknown http method and missing url", severity = 1 },
 			{ col = 0, end_col = 0, end_lnum = 13, lnum = 11, message = "no request URL found", severity = 1 },
 		}, r.diagnostics)
 		assert.are.same({ host = "{{$HOST}}" }, r.variables)

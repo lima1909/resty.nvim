@@ -134,19 +134,26 @@ function M:_parse_request(line)
 	self.cursor = self.cursor + 1
 	local req = self.r.request
 
+	line = self.r:replace_variable(line, lnum)
+
 	local ws1, ws2, ws3, rest, q, hv
 	req.method, ws1, req.url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
 	if not req.method then
-		self.r:add_diag(ERR, "http method is missing", 0, 0, lnum)
+		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, lnum)
 		return line
 	elseif ws1 == "" then
-		self.r:add_diag(ERR, "white space after http method is missing", 0, #req.method, lnum)
+		local _, no_letter = string.match(line, "([%a]+)([^%s]?)")
+		if no_letter and no_letter ~= "" then
+			self.r:add_diag(ERR, "this is not a valid http method", 0, #req.method, lnum)
+		else
+			self.r:add_diag(ERR, "white space after http method is missing", 0, #req.method, lnum)
+		end
 		return line
 	elseif req.url == "" then
 		local msg = "url is missing"
 		if methods[req.method] ~= "" then
-			msg = "unknown http method and " .. msg
+			msg = "unknown http method and missing url"
 		end
 		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url + #q, lnum)
 		return line
@@ -164,7 +171,6 @@ function M:_parse_request(line)
 		req.http_version = hv
 	end
 
-	req.url = self.r:replace_variable(req.url, lnum)
 	self.r.meta.request = lnum
 
 	-- separate url and query, if exist
@@ -293,20 +299,24 @@ function M:_parse_json()
 		return line
 	else
 		json_start = self.cursor
-		self.cursor = self.cursor + 1
+		local with_break = false
 
-		for i = self.cursor, self.len do
+		for i = self.cursor + 1, self.len do
 			line = self.lines[i]
+			self.cursor = i
 
 			-- until comment line or blank line
 			if string.match(line, "^#") or string.match(line, "^%s*$") then
-				self.cursor = i
+				with_break = true
 				break
 			end
 		end
 
-		-- remove comment or empty line
-		local json_end = self.cursor - 1
+		local json_end = self.cursor
+		if with_break then
+			-- remove comment or empty line
+			json_end = self.cursor - 1
+		end
 		-- if only one line (without for loop) => start and end line is the same
 		if json_start == self.cursor then
 			json_end = self.cursor

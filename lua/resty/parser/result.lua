@@ -3,8 +3,8 @@ local exec = require("resty.exec")
 local M = { global_variables = {} }
 
 M.default_opts = {
-	replace_variables = true,
-	is_prompt_supported = true,
+	replace_variables = true, -- for completion, for a better performance (resty-cmp)
+	is_prompt_supported = true, -- for diagnostics, by edit resty and http files
 }
 
 M.new = function(opts)

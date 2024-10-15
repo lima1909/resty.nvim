@@ -341,6 +341,27 @@ describe("parser:", function()
 			},
 		})
 	end)
+
+	it("empty", function()
+		check("", 1, {
+			variables = {},
+			request = { headers = {}, query = {} },
+		})
+	end)
+
+	it("only comment", function()
+		check("# comment", 1, {
+			variables = {},
+			request = { headers = {}, query = {} },
+		})
+	end)
+
+	it("only one variable", function()
+		check("@key=value", 1, {
+			variables = { key = "value" },
+			request = { headers = {}, query = {} },
+		})
+	end)
 end)
 
 describe("errors:", function()
@@ -353,38 +374,17 @@ describe("errors:", function()
 		assert.are.same(expected.lnum, err.lnum)
 	end
 
-	it("empty", function()
-		check("", 1, {
-			message = "no request URL found",
-			lnum = 0,
-		})
-	end)
-
-	it("only comment", function()
-		check("# comment", 1, {
-			message = "no request URL found",
-			lnum = 0,
-		})
-	end)
-
-	it("only one variable", function()
-		check("@key=value", 1, {
-			message = "no request URL found",
-			lnum = 0,
-		})
-	end)
-
 	it("only one variable and delimiter", function()
-		check("@key=value\n###", 1, {
-			message = "no request URL found",
-			lnum = 0,
+		check("@key=value\n###", 2, {
+			message = "no request definition found",
+			lnum = 2,
 		})
 	end)
 
 	it("only delimiter", function()
 		check("###", 1, {
-			message = "no request URL found",
-			lnum = 0,
+			message = "no request definition found",
+			lnum = 1,
 		})
 	end)
 
@@ -393,9 +393,9 @@ describe("errors:", function()
 	end)
 
 	it("selected in global variable", function()
-		check({ "@key=value", " ", "###", "GET http://host" }, 2, {
-			message = "no request URL found",
-			lnum = 0,
+		check({ "@key=value", " ", "###", "@local=value" }, 4, {
+			message = "no request definition found",
+			lnum = 3,
 		})
 	end)
 

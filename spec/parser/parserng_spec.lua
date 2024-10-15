@@ -601,6 +601,18 @@ id = 3
 		assert.are.same({ ["area"] = { starts = 12, ends = 14 }, variables = { host = 1 } }, r.meta)
 	end)
 
+	it("parse ng - only (global) variables", function()
+		local r = p.parse({ "", "@id = 7", "" })
+		assert.is_false(r:has_diag())
+		assert.are.same({ id = "7" }, r.variables)
+
+		r = p.parse({ "", "@id = 7", "###" })
+		assert.is_false(r:has_diag())
+		assert.are.same({ id = "7" }, r.variables)
+	end)
+end)
+
+describe("parse errors:", function()
 	it("parse ng - error", function()
 		local input = {
 			"",
@@ -649,16 +661,16 @@ id = 3
 
 	it("parse ng - error: missing URL", function()
 		local input = {
-			"",
+			"###",
 			"@id = 7",
 			"",
 		}
 
-		local r = p.parse(input)
+		local r = p.parse(input, 1)
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
-		assert.are.same("no request URL found", d.message)
-		assert.are.same(0, d.lnum)
+		assert.are.same("no request definition found", d.message)
+		assert.are.same(1, d.lnum)
 		assert.are.same(2, d.end_lnum)
 	end)
 end)

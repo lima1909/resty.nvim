@@ -38,24 +38,24 @@ function M:find_area()
 	self.r.meta.area.ends = self.len
 
 	-- start
-	if self.selected ~= 1 then
-		for i = self.selected, 1, -1 do
-			if string.sub(self.lines[i], 1, 3) == "###" then
-				self.r.meta.area.starts = i + 1
-				break
-			end
+	-- if self.selected ~= 1 then
+	for i = self.selected, 1, -1 do
+		if string.sub(self.lines[i], 1, 3) == "###" then
+			self.r.meta.area.starts = i + 1
+			break
 		end
 	end
+	-- end
 
 	-- end
-	if self.selected ~= self.len then
-		for i = self.selected, self.len do
-			if string.sub(self.lines[i], 1, 3) == "###" and i ~= self.selected then
-				self.r.meta.area.ends = i - 1
-				break
-			end
+	-- if self.selected ~= self.len then
+	for i = self.selected, self.len do
+		if string.sub(self.lines[i], 1, 3) == "###" and i ~= self.selected then
+			self.r.meta.area.ends = i - 1
+			break
 		end
 	end
+	-- end
 
 	return self.r.meta.area.starts, self.r.meta.area.ends
 end
@@ -90,7 +90,6 @@ function M:parse_definition(from, to)
 	self.len = to
 
 	local parsers = {
-		M._parse_variables,
 		M._parse_request,
 		M._parse_headers_queries,
 		M._parse_json,
@@ -98,7 +97,16 @@ function M:parse_definition(from, to)
 		M._parse_after_last,
 	}
 
-	local line
+	local line = self:_parse_variables()
+	-- no more lines available
+	-- only variables are ok for global area
+	if not line then
+		if self.r.meta.area.starts ~= 1 then
+			self.r:add_diag(ERR, "no request definition found", 0, 0, from, to)
+		end
+		return self
+	end
+
 	for _, parse in ipairs(parsers) do
 		line = parse(self, line)
 		if not line then
@@ -247,6 +255,10 @@ function M:_parse_variables(_, is_gloabel)
 			end
 		end
 	end
+
+	-- on the end, means only variables or nothing found
+	-- -> must be the global variables area
+	return nil
 end
 
 -- -------------------

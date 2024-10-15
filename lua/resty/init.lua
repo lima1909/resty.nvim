@@ -17,8 +17,13 @@ local default_config = {
 	},
 }
 
+-- change with: ':let g:resty.diagnostics = v:false'
+-- print current value: ':lua print(vim.g.resty.diagnostics)'
+vim.g.resty = { diagnostics = true, completion = true, variables_preview = true }
+
 local M = {
 	output = output.new(default_config),
+	config = default_config,
 	last_parser_result = nil,
 }
 

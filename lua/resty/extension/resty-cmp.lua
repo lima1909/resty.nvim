@@ -56,6 +56,10 @@ M.is_valid_headers_row = function(meta, row)
 end
 
 function M:complete(r, callback)
+	if not vim.g.resty.completion then
+		return
+	end
+
 	local line = r.context.cursor_before_line
 	local row = r.context.cursor.row
 

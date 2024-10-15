@@ -7,6 +7,10 @@ local parser = require("resty.parser.parserng")
 vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 	pattern = { "*.resty" },
 	callback = function()
+		if not vim.g.resty.diagnostics then
+			return
+		end
+
 		local bufnr = vim.api.nvim_get_current_buf()
 		vim.diagnostic.reset(ns_diagnostics, bufnr)
 
@@ -30,6 +34,10 @@ local hintNS = vim.api.nvim_create_namespace("resty_hint")
 vim.api.nvim_create_autocmd("CursorMoved", {
 	pattern = { "*.resty", "*.http" },
 	callback = function()
+		if not vim.g.resty.variables_preview then
+			return
+		end
+
 		local bufnr = vim.api.nvim_get_current_buf()
 
 		-- removes all hints and signs

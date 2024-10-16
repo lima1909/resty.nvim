@@ -100,4 +100,51 @@ function M:replace_variable(line, lnum)
 	end)
 end
 
+function M:get_header(header)
+	for _, h in ipairs(self.request.headers) do
+		if h == header then
+			return h
+		end
+	end
+
+	return nil
+end
+
+function M:is_valid_variable_row(row)
+	if row >= self.meta.area.starts and row <= self.meta.area.ends then
+		if self.meta.request then
+			return self.meta.request > row
+		elseif self.meta.body then
+			return self.meta.body.starts > row
+		elseif self.meta.script then
+			return self.meta.script.starts > row
+		end
+
+		-- NOTE: maybe check start of headers and query too?
+		return true
+	end
+
+	return false
+end
+
+function M:is_valid_headers_row(row)
+	if not self.meta.request then
+		return false
+	end
+
+	if self.meta.request < row and row <= self.meta.area.ends then
+		if self.meta.body then
+			return self.meta.body.starts > row
+		elseif self.meta.script then
+			-- starts - 1 is position of '--{%'
+			return self.meta.script.starts - 1 > row
+		end
+
+		-- NOTE: maybe check start of headers and query too?
+		return true
+	end
+
+	return false
+end
+
 return M

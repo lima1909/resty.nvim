@@ -1,11 +1,12 @@
 local M = {}
 
-M.var_cfg = {
+M.varcfg = {
 	-- curl configuration
 	{
-		label = "@cfg.insecure",
+		label = "insecure",
 		labelDetails = { detail = "boolean", description = "" },
 		insertText = "@cfg.insecure = true",
+		filterText = "@cfg.insecure=true",
 		documentation = {
 			kind = "markdown",
 			value = "allow insecure server connections",
@@ -13,9 +14,10 @@ M.var_cfg = {
 		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
 	},
 	{
-		label = "@cfg.dry_run",
+		label = "dry_run",
 		labelDetails = { detail = "boolean", description = "" },
 		insertText = "@cfg.dry_run = true",
+		filterText = "@cfg.dry_run=true",
 		documentation = {
 			kind = "markdown",
 			value = "whether to return the args to be ran through curl",
@@ -23,9 +25,10 @@ M.var_cfg = {
 		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
 	},
 	{
-		label = "@cfg.timeout",
+		label = "timeout",
 		labelDetails = { detail = "number", description = "" },
 		insertText = "@cfg.timeout = 1000",
+		filterText = "@cfg.timeout",
 		documentation = {
 			kind = "markdown",
 			value = "request timeout in mseconds",
@@ -33,9 +36,10 @@ M.var_cfg = {
 		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
 	},
 	{
-		label = "@cfg.proxy",
+		label = "proxy",
 		labelDetails = { detail = "string", description = "" },
 		insertText = "@cfg.proxy = ",
+		filterText = "@cfg.proxy",
 		documentation = {
 			kind = "markdown",
 			value = "use this proxy: '[protocol://]host[:port]'",
@@ -44,9 +48,10 @@ M.var_cfg = {
 	},
 	-- resty request configuration
 	{
-		label = "@cfg.check_json_body",
+		label = "check_json_body",
 		labelDetails = { detail = "boolean", description = "" },
 		insertText = "@cfg.check_json_body = true",
+		filterText = "@cfg.check_json_body=true",
 		documentation = {
 			kind = "markdown",
 			value = "check the reques body if it is a valid JSON",
@@ -119,5 +124,16 @@ M.headers = {
 		cmp = { kind_hl_group = "Function", kind_text = "headers" },
 	},
 }
+
+M.available_headers = function(parsed)
+	local entries = {}
+	for _, h in ipairs(M.headers) do
+		if not parsed:get_header(h.insertText) then
+			table.insert(entries, h)
+		end
+	end
+
+	return entries
+end
 
 return M

@@ -56,6 +56,17 @@ function M:replace_variable_by_key(key)
 		return os.getenv(key:sub(2):upper()), "env"
 	-- commmand
 	elseif symbol == ">" then
+		-- use the possibility to use a cached value
+		if key:sub(2, 2) == ">" then
+			local value = M.global_variables[key]
+			if value then
+				return value, "cmd"
+			end
+			value = exec.cmd(key:sub(3))
+			M.global_variables[key] = value
+			return value, "cmd"
+		end
+
 		return exec.cmd(key:sub(2)), "cmd"
 	-- prompt
 	elseif symbol == ":" then

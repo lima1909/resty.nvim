@@ -1,12 +1,8 @@
-# resty.nvim
-
-[![Build Status]][Build Action][![License]]
+# resty.nvim  [License][![Build Status]][Build Action]
 
 [Build Status]: https://github.com/lima1909/resty.nvim/actions/workflows/ci.yaml/badge.svg
 [Build Action]: https://github.com/lima1909/resty.nvim/actions
 [License]:      https://img.shields.io/github/license/lima1909/resty.nvim?style=for-the-badge
-
-The main goal of _resty_ is to build a fast and easy-to-use http-rest-client for neovim complete written in LUA.
 
 <div align="center">
 
@@ -14,21 +10,23 @@ The main goal of _resty_ is to build a fast and easy-to-use http-rest-client for
 
 </div>
 
+The main goal of _resty_ is to build a **fast** and **easy-to-use** http-rest-client for neovim complete written in LUA.
+
 ## These are the features that contribute to this goal:
 
 * meaningful error messages by editing the input file
 * completion (if `hrsh7th/nvim-cmp` is installed) for mainly used headers and possible configurations
-* different variables types: from environment variables, commands (with cache) or values
-* display the values of defined variables without executing the request
+* different variables types: from environment variables, shell commands (with cache), input prompt or values
 * executing from `lua scripts` (post-request hook)
+* display the values of defined variables without executing the request
 * further processing from json result with `jq`
 * create your own favorite list with `nvim-telescope/telescope.nvim` (if installed) for finding often used request in a large input file
-* write the request definition in which file you want (directly to the place where they are used)
+* write the request definition in which file you want (nearby to the code, where you have implement the rest service)
 
 ## Dependencies
 
 - `curl` execute the request definition
-- `jq` (_optional_, but recommended) query the body
+- `jq` (_optional, but recommended_) query the response body
 - `nvim-telescope/telescope.nvim` plugin (_optional_), for using a listing of available favorites 
 - `hrsh7th/nvim-cmp` plugin (_optional_) for headers and configurations completion
 
@@ -59,13 +57,13 @@ The main goal of _resty_ is to build a fast and easy-to-use http-rest-client for
 
 ## Syntax
 
-- variable definition (_optional_):
+- global and local variable definition (_optional_):
   - `@[variable-name]=[value]` or `@[variable-name]={{variable-replacement}}`
   - `variable-replacement`: shell command, environment variable or prompt  
   - `configuration variables`: for curl (timeout, insecure, proxy, ...) or for resty (check_json_body )  
-- request definition (_mandatory_):
-  - `method` (GET, POST, ...)
-  - `url` (http://host, https://host:port, http://127.0.0.1:443?id=7)
+- request definition 
+  - `method` (GET, POST, ...) (_mandatory_):
+  - `url` (http://host, https://host:port, http://127.0.0.1:443?id=7) (_mandatory_):
   - `http version` (HTTP/1.0) (_optional_)
 - headers and or query parameter (_optional_)
 - json body (optional)

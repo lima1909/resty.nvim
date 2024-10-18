@@ -3,7 +3,7 @@
 # resty.nvim 
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/lima1909/resty.nvim/ci.yaml?style=for-the-badge)](https://github.com/lima1909/resty.nvim/actions)
-[License](https://img.shields.io/github/license/lima1909/resty.nvim?style=for-the-badge)
+![License](https://img.shields.io/github/license/lima1909/resty.nvim?style=for-the-badge)
 [![Stars](https://img.shields.io/github/stars/lima1909/resty.nvim?style=for-the-badge)](https://github.com/lima1909/resty.nvim/stargazers)
 
 A **fast** and **easy-to-use** HTTP-Rest-Client plugin for neovim, completely written in LUA.

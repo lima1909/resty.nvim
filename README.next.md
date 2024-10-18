@@ -3,6 +3,7 @@
 # resty.nvim 
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/lima1909/resty.nvim/ci.yaml?style=for-the-badge)](https://github.com/lima1909/resty.nvim/actions)
+[License](https://img.shields.io/github/license/lima1909/resty.nvim?style=for-the-badge)
 [![Stars](https://img.shields.io/github/stars/lima1909/resty.nvim?style=for-the-badge)](https://github.com/lima1909/resty.nvim/stargazers)
 
 A **fast** and **easy-to-use** HTTP-Rest-Client plugin for neovim, completely written in LUA.
@@ -47,12 +48,12 @@ These are the features that contribute to this goal:
   },
   ```
 
-### Supported Neovim versions:
+#### Supported Neovim versions:
 
 - Latest nightly
 - 0.10.x
 
-### Dependencies
+#### Dependencies
 
 - `curl` (_mandatory_) execute the request definition
 - `jq` (_optional, but recommended_) query the response body
@@ -64,6 +65,7 @@ These are the features that contribute to this goal:
 - global and local variable definition (_optional_):
   - `@[variable-name]=[value]` or `@[variable-name]={{variable-replacement}}`
   - `variable-replacement`: shell command, environment variable or input prompt  
+    - variable-replacement are supported in: url, variable-, header- and query-values, 
   - `configuration variables`: for curl (timeout, insecure, proxy, ...) or for resty (check_json_body)  
 - request definition 
   - `method` (GET, POST, ...) (_mandatory_):
@@ -77,7 +79,7 @@ These are the features that contribute to this goal:
   - `###`: delimiter, if more as one request definition, or text before and/or after exist
   - `### #my favorite` : delimiter, with defining a favorite ('my favorite') for the easy to finding the request definition
 
-### Syntax in action 
+#### Syntax in action 
 
 ```http
 # variable for the hostname
@@ -106,7 +108,7 @@ accept: application/json
 { "comment": "my comment" }
 ```
 
-### In LUA scripts you can use an `ctx` table, which has access to the following properties and methods:
+#### In LUA scripts you can use an `ctx` table, which has access to the following properties and methods:
 
 ```lua
 local ctx = {
@@ -152,7 +154,7 @@ There are four views for the result (the rest-call-response)
 | `?`       |   `?`     | shows help information for keybindings       |
 
 
-### Short cuts for the view: body
+#### Short cuts for the view: body
 
 `jq` must be installed!
 
@@ -166,7 +168,7 @@ __Hint:__ with `cc` can the curl call canceled.
 
 ## Examples
 
-### Give a star for this great project ;-)
+#### Give a star for this great project ;-)
 
 ```http
 PUT https://api.github.com/user/starred/lima1909/resty.nvim
@@ -174,7 +176,7 @@ Authorization: Bearer {{my-token}}
 Accept: application/vnd.github+json
 ```
 
-### Login with saving the result token
+#### Login with saving the result token
 
 ```http
 POST https://reqres.in/api/login
@@ -195,7 +197,7 @@ Content-type: application/json ; charset=UTF-8
 --%}
 ```
 
-### Call with query parameter
+#### Call with query parameter
 
 ```http
 GET https://reqres.in/api/users
@@ -205,7 +207,7 @@ delay = 1
 GET https://reqres.in/api/users?delay=1 
 ```
 
-### Post with body
+#### Post with body
 
 ```http
 POST https://api.restful-api.dev/objects

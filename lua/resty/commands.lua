@@ -1,4 +1,4 @@
-local favorite = require("resty.parser.favorite")
+local favorite = require("resty.extension.favorites")
 
 local M = {}
 

@@ -3,7 +3,6 @@ P = function(tab)
 end
 
 local parser = require("resty.parser.parserng")
-local f = require("resty.parser.favorite")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
 
@@ -26,12 +25,6 @@ local M = {
 	config = default_config,
 	last_parser_result = nil,
 }
-
--- check, is telescope installed for viewing favorites
-local has_telescope = pcall(require, "telescope")
-if has_telescope then
-	M.view_favorites = require("resty.view_favorites")
-end
 
 M.setup = function(user_configs)
 	M.config = vim.tbl_deep_extend("force", default_config, user_configs)
@@ -74,8 +67,13 @@ M.run = function(input)
 	end
 end
 
+-- check, is telescope installed for viewing favorites
+local has_telescope = pcall(require, "telescope")
+local f = require("resty.extension.favorites")
+
 M.favorite = function(favorite, bufnr)
-	bufnr = f.get_current_bufnr(bufnr)
+	-- bufnr = f.get_current_bufnr(bufnr)
+	bufnr = bufnr or 0
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
 
 	if favorite and #favorite > 0 then
@@ -85,9 +83,9 @@ M.favorite = function(favorite, bufnr)
 		else
 			error("Favorite: '" .. favorite .. "' not found", 0)
 		end
-	elseif M.view_favorites then
+	elseif has_telescope then
 		local favorites = f.find_all_favorites(lines)
-		M.view_favorites.show({}, favorites, lines, function(row)
+		require("resty.extension.favorites_view").show(favorites, lines, function(row)
 			M._run(lines, row, bufnr)
 		end)
 	else
@@ -95,42 +93,21 @@ M.favorite = function(favorite, bufnr)
 	end
 end
 
--- local parserng = require("resty.parser.parserng")
--- local format = require("resty.output.format")
-
 M._run = function(lines, row, bufnr)
 	local result = parser.parse(lines, row)
 	if diagnostic.show(bufnr, result) then
 		return
 	end
 
-	-- local rng = parserng.parse(lines, row)
-	-- print("time parsengng request: " .. format.duration(rng.duration))
-	-- if diagnostic.show(bufnr, rng) then
-	-- 	return
-	-- end
-
 	-- save the last result
 	M.last_parser_result = result
 	M.output:exec_and_show_response(M.last_parser_result)
 end
 
---[[ M.view = function()
-	local lines = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), true)
-	local req_defs = parser.parse(lines)
-
-	-- load the view and execute the selection
-	require("resty.select").view({}, req_defs.definitions, function(def)
-		exec_and_show_response(def)
-	end)
-end 
-
-
-
+--[[
 package.loaded["resty"] = nil
 package.loaded["resty.output"] = nil
 package.loaded["resty.output.winbar"] = nil
-	
 ]]
 
 return M

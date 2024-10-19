@@ -2,6 +2,7 @@ local util = require("resty.util")
 
 local M = {}
 
+-- TODO: is this a good idea to cache the bufnr?
 M.get_current_bufnr = function(bufnr)
 	-- override the existing bufnr
 	if bufnr then
@@ -14,7 +15,49 @@ M.get_current_bufnr = function(bufnr)
 	return M.current_bufnr
 end
 
-M.check_lines = function(lines, check)
+M.find_favorite = function(input, favorite)
+	local row
+
+	M._check_lines(input, function(r, f)
+		if favorite == f then
+			row = r
+			return true -- founded and break
+		else
+			return false
+		end
+	end)
+
+	return row
+end
+
+M.find_all_favorites = function(input)
+	local favorites = {}
+
+	M._check_lines(input, function(r, f)
+		table.insert(favorites, { ["row"] = r, ["favorite"] = f })
+		return false
+	end)
+
+	return favorites
+end
+
+M.find_favorite_by_prefix = function(input, prefix)
+	local favorites = {}
+
+	M._check_lines(input, function(_, f)
+		if vim.startswith(f, prefix) then
+			table.insert(favorites, f)
+		end
+
+		return false
+	end)
+
+	return favorites
+end
+
+M._check_lines = function(input, check)
+	local lines = util.input_to_lines(input)
+
 	for row, l in ipairs(lines) do
 		if vim.startswith(l, "###") then
 			l = l:sub(4)
@@ -28,48 +71,6 @@ M.check_lines = function(lines, check)
 			end
 		end
 	end
-end
-
-M.find_favorite = function(input, favorite)
-	local lines = util.input_to_lines(input)
-	local row
-
-	M.check_lines(lines, function(r, f)
-		if favorite == f then
-			row = r
-			return true
-		else
-			return false
-		end
-	end)
-
-	return row
-end
-
-M.find_all_favorites = function(input)
-	local lines = util.input_to_lines(input)
-	local favorites = {}
-
-	M.check_lines(lines, function(r, f)
-		table.insert(favorites, { ["row"] = r, ["favorite"] = f })
-		return false
-	end)
-
-	return favorites
-end
-
-M.find_favorite_by_prefix = function(input, prefix)
-	local lines = util.input_to_lines(input)
-	local favorites = M.find_all_favorites(lines)
-	local list = {}
-
-	for _, f in pairs(favorites) do
-		if vim.startswith(f.favorite, prefix) then
-			table.insert(list, f.favorite)
-		end
-	end
-
-	return list
 end
 
 return M

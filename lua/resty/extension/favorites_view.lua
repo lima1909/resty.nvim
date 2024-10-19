@@ -2,7 +2,7 @@
 -- https://www.youtube.com/watch?v=HXABdG3xJW4
 --
 
-local parser = require("resty.parser")
+local parser = require("resty.parser.parserng")
 
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
@@ -15,11 +15,9 @@ local config = require("telescope.config").values
 local log = require("plenary.log"):new()
 log.level = "debug"
 
-M = {
-	parser = parser.new(),
-}
+M = {}
 
-M.show = function(opts, favorites, lines, exec)
+M.show = function(favorites, lines, exec, opts)
 	pickers
 		.new(opts, {
 			finder = finders.new_table({
@@ -38,7 +36,7 @@ M.show = function(opts, favorites, lines, exec)
 				define_preview = function(self, entry)
 					local bufnr = self.state.bufnr
 					local favorite = entry.value
-					M.parser.parse(lines, favorite.row):write_to_buffer(bufnr)
+					parser.parse(lines, favorite.row):write_to_buffer(bufnr)
 					utils.highlighter(bufnr, "markdown")
 				end,
 			}),

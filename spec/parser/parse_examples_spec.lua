@@ -82,7 +82,7 @@ filter = id = {{id}}
 				request = {
 					method = "POST",
 					url = "http://host",
-					headers = { "accept: application/json  " },
+					headers = { accept = "application/json  " },
 					query = { filter = 'id = "42" ' },
 					body = '{	"name": "john",	"valid": true}',
 				},
@@ -141,7 +141,7 @@ include = sub, *
 				r.variables
 			)
 			assert.are.same("http://myhost:8080", r.request.url)
-			assert.are.same({ "accept: application/json", "Authorization: Bearer mytoken123 " }, r.request.headers)
+			assert.are.same({ accept = "application/json", Authorization = "Bearer mytoken123 " }, r.request.headers)
 			assert.are.same({ filter = 'id = "42" and age > 42  ', include = "sub, *  " }, r.request.query)
 		end)
 	end)

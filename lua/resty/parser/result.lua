@@ -158,4 +158,76 @@ function M:is_valid_headers_row(row)
 	return false
 end
 
+function M:write_to_buffer(bufnr)
+	local req = self.request
+
+	-- QUERY
+	local query_str = ""
+	for key, value in pairs(req.query) do
+		if query_str:len() == 0 then
+			query_str = "?" .. key .. "=" .. vim.trim(value)
+		else
+			query_str = query_str .. "&" .. key .. "=" .. vim.trim(value)
+		end
+	end
+
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+		"## Request:",
+		"",
+		"```http",
+		req.method .. " " .. req.url .. query_str,
+	})
+
+	-- HEADERS
+	for key, value in pairs(req.headers) do
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { key .. ": " .. value })
+	end
+
+	-- BODY
+	if req.body then
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.body, "\n"))
+	end
+
+	-- SCRIPT
+	if req.script then
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "# @lang=lua", "> {%" })
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.script, "\n"))
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "%}" })
+	end
+
+	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "```" })
+
+	-- VARIABLES and REPLACEMENTS
+	if #self.replacements > 0 then
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
+			"",
+			"## Variables:",
+			"",
+		})
+		for _, typ in ipairs(self.replacements) do
+			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
+				"- '" .. typ.from .. "': '" .. typ.to .. "' (" .. typ.type .. ")",
+			})
+		end
+	end
+
+	-- GLOBAL VARIABLES
+	local with = true
+	for key, value in pairs(M.global_variables) do
+		if with then
+			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
+				"",
+				"## Global Variables:",
+				"",
+			})
+			with = false
+		end
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
+			"- '" .. key .. "': '" .. value .. "'",
+		})
+	end
+end
+
 return M

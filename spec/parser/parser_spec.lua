@@ -84,7 +84,7 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = { "accept: application/json " },
+				headers = { accept = "application/json " },
 				query = {},
 			},
 		})
@@ -96,7 +96,7 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = { "accept: application/json" },
+				headers = { accept = "application/json" },
 				query = {},
 			},
 		})
@@ -120,7 +120,7 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = { "accept: application/json" },
+				headers = { accept = "application/json" },
 				query = { ["id"] = "42" },
 			},
 		})
@@ -145,7 +145,7 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = { "accept: application/json" },
+				headers = { accept = "application/json" },
 				query = { ["id"] = "42" },
 				body = "{'name': 'John'}",
 			},
@@ -173,7 +173,7 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://host",
-					headers = { "accept: application/json" },
+					headers = { accept = "application/json" },
 					query = { ["id"] = "42" },
 					body = "{'name': 'John'}",
 				},
@@ -197,7 +197,7 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://host",
-					headers = { "accept: application/json" },
+					headers = { accept = "application/json" },
 					query = {},
 				},
 			}
@@ -218,7 +218,7 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://host",
-					headers = { "accept: application/json" },
+					headers = { accept = "application/json" },
 					query = { ["user"] = os.getenv("USER") },
 				},
 			}
@@ -258,7 +258,7 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://echo-host",
-					headers = { "accept: application/json" },
+					headers = { accept = "application/json" },
 					query = { ["cmd"] = "my output" },
 				},
 			}

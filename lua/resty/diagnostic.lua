@@ -6,17 +6,15 @@ function M.reset(bufnr)
 	vim.diagnostic.reset(M.ns_diagnostics, bufnr)
 end
 
-function M.show(bufnr, parser_result)
+function M.show(bufnr, result)
 	if not bufnr then
 		return false
 	end
 
 	M.reset(bufnr)
 
-	-- if parser_result:has_diag() then
-	-- 	vim.diagnostic.set(M.ns_diagnostics, bufnr, parser_result.diagnostics)
-	if parser_result:has_errors() then
-		vim.diagnostic.set(M.ns_diagnostics, bufnr, parser_result.errors)
+	if result:has_diag() then
+		vim.diagnostic.set(M.ns_diagnostics, bufnr, result.diagnostics)
 		return true
 	end
 

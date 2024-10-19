@@ -2,7 +2,7 @@ P = function(tab)
 	print(vim.inspect(tab))
 end
 
-local parser = require("resty.parser")
+local parser = require("resty.parser.parserng")
 local f = require("resty.parser.favorite")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
@@ -99,8 +99,8 @@ end
 -- local format = require("resty.output.format")
 
 M._run = function(lines, row, bufnr)
-	local parser_result = parser.parse(lines, row)
-	if diagnostic.show(bufnr, parser_result) then
+	local result = parser.parse(lines, row)
+	if diagnostic.show(bufnr, result) then
 		return
 	end
 
@@ -111,7 +111,7 @@ M._run = function(lines, row, bufnr)
 	-- end
 
 	-- save the last result
-	M.last_parser_result = parser_result
+	M.last_parser_result = result
 	M.output:exec_and_show_response(M.last_parser_result)
 end
 

@@ -69,7 +69,7 @@ describe("resty:", function()
 		end)
 
 		-- no parse errors
-		assert.are.same({}, resty.output.parser_result.errors)
+		assert.are.same({}, resty.output.parser_result.diagnostics)
 
 		assert.is_true(resty.output.meta.duration > 0)
 

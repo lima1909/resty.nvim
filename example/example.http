@@ -17,8 +17,8 @@ GET https://jsonplaceholder.typicode.com/comments
 accept: application/json  
 
 # query values
-postId = {{id}} 
-id=6 # id={{:ID}} # 21
+postId = 1
+id= {{id}}
 
 ###  #httpbin
 

@@ -2,7 +2,7 @@
 -- https://www.youtube.com/watch?v=HXABdG3xJW4
 --
 
-local parser = require("resty.parser.parserng")
+local parser = require("resty.parser")
 
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")

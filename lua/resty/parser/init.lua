@@ -1,311 +1,463 @@
-local kv = require("resty.parser.key_value")
-local mu = require("resty.parser.method_url")
-local b = require("resty.parser.body")
-local d = require("resty.parser.delimiter")
-local v = require("resty.parser.variables")
 local util = require("resty.util")
+local result = require("resty.parser.result")
 
-local M = { global_variables = {} }
-M.__index = M
+local INF = vim.diagnostic.severity.INFO
+local ERR = vim.diagnostic.severity.ERROR
+
+local M = {}
 
 M.set_global_variables = function(gvars)
-	M.global_variables = vim.tbl_deep_extend("force", M.global_variables, gvars)
+	result.global_variables = vim.tbl_deep_extend("force", result.global_variables, gvars)
 end
 
-M.STATE_START = {
-	id = 1,
-	name = "start",
-}
+M.new = function(input, selected, opts)
+	local lines = util.input_to_lines(input)
 
-M.STATE_VARIABLE = {
-	id = 2,
-	name = "variables",
-	parser = kv.parse_variable,
-	set_result = function(slf, r)
-		slf.variables[r.k] = r.v
-	end,
-}
+	local parser = setmetatable({
+		lines = lines,
+		len = #lines,
+	}, { __index = M })
 
-M.STATE_METHOD_URL = {
-	id = 3,
-	name = "method and url",
-	parser = mu.parse_method_url,
-	set_result = function(slf, r)
-		slf.request.method = r.method
-		slf.request.url = r.url
-	end,
-}
-
-M.STATE_HEADERS_QUERY = {
-	id = 4,
-	name = "header or query",
-	parser = kv.parse_headers_query,
-	set_result = function(slf, r)
-		if r.delimiter == "=" then
-			slf.request.query[r.k] = r.v
-		else
-			slf.request.headers[r.k] = r.v
-		end
-	end,
-}
-
-M.STATE_BODY = {
-	id = 5,
-	name = "body",
-	parser = b.parse_request_body,
-	set_result = function(slf, r)
-		slf.request.body = (slf.request.body or "") .. r .. "\n"
-	end,
-}
-
-M.STATE_SCRIPT = {
-	id = 6,
-	name = "script",
-	parser = b.parse_script_body,
-	set_result = function(slf, r)
-		slf.request.script = (slf.request.script or "") .. r .. "\n"
-	end,
-}
-
-local transitions = {
-	[M.STATE_START.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_VARIABLE.id] = { M.STATE_VARIABLE, M.STATE_METHOD_URL },
-	[M.STATE_METHOD_URL.id] = { M.STATE_BODY, M.STATE_HEADERS_QUERY, M.STATE_SCRIPT },
-	[M.STATE_HEADERS_QUERY.id] = { M.STATE_BODY, M.STATE_HEADERS_QUERY, M.STATE_SCRIPT },
-	[M.STATE_BODY.id] = { M.STATE_BODY, M.STATE_SCRIPT },
-	[M.STATE_SCRIPT.id] = { M.STATE_SCRIPT, M.STATE_BODY },
-}
-
-function M:parse_line(parser, line, set_result)
-	local no_error, result = pcall(parser, line)
-
-	-- if has an error
-	if not no_error then
-		self:add_error(result)
-		return true
-	elseif result then
-		set_result(self, result)
-		return true
+	if not selected then
+		selected = 1
+	elseif selected > parser.len then
+		selected = parser.len
+	elseif selected <= 0 then
+		selected = 1
 	end
+	-- NOTE: maybe better on result?
+	parser.selected = selected
+
+	parser.r = result.new(opts)
+
+	return parser
 end
 
-function M:do_transition(line)
-	local ts = transitions[self.current_state.id]
-	for _, s in ipairs(ts) do
-		if self:parse_line(s.parser, line, s.set_result) then
-			self.current_state = s
-			return
+function M:find_area()
+	self.r.meta.area.starts = 1
+	self.r.meta.area.ends = self.len
+
+	-- start
+	-- if self.selected ~= 1 then
+	for i = self.selected, 1, -1 do
+		if string.sub(self.lines[i], 1, 3) == "###" then
+			self.r.meta.area.starts = i + 1
+			break
 		end
 	end
-	--
-	-- no valid transition found
-	local err = "from current state: '" .. self.current_state.name .. "' are only possible state(s): "
-	for _, s in ipairs(ts) do
-		err = err .. s.name .. ", "
+	-- end
+
+	-- end
+	-- if self.selected ~= self.len then
+	for i = self.selected, self.len do
+		if string.sub(self.lines[i], 1, 3) == "###" and i ~= self.selected then
+			self.r.meta.area.ends = i - 1
+			break
+		end
 	end
-	self:add_error(err:sub(1, #err - 2))
+	-- end
+
+	return self.r.meta.area.starts, self.r.meta.area.ends
 end
 
-function M:has_errors()
-	return self.errors ~= nil and #self.errors > 0
+M.parse = function(input, selected, opts)
+	local start = os.clock()
+
+	local parser = M.new(input, selected, opts)
+	parser:find_area()
+
+	-- start > 1, means, there are global variables
+	if parser.r.meta.area.starts > 1 then
+		parser.cursor = 1
+		parser.len = parser.r.meta.area.starts - 1
+		parser:_parse_variables(nil, true)
+	end
+
+	parser:parse_definition(parser.r.meta.area.starts, parser.r.meta.area.ends)
+
+	parser.r.duration = os.clock() - start
+	return parser.r
 end
 
-function M:add_error(message)
-	table.insert(self.errors, {
-		col = 0,
-		lnum = self.readed_lines - 1, -- NOTE: lnum is 0 indexed, end readed_lines starts by 1
-		severity = vim.diagnostic.severity.ERROR,
-		message = message,
-	})
+-- parse only the fined area (e.g. between two ###)
+M.parse_area = function(input, selected, opts)
+	local parser = M.new(input, selected, opts)
+	return parser:parse_definition(parser:find_area()).r
+end
+
+function M:parse_definition(from, to)
+	self.cursor = from
+	self.len = to
+
+	local parsers = {
+		M._parse_request,
+		M._parse_headers_queries,
+		M._parse_json,
+		M._parse_script,
+		M._parse_after_last,
+	}
+
+	local line = self:_parse_variables()
+	-- no more lines available
+	-- only variables are ok for global area
+	if not line then
+		if self.r.meta.area.starts ~= 1 then
+			self.r:add_diag(ERR, "no request definition found", 0, 0, from, to)
+		end
+		return self
+	end
+
+	for _, parse in ipairs(parsers) do
+		line = parse(self, line)
+		if not line then
+			break
+		end
+	end
+
+	if not self.r.request.url or self.r.request.url == "" then
+		self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
+	end
+
 	return self
 end
 
----@param variables { } the parsed variables
----@param line string the input line
----@return string the output line with replaced variables
-function M:replace_variable(variables, line, replacements)
-	local ok, result = pcall(v.replace_variable, variables, line, replacements, M.global_variables)
-	if not ok then
-		self:add_error(result)
-		return ""
+local WS = "([%s]*)"
+local REST = "(.*)"
+local VALUE = "([^#]*)"
+
+-- -------
+-- request
+-- -------
+local METHOD = "^([%a]+)"
+local URL = "([^%?=&#%s]*)"
+local URL_QUERY = "([^%s#]*)"
+local HTTP_VERSION = "([HTTP%/%.%d]*)"
+
+local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. WS .. REST
+
+local methods =
+	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
+
+function M:_parse_request(line)
+	local lnum = self.cursor
+	self.cursor = self.cursor + 1
+	local req = self.r.request
+
+	line = self.r:replace_variable(line, lnum)
+
+	local ws1, ws2, ws3, rest, q, hv
+	req.method, ws1, req.url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
+
+	if not req.method then
+		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, lnum)
+		return line
+	elseif ws1 == "" then
+		local _, no_letter = string.match(line, "([%a]+)([^%s]?)")
+		if no_letter and no_letter ~= "" then
+			self.r:add_diag(ERR, "this is not a valid http method", 0, #req.method, lnum)
+		else
+			self.r:add_diag(ERR, "white space after http method is missing", 0, #req.method, lnum)
+		end
+		return line
+	elseif req.url == "" then
+		local msg = "url is missing"
+		if methods[req.method] ~= "" then
+			msg = "unknown http method and missing url"
+		end
+		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url + #q, lnum)
+		return line
+	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
+		self.r:add_diag(
+			INF,
+			"invalid input after the request definition: " .. rest,
+			0,
+			#req.method + #ws1 + #req.url + #q + #ws2 + #hv + #ws3,
+			self.cursor
+		)
 	end
 
-	return result
-end
-
----@param line  string the readed line
----@param parse function a parser function
----@param with_replace_variable? boolean with replacing variables
----@return boolean has_parsed is the given a line, that the parser should parse
-function M:read_line(line, parse, with_replace_variable)
-	with_replace_variable = with_replace_variable or false
-
-	-- ignore line with comment or empty line, do nothing
-	if vim.startswith(line, "#") or line == "" or vim.trim(line) == "" then
-		return false
+	if hv ~= "" then
+		req.http_version = hv
 	end
 
-	-- cut comment from the current line
-	local pos = string.find(line, "#")
-	if pos then
-		line = line:sub(1, pos - 1)
-	end
+	self.r.meta.request = lnum
 
-	-- replace variables
-	if with_replace_variable then
-		line = self:replace_variable(self.variables, line, self.replacements)
-		if line == "" then
-			return false
+	-- separate url and query, if exist
+	if q ~= "" then
+		if string.sub(q, 1, 1) ~= "?" then
+			self.r:add_diag(ERR, "invalid query in url, must start with a '?'", 0, #req.method + #ws1 + #req.url, lnum)
+			return line
+		end
+
+		q = string.sub(q, 2)
+		for k, v in string.gmatch(q, "([^=&]+)=([^&]+)") do
+			req.query[k] = v
 		end
 	end
 
-	parse(self, line)
-
-	return true
-end
-
-function M.new()
-	local p = {
-		current_state = M.STATE_START,
-		readed_lines = 1,
-		duration = 0,
-		variables = {},
-		replacements = {},
-		request = {
-			headers = {},
-			query = {},
-		},
-		errors = {},
-	}
-	return setmetatable(p, M)
-end
-
----Entry point, the parser
----@param input string | { } a string with delimiter '\n' or an array with strings
----@param selected? number the selected row
----@return self the parser with the request and possible errors
-function M.parse(input, selected)
-	selected = selected or 1
-	local start_time = os.clock()
-
-	local lines = util.input_to_lines(input)
-	local p = M.new()
-	--
-	-- find request
-	local ok, req_start, req_end = pcall(d.find_request, lines, selected)
-	if not ok then
-		return p:add_error(req_start)
+	if methods[req.method] ~= "" then
+		self.r:add_diag(INF, "unknown http method", 0, #req.method, lnum)
 	end
 
-	-- start == 1, no global variables exist
-	if req_start > 1 then
-		-- read global variables
-		while true do
-			local line = lines[p.readed_lines]
-			if not line or vim.startswith(line, "###") then
-				break
+	return line
+end
+
+-- ---------
+-- variables
+-- ---------
+local VKEY = "^@([%a][%w%-_%.]*)"
+local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VALUE .. REST
+
+local configures = { insecure = "", dry_run = "", timeout = "", proxy = "", check_json_body = "" }
+
+function M:_parse_variables(_, is_gloabel)
+	for lnum = self.cursor, self.len do
+		local line = self.lines[lnum]
+		local first_char = string.sub(line, 1, 1)
+
+		if is_gloabel and string.sub(line, 1, 3) == "###" then
+			-- stop searching for global variables if you find a new request
+			self.cursor = lnum
+			return line
+		elseif first_char == "" or first_char == "#" or line:match("^%s") then
+			-- ignore comment and blank line
+		elseif first_char ~= "@" then
+			self.cursor = lnum
+			return line
+		else
+			local k, ws1, d, ws2, v, rest = string.match(line, VARIABLE)
+			self.cursor = lnum + 1
+
+			if not k then
+				self.r:add_diag(ERR, "valid variable key is missing", 0, 1, lnum)
+			elseif d == "" then
+				self.r:add_diag(ERR, "variable delimiter is missing", 0, 1 + #k + #ws1, lnum)
+			elseif v == "" then
+				self.r:add_diag(ERR, "variable value is missing", 0, 1 + #k + #ws1 + #d + #ws2, lnum)
+			elseif rest and rest ~= "" and not string.match(rest, "^#") then
+				local col = 1 + #k + #ws1 + #d + #ws2 + #v
+				self.r:add_diag(INF, "invalid input after the variable: " .. rest, 0, col, lnum)
 			end
 
-			p:read_line(line, function(_, l)
-				local no_error, result = pcall(kv.parse_variable, l)
-				if not no_error then
-					p:add_error(result)
-				elseif result then
-					p.variables[result.k] = result.v
+			if k and v ~= "" then
+				local key = string.sub(k, 1, 4)
+				if key == "cfg." and #k > 4 then
+					key = string.sub(k, 5)
+					if configures[key] == "" then
+						self.r.request[key] = v
+					else
+						self.r:add_diag(INF, "invalid config key", 0, 5 + #key, lnum)
+					end
+				else
+					self.r.variables[k] = self.r:replace_variable(v, lnum)
+					self.r.meta.variables[k] = lnum
 				end
-			end)
-
-			p.readed_lines = p.readed_lines + 1
+			end
 		end
 	end
 
-	-- read request
-	p.readed_lines = req_start
-	while true do
-		-- read the line and execute the state machine
-		p:read_line(lines[p.readed_lines], M.do_transition, true)
-
-		if p.readed_lines == req_end then
-			break
-		end
-		p.readed_lines = p.readed_lines + 1
-	end
-
-	if not p.request.method or not p.request.url then
-		p:add_error("a valid request expect at least a url (parse rows: " .. req_start .. ":" .. req_end .. ")")
-	end
-
-	p.duration = os.clock() - start_time
-	return p
+	-- on the end, means only variables or nothing found
+	-- -> must be the global variables area
+	return nil
 end
 
-function M:write_to_buffer(bufnr)
-	local req = self.request
+-- -------------------
+-- headers and queries
+-- -------------------
+local HQKEY = "([^=:%s]+)"
+local HEADER_QUERY = HQKEY .. WS .. "([:=]?)" .. WS .. VALUE .. REST
 
-	-- QUERY
-	local query_str = ""
-	for key, value in pairs(req.query) do
-		if query_str:len() == 0 then
-			query_str = "?" .. key .. "=" .. value
+function M:_parse_headers_queries()
+	for lnum = self.cursor, self.len do
+		local line = self.lines[lnum]
+		local first_char = string.sub(line, 1, 1)
+
+		if first_char == "" or first_char == "#" or line:match("^%s") then
+			-- ignore comment and blank line
+		elseif not string.match(first_char, "%a") then
+			self.cursor = lnum
+			return line
 		else
-			query_str = query_str .. "&" .. key .. "=" .. value
+			self.cursor = lnum + 1
+			local k, ws1, d, ws2, v, rest = string.match(line, HEADER_QUERY)
+
+			if d == "" then
+				self.r:add_diag(ERR, "header: ':' or query: '=' delimiter is missing", 0, #k + #ws1, lnum)
+			elseif v == "" then
+				local kind = "header"
+				if d == "=" then
+					kind = "query"
+				end
+				self.r:add_diag(ERR, kind .. " value is missing", 0, #k + #ws1 + #d + #ws2, lnum)
+			elseif rest and rest ~= "" and not string.match(rest, "^#") then
+				local col = #k + #ws1 + #d + #ws2 + #v
+				local kind = "header"
+				if d == "=" then
+					kind = "query"
+				end
+				self.r:add_diag(INF, "invalid input after the " .. kind .. ": " .. rest, 0, col, lnum)
+			end
+
+			if v ~= "" then
+				if d == ":" then
+					v = self.r:replace_variable(v, lnum)
+					self.r.request.headers[k] = self.r:replace_variable(v, lnum)
+				else
+					self.r.request.query[k] = self.r:replace_variable(v, lnum)
+				end
+			end
+		end
+	end
+end
+
+function M:_parse_json()
+	local line, first_char = self:_ignore_lines()
+
+	if not line or first_char ~= "{" then
+		return line
+	else
+		local json_start = self.cursor
+		local with_break = false
+
+		for i = self.cursor + 1, self.len do
+			line = self.lines[i]
+			self.cursor = i
+
+			-- until comment line or blank line
+			if string.match(line, "^#") or string.match(line, "^%s*$") then
+				with_break = true
+				break
+			end
+		end
+
+		local json_end = self.cursor
+		if with_break then
+			-- remove comment or empty line
+			json_end = self.cursor - 1
+		else
+			self.cursor = self.cursor + 1
+		end
+
+		self.r.meta.body = { starts = json_start, ends = json_end }
+		self.r.request.body = table.concat(self.lines, "", json_start, json_end)
+
+		self.r:check_json_body_if_enabled(json_start, json_end)
+	end
+
+	return line
+end
+
+function M:_parse_script()
+	local line, _ = self:_ignore_lines()
+
+	-- or > {% (tree-sitter-http) %}
+	if not line or not string.match(line, "^--{%%%s*$") then
+		return line
+	else
+		-- ignore this line
+		self.cursor = self.cursor + 1
+		local start = self.cursor
+
+		for i = start, self.len do
+			line = self.lines[i]
+			self.cursor = i
+
+			if string.match(line, "^--%%}%s*$") then
+				-- ignore this line
+				self.r.meta.script = { starts = start, ends = i - 1 }
+				self.r.request.script = table.concat(self.lines, "\n", start, i - 1)
+				self.cursor = self.cursor + 1
+				return line
+			end
+		end
+
+		self.r:add_diag(ERR, "missing end of script", 0, 0, self.cursor)
+		return line
+	end
+end
+
+function M:_parse_after_last()
+	for i = self.cursor, self.len do
+		local line = self.lines[i]
+		local first_char = string.sub(line, 1, 1)
+
+		if first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		else
+			self.cursor = i
+			self.r:add_diag(
+				ERR,
+				"invalid input, this and the following lines are ignored",
+				0,
+				#line,
+				self.cursor,
+				self.len
+			)
+			return line
 		end
 	end
 
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-		-- "## Request:",
-		-- "",
-		"```http request",
-		req.method .. " " .. req.url .. query_str,
-	})
+	self.cursor = self.len
+	return nil
+end
 
-	-- HEADERS
-	for key, value in pairs(req.headers) do
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { key .. ": " .. value })
-	end
+function M:_ignore_lines()
+	for i = self.cursor, self.len do
+		local line = self.lines[i]
+		local first_char = string.sub(line, 1, 1)
 
-	-- BODY
-	if req.body then
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.body, "\n"))
-	end
-
-	-- SCRIPT
-	if req.script then
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.script, "\n"))
-	end
-
-	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "```" })
-
-	-- VARIABLES and REPLACEMENTS
-	if #self.replacements > 0 then
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
-			"",
-			"## Variables:",
-			"",
-		})
-		for _, typ in ipairs(self.replacements) do
-			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
-				"- '" .. typ.from .. "': '" .. typ.to .. "' (" .. typ.type.text .. ")",
-			})
+		if first_char == "" or first_char == "#" or line:match("^%s") then
+			-- do nothing, comment or empty line
+		else
+			self.cursor = i
+			return line, first_char
 		end
 	end
 
-	-- GLOBAL VARIABLES
-	local with = true
-	for key, value in pairs(M.global_variables) do
-		if with then
-			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
-				"",
-				"## Global Variables:",
-				"",
-			})
-			with = false
+	self.cursor = self.len
+	return nil, ""
+end
+
+M.get_replace_variable_str = function(lines, row, col)
+	local key = nil
+	for s, k, e in string.gmatch(lines[row], "(){{(.-)}}()") do
+		if s - 1 <= col and e - 1 > col then
+			key = k
+			break
 		end
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
-			"- '" .. key .. "': '" .. value .. "'",
-		})
+	end
+
+	-- early return, if not replacement exist in the current line
+	if not key then
+		return nil
+	end
+
+	local r = M.parse(lines, row, { is_prompt_supported = false })
+	local value = r.variables[key]
+
+	-- resolve environment and exec variable
+	if not value then
+		value = r:replace_variable_by_key(key)
+	end
+
+	if value then
+		local lnum_str = ""
+		-- environment or exec variables have no line number
+		local lnum = r.meta.variables[key]
+		if lnum then
+			lnum_str = "[" .. lnum .. "] "
+		end
+		return lnum_str .. key .. " = " .. value, lnum
+	else
+		local isPrompt = string.sub(key, 1, 1) == ":"
+		if isPrompt == true then
+			return "prompt variables are not supported for a preview"
+		end
+
+		if key == "" then
+			return "no key found"
+		end
+		return "no value found for key: " .. key
 	end
 end
 

@@ -19,7 +19,7 @@ vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 -- 		local row = vim.api.nvim_win_get_cursor(winnr)[1]
 -- 		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 --
--- 		-- local r = require("resty.parser.parserng").parse(lines, row)
+-- 		-- local r = require("resty.parser").parse(lines, row)
 -- 		local r = require("resty.parser").parse(lines, row)
 -- 		require("resty.diagnostic").show(ev.buf, r)
 -- 	end,

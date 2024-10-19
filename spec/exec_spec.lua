@@ -52,7 +52,7 @@ GET https://reqres.in/api/users?page=5
 ]]
 
 			local r = parser.parse(input, 2)
-			assert.is_false(r:has_errors())
+			assert.is_false(r:has_diag())
 
 			exec.curl_wait(7000, r.request, callback, error_fn)
 
@@ -63,12 +63,12 @@ GET https://reqres.in/api/users?page=5
 		it("request error: bad url", function()
 			local input = [[
 ### 
-Get https://.org/get 
+GET https://.org/get 
 
 ]]
 
 			local r = parser.parse(input, 2)
-			assert.is_false(r:has_errors())
+			assert.is_false(r:has_diag())
 
 			exec.curl_wait(7000, r.request, callback, error_fn)
 
@@ -92,7 +92,7 @@ GET https://reqres.in/api/users/2
 ]]
 
 			local r = parser.parse(input)
-			assert.is_false(r:has_errors())
+			assert.is_false(r:has_diag())
 
 			exec.curl_wait(7000, r.request, callback, error_fn)
 
@@ -111,7 +111,7 @@ GET https://reqres.in/api/users/3
 ]]
 
 			local r = parser.parse(input)
-			assert.is_false(r:has_errors())
+			assert.is_false(r:has_diag())
 
 			exec.curl_wait(7000, r.request, callback, error_fn)
 

@@ -1,5 +1,5 @@
 local assert = require("luassert")
-local p = require("resty.parser.parserng")
+local p = require("resty.parser")
 local f = require("resty.output.format")
 local exec = require("resty.exec")
 

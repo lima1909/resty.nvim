@@ -3,7 +3,6 @@ local format = require("resty.output.format")
 local statuscode = require("resty.output.statuscode")
 local exec = require("resty.exec")
 local parser = require("resty.parser")
-local parserng = require("resty.parser.parserng")
 
 local M = {
 	windows = {
@@ -306,7 +305,6 @@ function M:exec_and_show_response(parser_result)
 		self.meta.duration = os.clock() - start_time
 
 		parser.set_global_variables(result.global_variables)
-		parserng.set_global_variables(result.global_variables)
 
 		vim.schedule(function()
 			self:show(parser_result, result)

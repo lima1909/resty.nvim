@@ -218,7 +218,7 @@ describe("output:", function()
 	it("integration: exec_and_show_response", function()
 		local input = [[
 ### simple get 
-get https://reqres.in/api/users?page=5
+GET https://reqres.in/api/users?page=5
 
 ]]
 
@@ -250,8 +250,8 @@ get https://reqres.in/api/users?page=5
 		assert.are.same(3, o.current_window_id)
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 		assert.are.same(
-			{ "```http request", "GET https://reqres.in/api/users?page=5" },
-			vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false)
+			{ "## Request:", "", "```http", "GET https://reqres.in/api/users?page=5", "```" },
+			vim.api.nvim_buf_get_lines(o.bufnr, 0, 5, false)
 		)
 	end)
 
@@ -279,7 +279,7 @@ ctx.set("email", email)
 			return 1 == o.current_window_id
 		end)
 
-		assert.are.same({ ["email"] = "janet.weaver@reqres.in" }, parser.global_variables)
+		assert.are.same({ ["email"] = "janet.weaver@reqres.in" }, r.global_variables)
 	end)
 
 	it("integration: cancel exec_and_show_response", function()

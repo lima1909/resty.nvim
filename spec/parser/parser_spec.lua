@@ -1,6 +1,5 @@
 local assert = require("luassert")
-local p = require("resty.parser.parserng")
-local body = require("resty.parser.body")
+local p = require("resty.parser")
 
 describe("parser:", function()
 	local function check(input, selected, expected)
@@ -290,7 +289,7 @@ describe("parser:", function()
 	end)
 
 	it("method url with script", function()
-		check({ "GET http://host", "  ", body.script.open, "-- comment", body.script.close }, 1, {
+		check({ "GET http://host", "  ", "--{%", "-- comment", "--%}" }, 1, {
 			variables = {},
 			request = {
 				method = "GET",
@@ -311,9 +310,9 @@ describe("parser:", function()
 				"\t'name': 'John'",
 				"}",
 				"",
-				body.script.open,
+				"--{%",
 				"print('Hey ...')",
-				body.script.close,
+				"--%}",
 			},
 			1,
 			{
@@ -412,9 +411,9 @@ describe("errors:", function()
 				"GET http://host",
 				"accept: application/json",
 				"",
-				body.script.open,
+				"--{%",
 				"print('Hey ...')",
-				body.script.close,
+				"--%}",
 				"",
 				"{",
 				"\t'name': 'John'",

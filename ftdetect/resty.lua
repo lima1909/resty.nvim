@@ -2,7 +2,7 @@ vim.filetype.add({ extension = { resty = "resty" } })
 vim.diagnostic.config({ update_in_insert = true })
 
 local ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics")
-local parser = require("resty.parser.parserng")
+local parser = require("resty.parser")
 
 vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 	pattern = { "*.resty" },

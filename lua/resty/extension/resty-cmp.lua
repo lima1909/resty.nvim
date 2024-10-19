@@ -1,5 +1,5 @@
 -- https://www.jonashietala.se/blog/2024/05/26/autocomplete_with_nvim-cmp/
-local parser = require("resty.parser.parserng")
+local parser = require("resty.parser")
 local items = require("resty.extension.resty-cmp-items")
 
 local M = {}

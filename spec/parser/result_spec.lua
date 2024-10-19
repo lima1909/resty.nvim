@@ -1,5 +1,5 @@
 local assert = require("luassert")
-local p = require("resty.parser.parserng")
+local p = require("resty.parser")
 -- local result = require("resty.parser.result")
 
 describe("valid variable row:", function()

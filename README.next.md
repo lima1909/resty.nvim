@@ -79,6 +79,13 @@ These are the features that contribute to this goal:
   - `###`: delimiter, if more as one request definition, or text before and/or after exist
   - `### #my favorite` : delimiter, with defining a favorite ('my favorite') for the easy to finding the request definition
 
+#### Syntax highlight
+
+There are two supported filetypes:
+- `http`: needs a treesitter installation. This filetype is not 100% compatible!
+- `resty`: has his own vim syntax highlight and don't need additional installations
+
+
 #### Syntax in action 
 
 ```http

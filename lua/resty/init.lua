@@ -95,7 +95,7 @@ end
 
 M._run = function(lines, row, bufnr)
 	local result = parser.parse(lines, row)
-	if diagnostic.show(bufnr, result) then
+	if diagnostic.check_errors(bufnr, result) then
 		return
 	end
 

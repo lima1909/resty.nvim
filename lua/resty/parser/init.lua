@@ -2,6 +2,7 @@ local util = require("resty.util")
 local result = require("resty.parser.result")
 
 local INF = vim.diagnostic.severity.INFO
+local WRN = vim.diagnostic.severity.WARN
 local ERR = vim.diagnostic.severity.ERROR
 
 local M = {}
@@ -38,24 +39,20 @@ function M:find_area()
 	self.r.meta.area.ends = self.len
 
 	-- start
-	-- if self.selected ~= 1 then
 	for i = self.selected, 1, -1 do
 		if string.sub(self.lines[i], 1, 3) == "###" then
 			self.r.meta.area.starts = i + 1
 			break
 		end
 	end
-	-- end
 
 	-- end
-	-- if self.selected ~= self.len then
 	for i = self.selected, self.len do
 		if string.sub(self.lines[i], 1, 3) == "###" and i ~= self.selected then
 			self.r.meta.area.ends = i - 1
 			break
 		end
 	end
-	-- end
 
 	return self.r.meta.area.starts, self.r.meta.area.ends
 end
@@ -300,9 +297,16 @@ function M:_parse_headers_queries()
 
 			if v ~= "" then
 				if d == ":" then
-					v = self.r:replace_variable(v, lnum)
+					local val = self.r.request.headers[k]
+					if val then
+						self.r:add_diag(WRN, "overwrite header key: " .. k, 0, #k, lnum)
+					end
 					self.r.request.headers[k] = self.r:replace_variable(v, lnum)
 				else
+					local val = self.r.request.query[k]
+					if val then
+						self.r:add_diag(WRN, "overwrite query key: " .. k, 0, #k, lnum)
+					end
 					self.r.request.query[k] = self.r:replace_variable(v, lnum)
 				end
 			end

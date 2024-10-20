@@ -5,19 +5,19 @@ describe("parser:", function()
 	local function check(input, selected, expected)
 		local r = p.parse(input, selected)
 
-		if r:has_diag() then
+		if r:has_error() then
 			print(vim.inspect(r))
 		end
-		assert.is_false(r:has_diag())
+		assert.is_false(r:has_error())
 		assert.are.same(r.variables, expected.variables)
 		assert.are.same(r.request, expected.request or {})
 		assert.are.same(r.script, expected.script)
 	end
 
 	it("method url", function()
-		check("GET http://host", 1, {
+		check("GEt http://host", 1, {
 			variables = {},
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GEt", url = "http://host", headers = {}, query = {} },
 		})
 	end)
 

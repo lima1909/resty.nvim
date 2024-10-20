@@ -22,6 +22,27 @@ function M:has_diag()
 	return #self.diagnostics > 0
 end
 
+function M:has_error()
+	for _, d in ipairs(self.diagnostics) do
+		if d.severity == vim.diagnostic.severity.ERROR then
+			return true
+		end
+	end
+
+	return false
+end
+
+function M:errors()
+	local errors = {}
+	for _, d in ipairs(self.diagnostics) do
+		if d.severity == vim.diagnostic.severity.ERROR then
+			table.insert(errors, d)
+		end
+	end
+
+	return errors
+end
+
 function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 	if end_lnum and end_lnum > 1 then
 		end_lnum = end_lnum - 1

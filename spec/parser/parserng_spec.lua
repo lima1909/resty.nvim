@@ -90,10 +90,10 @@ describe("parse:", function()
 			{ method = "GET", url = "http://localhost", query = { k1 = "v1", k2 = "v2" }, headers = {} },
 			r.request
 		)
+	end)
 
-		--
-		-- error or hints
-		r = p.parse("GET")
+	it("parse request definition errors", function()
+		local r = p.parse("GET")
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
 		assert.are.same(d.message, "white space after http method is missing")
@@ -126,6 +126,7 @@ describe("parse:", function()
 		assert.are.same(3, d.end_col)
 
 		r = p.parse("Foo http://127.0.0.1:8080")
+		assert.is_false(r:has_error())
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
 		assert.are.same(d.message, "unknown http method")
@@ -276,9 +277,10 @@ describe("parse:", function()
 		r = parse("foo: {{> echo -n 'a; b'}}")
 		assert.is_false(r:has_diag())
 		assert.are.same({ foo = "a; b" }, r.request.headers)
+	end)
 
-		-- error or hints
-		r = parse("ID  ")
+	it("parse header errors", function()
+		local r = parse("ID  ")
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
 		assert.are.same("header: ':' or query: '=' delimiter is missing", d.message)
@@ -303,6 +305,15 @@ describe("parse:", function()
 		assert.are.same("invalid input, this and the following lines are ignored", d.message)
 		assert.are.same(0, d.col)
 		assert.are.same(5, d.end_col)
+
+		r = parse("foo: a\nfoo:b")
+		assert.are.same({ ["foo"] = "b" }, r.request.headers)
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("overwrite header key: foo", d.message)
+		assert.are.same(0, d.col)
+		assert.are.same(3, d.end_col)
+		assert.are.same(2, d.lnum)
 	end)
 
 	it("parse query", function()
@@ -333,13 +344,23 @@ describe("parse:", function()
 		r = parse("id = {{> echo -n '42'}}")
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "42" }, r.request.query)
+	end)
 
-		-- error or hints
-		r = parse("id = ")
+	it("parse query errors", function()
+		local r = parse("id = ")
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
 		assert.are.same("query value is missing", d.message)
 		assert.are.same(5, d.end_col)
+
+		r = parse("foo= a\nfoo=b")
+		assert.are.same({ ["foo"] = "b" }, r.request.query)
+		assert.is_true(r:has_diag())
+		d = r.diagnostics[1]
+		assert.are.same("overwrite query key: foo", d.message)
+		assert.are.same(0, d.col)
+		assert.are.same(3, d.end_col)
+		assert.are.same(2, d.lnum)
 	end)
 
 	it("parse json body", function()

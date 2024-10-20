@@ -1,11 +1,11 @@
 vim.filetype.add({ extension = { resty = "resty" } })
 vim.diagnostic.config({ update_in_insert = true })
 
-local ns_diagnostics = vim.api.nvim_create_namespace("resty_diagnostics")
 local parser = require("resty.parser")
+local ns_diagnostics = require("resty.diagnostic").ns_diagnostics
 
 vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
-	pattern = { "*.resty" },
+	pattern = { "*.resty", "*.http" },
 	callback = function()
 		if not vim.g.resty.diagnostics then
 			return

@@ -6,15 +6,15 @@ function M.reset(bufnr)
 	vim.diagnostic.reset(M.ns_diagnostics, bufnr)
 end
 
-function M.show(bufnr, result)
+function M.check_errors(bufnr, result)
 	if not bufnr then
 		return false
 	end
 
 	M.reset(bufnr)
 
-	if result:has_diag() then
-		vim.diagnostic.set(M.ns_diagnostics, bufnr, result.diagnostics)
+	if result:has_error() then
+		vim.diagnostic.set(M.ns_diagnostics, bufnr, result:errors())
 		return true
 	end
 

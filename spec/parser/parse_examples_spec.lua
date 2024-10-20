@@ -82,8 +82,8 @@ filter = id = {{id}}
 				request = {
 					method = "POST",
 					url = "http://host",
-					headers = { accept = "application/json  " },
-					query = { filter = 'id = "42" ' },
+					headers = { accept = "application/json" },
+					query = { filter = 'id = "42"' },
 					body = '{	"name": "john",	"valid": true}',
 				},
 			})
@@ -96,7 +96,7 @@ filter = id = {{id}}
 					method = "GET",
 					url = "http://host",
 					headers = {},
-					query = { filter = 'id = "42" ' },
+					query = { filter = 'id = "42"' },
 				},
 			})
 		end)
@@ -137,12 +137,12 @@ include = sub, *
 
 			local r = p.parse(input, 1)
 			assert.are.same(
-				{ host = "myhost", port = "8080", token = "Bearer mytoken123", filter = 'id = "42" and age > 42 ' },
+				{ host = "myhost", port = "8080", token = "Bearer mytoken123", filter = 'id = "42" and age > 42' },
 				r.variables
 			)
 			assert.are.same("http://myhost:8080", r.request.url)
-			assert.are.same({ accept = "application/json", Authorization = "Bearer mytoken123 " }, r.request.headers)
-			assert.are.same({ filter = 'id = "42" and age > 42  ', include = "sub, *  " }, r.request.query)
+			assert.are.same({ accept = "application/json", Authorization = "Bearer mytoken123" }, r.request.headers)
+			assert.are.same({ filter = 'id = "42" and age > 42', include = "sub, *" }, r.request.query)
 		end)
 	end)
 

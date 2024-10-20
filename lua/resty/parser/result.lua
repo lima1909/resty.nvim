@@ -61,7 +61,7 @@ function M:add_diag(sev, msg, col, end_col, lnum, end_lnum)
 end
 
 function M:check_json_body_if_enabled(lnum, end_lnum)
-	if self.request["check_json_body"] == "true" then
+	if self.request["check_json_body"] == true then
 		local ok, err = pcall(vim.json.decode, self.request.body, {})
 		if ok == false then
 			self:add_diag(vim.diagnostic.severity.ERROR, "json parsing error: " .. err, 0, 0, lnum, end_lnum)
@@ -238,6 +238,45 @@ function M:write_to_buffer(bufnr)
 		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
 			"- '" .. key .. "': '" .. value .. "'",
 		})
+	end
+end
+
+function M:to_boolean(key, value, lnum)
+	if value == "true" then
+		return true
+	elseif value == "false" then
+		return false
+	else
+		self:add_diag(vim.diagnostic.severity.INFO, "invalid boolean value", 0, 5 + #key + #value, lnum)
+		return nil
+	end
+end
+
+function M:to_number(key, value, lnum)
+	local n = tonumber(value)
+	if n then
+		return n
+	else
+		self:add_diag(vim.diagnostic.severity.INFO, "invalid number value", 0, 5 + #key + #value, lnum)
+		return nil
+	end
+end
+
+function M:to_cfg_value(key, value, lnum)
+	value = vim.trim(value)
+
+	if key == "insecure" then
+		return self:to_boolean(key, value, lnum)
+	-- elseif key == "dry_run" then
+	-- 	return self:to_boolean(key, value, lnum)
+	elseif key == "timeout" then
+		return self:to_number(key, value, lnum)
+	elseif key == "proxy" then
+		return value
+	elseif key == "check_json_body" then
+		return self:to_boolean(key, value, lnum)
+	else
+		self:add_diag(vim.diagnostic.severity.INFO, "invalid config key", 0, 5 + #key, lnum)
 	end
 end
 

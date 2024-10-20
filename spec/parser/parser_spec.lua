@@ -23,7 +23,7 @@ describe("parser:", function()
 
 	it("only one variable and method and url", function()
 		check({ "@key=value # comment", "GET http://host" }, 0, {
-			variables = { key = "value " },
+			variables = { key = "value" },
 			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
@@ -37,7 +37,7 @@ describe("parser:", function()
 
 	it("method url with variable", function()
 		check({ "@host=my-host # comment", "###", "GET http://{{host}}" }, 3, {
-			variables = { host = "my-host " },
+			variables = { host = "my-host" },
 			request = { method = "GET", url = "http://my-host", headers = {}, query = {} },
 		})
 	end)
@@ -51,7 +51,7 @@ describe("parser:", function()
 
 	it("two variables and method url", function()
 		check({ "@key1=value1 #comment", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
-			variables = { key1 = "value1 ", key2 = "value2" },
+			variables = { key1 = "value1", key2 = "value2" },
 			request = { method = "GET", url = "http://host", headers = {}, query = {} },
 		})
 	end)
@@ -83,7 +83,7 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = { accept = "application/json " },
+				headers = { accept = "application/json" },
 				query = {},
 			},
 		})
@@ -272,7 +272,7 @@ describe("parser:", function()
 			},
 			1,
 			{
-				variables = { ["host"] = "my-host-from-var\n" },
+				variables = { ["host"] = "my-host-from-var" },
 				request = {
 					method = "GET",
 					url = "http://my-host-from-var",

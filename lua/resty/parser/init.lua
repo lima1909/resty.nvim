@@ -166,10 +166,10 @@ function M:_parse_request(line)
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		self.r:add_diag(
 			INF,
-			"invalid input after the request definition: " .. rest,
+			"invalid input after the request definition: '" .. rest .. "', maybe spaces?",
 			0,
 			#req.method + #ws1 + #req.url + #q + #ws2 + #hv + #ws3,
-			self.cursor
+			lnum
 		)
 	end
 
@@ -240,13 +240,10 @@ function M:_parse_variables(_, is_gloabel)
 				local key = string.sub(k, 1, 4)
 				if key == "cfg." and #k > 4 then
 					key = string.sub(k, 5)
-					if configures[key] == "" then
-						self.r.request[key] = v
-					else
-						self.r:add_diag(INF, "invalid config key", 0, 5 + #key, lnum)
-					end
+					self.r.request[key] = self.r:to_cfg_value(key, v, lnum)
 				else
-					self.r.variables[k] = self.r:replace_variable(v, lnum)
+					v = self.r:replace_variable(v, lnum)
+					self.r.variables[k] = vim.trim(v)
 					self.r.meta.variables[k] = lnum
 				end
 			end
@@ -296,18 +293,21 @@ function M:_parse_headers_queries()
 			end
 
 			if v ~= "" then
+				v = self.r:replace_variable(v, lnum)
+				v = vim.trim(v)
+
 				if d == ":" then
 					local val = self.r.request.headers[k]
 					if val then
 						self.r:add_diag(WRN, "overwrite header key: " .. k, 0, #k, lnum)
 					end
-					self.r.request.headers[k] = self.r:replace_variable(v, lnum)
+					self.r.request.headers[k] = v
 				else
 					local val = self.r.request.query[k]
 					if val then
 						self.r:add_diag(WRN, "overwrite query key: " .. k, 0, #k, lnum)
 					end
-					self.r.request.query[k] = self.r:replace_variable(v, lnum)
+					self.r.request.query[k] = v
 				end
 			end
 		end

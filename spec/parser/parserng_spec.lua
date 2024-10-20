@@ -136,7 +136,7 @@ describe("parse:", function()
 		r = p.parse("GET http://localhost HTTP/1.0  foo")
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
-		assert.are.same(d.message, "invalid input after the request definition: foo")
+		assert.are.same(d.message, "invalid input after the request definition: 'foo', maybe spaces?")
 		assert.are.same(31, d.end_col)
 		assert.are.same(
 			{ method = "GET", url = "http://localhost", http_version = "HTTP/1.0", query = {}, headers = {} },
@@ -165,7 +165,7 @@ describe("parse:", function()
 
 		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value " }, r.variables)
+		assert.are.same({ key = "value" }, r.variables)
 
 		r = parse_var("@k_e-y = va_lu-e2")
 		assert.is_false(r:has_diag())
@@ -185,7 +185,7 @@ describe("parse:", function()
 
 		r = parse_var("@key=value # comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value " }, r.variables)
+		assert.are.same({ key = "value" }, r.variables)
 
 		r = parse_var("@host = host.org")
 		assert.is_false(r:has_diag())
@@ -193,11 +193,11 @@ describe("parse:", function()
 
 		r = parse_var("@key=value # comment\n@host = host.org")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value ", host = "host.org" }, r.variables)
+		assert.are.same({ key = "value", host = "host.org" }, r.variables)
 
 		r = parse_var("# comment \n@key=value \n	\n@host = host.org")
 		assert.is_false(r:has_diag())
-		assert.are.same({ key = "value ", host = "host.org" }, r.variables)
+		assert.are.same({ key = "value", host = "host.org" }, r.variables)
 
 		r = parse_var("@key=value\n@host = host.org\nfoo=bar")
 		assert.are.same({ key = "value", host = "host.org" }, r.variables)
@@ -205,7 +205,7 @@ describe("parse:", function()
 		-- cfg variable
 		r = parse_var("@cfg.insecure = true")
 		assert.is_false(r:has_diag())
-		assert.are.same({ insecure = "true", method = "GET", url = "http://host", query = {}, headers = {} }, r.request)
+		assert.are.same({ insecure = true, method = "GET", url = "http://host", query = {}, headers = {} }, r.request)
 
 		--
 		-- errors
@@ -264,7 +264,7 @@ describe("parse:", function()
 
 		r = parse("accept: application/json # my comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ accept = "application/json " }, r.request.headers)
+		assert.are.same({ accept = "application/json" }, r.request.headers)
 
 		r = parse("f_o-o: a=b")
 		assert.is_false(r:has_diag())
@@ -339,7 +339,7 @@ describe("parse:", function()
 
 		r = parse("id = 42 # comment")
 		assert.is_false(r:has_diag())
-		assert.are.same({ id = "42 " }, r.request.query)
+		assert.are.same({ id = "42" }, r.request.query)
 
 		r = parse("id = {{> echo -n '42'}}")
 		assert.is_false(r:has_diag())
@@ -467,12 +467,12 @@ describe("parse:", function()
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
-				accept = "application/json ",
+				accept = "application/json",
 				foo = "=bar; blub",
 			},
 			method = "GET",
 			query = {
-				qid = "{{id}} ",
+				qid = "{{id}}",
 				["foo%3Abar"] = "value",
 				myid = "{{id}}",
 				["ot_he-r"] = "a",
@@ -534,7 +534,7 @@ describe("parse:", function()
 		assert.are.same({
 			body = '{ "name": "me" }',
 			headers = {
-				accept = "application/json ",
+				accept = "application/json",
 				["accept-charset"] = "utf-8",
 				foo = "=bar; blub",
 			},
@@ -544,7 +544,7 @@ describe("parse:", function()
 			},
 			script = '  local json = ctx.json_body()\n  ctx.set("id", json.data.id)',
 			url = "http://{{host}}:7171",
-			insecure = "true",
+			insecure = true,
 		}, r.request)
 		assert.are.same({}, r.replacements)
 

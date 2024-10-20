@@ -132,16 +132,6 @@ function M:replace_variable(line, lnum)
 	end)
 end
 
-function M:get_header(header)
-	for _, h in ipairs(self.request.headers) do
-		if h == header then
-			return h
-		end
-	end
-
-	return nil
-end
-
 function M:is_valid_variable_row(row)
 	if row >= self.meta.area.starts and row <= self.meta.area.ends then
 		if self.meta.request then

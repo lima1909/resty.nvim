@@ -125,10 +125,11 @@ M.headers = {
 	},
 }
 
-M.available_headers = function(parsed)
+M.available_headers = function(headers)
 	local entries = {}
 	for _, h in ipairs(M.headers) do
-		if not parsed:get_header(h.insertText) then
+		local key = string.match(h.insertText, "([^:%s]+)")
+		if key and not headers[key] then
 			table.insert(entries, h)
 		end
 	end

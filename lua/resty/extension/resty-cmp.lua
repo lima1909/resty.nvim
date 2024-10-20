@@ -24,6 +24,7 @@ function M:complete(r, callback)
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	local parsed = parser.parse_area(lines, row, { replace_variables = false })
 
+	-- completion for variables
 	if (line == "" or string.match(line, "^@([^=]*)")) and parsed:is_valid_variable_row(row) then
 		-- add not used configs
 		local entries = {}
@@ -48,9 +49,10 @@ function M:complete(r, callback)
 		end
 
 		callback(entries)
+	-- completion for headers
 	-- start on the first column, no spaces
 	elseif (line == "" or string.match(line, "^([%a]+)$")) and parsed:is_valid_headers_row(row) then
-		local entries = items.available_headers(parsed)
+		local entries = items.available_headers(parsed.request.headers)
 		callback(entries)
 	end
 end

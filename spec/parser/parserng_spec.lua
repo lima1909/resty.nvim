@@ -33,7 +33,7 @@ describe("parse:", function()
 	end)
 
 	it("replace prompt variables", function()
-		local r = result.new({ is_prompt_supported = false })
+		local r = result.new({ is_in_execute_mode = false })
 		local line = r:replace_variable("abc: {{: my prompt}}")
 		assert.is_false(r:has_diag())
 		assert.are.same("abc: {{: my prompt}}", line)
@@ -496,7 +496,7 @@ describe("parse:", function()
 		print("time parse request: " .. format.duration(r.duration))
 	end)
 
-	it("parse ng with global variables", function()
+	it("with global variables", function()
 		local input = {
 			"",
 			"@host = g_host_7",
@@ -560,7 +560,7 @@ describe("parse:", function()
 		print("time parse request: " .. format.duration(r.duration))
 	end)
 
-	it("parse ng with check json body", function()
+	it("with check json body", function()
 		local input = {
 			"",
 			"@cfg.check_json_body = true",
@@ -587,7 +587,7 @@ describe("parse:", function()
 		}, r.diagnostics)
 	end)
 
-	it("parse ng without request", function()
+	it("without request", function()
 		local input = [[
 @host={{$HOST}}
 
@@ -622,19 +622,19 @@ id = 3
 		assert.are.same({ ["area"] = { starts = 12, ends = 14 }, variables = { host = 1 } }, r.meta)
 	end)
 
-	it("parse ng - only (global) variables", function()
-		local r = p.parse({ "", "@id = 7", "" })
+	it("only (global) variables", function()
+		local r = p.parse({ "", "@id = 7", "" }, 1, { is_in_execute_mode = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "7" }, r.variables)
 
-		r = p.parse({ "", "@id = 7", "###" })
+		r = p.parse({ "", "@id = 7", "###" }, 1, { is_in_execute_mode = false })
 		assert.is_false(r:has_diag())
 		assert.are.same({ id = "7" }, r.variables)
 	end)
 end)
 
 describe("parse errors:", function()
-	it("parse ng - error", function()
+	it("general - errors", function()
 		local input = {
 			"",
 			"@id = ",
@@ -680,7 +680,7 @@ describe("parse errors:", function()
 		assert.are.same({ method = "GETT", url = "http://host:7171", query = {}, headers = {} }, r.request)
 	end)
 
-	it("parse ng - error: missing URL", function()
+	it("missing URL in request", function()
 		local input = {
 			"###",
 			"@id = 7",
@@ -690,8 +690,22 @@ describe("parse errors:", function()
 		local r = p.parse(input, 1)
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
-		assert.are.same("no request definition found", d.message)
+		assert.are.same("no request URL found", d.message)
 		assert.are.same(1, d.lnum)
 		assert.are.same(2, d.end_lnum)
+	end)
+
+	it("in global variable area - missing URL", function()
+		local input = {
+			"@id = 7",
+			"",
+		}
+
+		local r = p.parse(input)
+		assert.is_true(r:has_diag())
+		local d = r.diagnostics[1]
+		assert.are.same("no request URL found. please set the cursor to an valid request", d.message)
+		assert.are.same(0, d.lnum)
+		assert.are.same(1, d.end_lnum)
 	end)
 end)

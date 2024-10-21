@@ -342,24 +342,8 @@ describe("parser:", function()
 	end)
 
 	it("empty", function()
-		check("", 1, {
-			variables = {},
-			request = { headers = {}, query = {} },
-		})
-	end)
-
-	it("only comment", function()
-		check("# comment", 1, {
-			variables = {},
-			request = { headers = {}, query = {} },
-		})
-	end)
-
-	it("only one variable", function()
-		check("@key=value", 1, {
-			variables = { key = "value" },
-			request = { headers = {}, query = {} },
-		})
+		local r = p.parse("", 1, { is_in_execute_mode = false })
+		assert.are.same({ headers = {}, query = {} }, r.request)
 	end)
 end)
 
@@ -373,16 +357,37 @@ describe("errors:", function()
 		assert.are.same(expected.lnum, err.lnum)
 	end
 
+	it("empty", function()
+		check("", 1, {
+			message = "no request URL found. please set the cursor to an valid request",
+			lnum = 0,
+		})
+	end)
+
+	it("only comment", function()
+		check("# comment", 1, {
+			message = "no request URL found. please set the cursor to an valid request",
+			lnum = 0,
+		})
+	end)
+
+	it("only one variable", function()
+		check("@key=value", 1, {
+			message = "no request URL found. please set the cursor to an valid request",
+			lnum = 0,
+		})
+	end)
+
 	it("only one variable and delimiter", function()
 		check("@key=value\n###", 2, {
-			message = "no request definition found",
+			message = "no request URL found",
 			lnum = 2,
 		})
 	end)
 
 	it("only delimiter", function()
 		check("###", 1, {
-			message = "no request definition found",
+			message = "no request URL found",
 			lnum = 1,
 		})
 	end)
@@ -393,7 +398,7 @@ describe("errors:", function()
 
 	it("selected in global variable", function()
 		check({ "@key=value", " ", "###", "@local=value" }, 4, {
-			message = "no request definition found",
+			message = "no request URL found",
 			lnum = 3,
 		})
 	end)

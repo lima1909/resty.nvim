@@ -4,7 +4,7 @@ local M = { global_variables = {} }
 
 M.default_opts = {
 	replace_variables = true, -- for completion, for a better performance (resty-cmp)
-	is_prompt_supported = true, -- for diagnostics, by edit resty and http files
+	is_in_execute_mode = true, -- in diagnostics are the prompt variables disabled and the parser checks, is there a request URL
 }
 
 M.new = function(opts)
@@ -91,7 +91,7 @@ function M:replace_variable_by_key(key)
 		return exec.cmd(key:sub(2)), "cmd"
 	-- prompt
 	elseif symbol == ":" then
-		if self.opts.is_prompt_supported == false then
+		if self.opts.is_in_execute_mode == false then
 			return nil, "prompt"
 		end
 		return vim.fn.input("Input for key " .. key:sub(2) .. ": "), "prompt"

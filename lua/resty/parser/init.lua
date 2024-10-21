@@ -61,16 +61,16 @@ M.parse = function(input, selected, opts)
 	local start = os.clock()
 
 	local parser = M.new(input, selected, opts)
-	parser:find_area()
+	local s, e = parser:find_area()
 
 	-- start > 1, means, there are global variables
-	if parser.r.meta.area.starts > 1 then
+	if s > 1 then
 		parser.cursor = 1
-		parser.len = parser.r.meta.area.starts - 1
+		parser.len = s - 1
 		parser:_parse_variables(nil, true)
 	end
 
-	parser:parse_definition(parser.r.meta.area.starts, parser.r.meta.area.ends)
+	parser:parse_definition(s, e)
 
 	parser.r.duration = os.clock() - start
 	return parser.r
@@ -98,8 +98,12 @@ function M:parse_definition(from, to)
 	-- no more lines available
 	-- only variables are ok for global area
 	if not line then
+		-- LOCAL variables
 		if self.r.meta.area.starts ~= 1 then
-			self.r:add_diag(ERR, "no request definition found", 0, 0, from, to)
+			self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
+		-- GLOBAL variables: self.r.meta.area.starts = 1
+		elseif self.r.opts.is_in_execute_mode == true then
+			self.r:add_diag(ERR, "no request URL found. please set the cursor to an valid request", 0, 0, from, to)
 		end
 		return self
 	end
@@ -436,7 +440,7 @@ M.get_replace_variable_str = function(lines, row, col)
 		return nil
 	end
 
-	local r = M.parse(lines, row, { is_prompt_supported = false })
+	local r = M.parse(lines, row, { is_in_execute_mode = false })
 	local value = r.variables[key]
 
 	-- resolve environment and exec variable

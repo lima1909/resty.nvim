@@ -17,7 +17,7 @@ vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 		local parsed = parser.parse(
 			vim.api.nvim_buf_get_lines(bufnr, 0, -1, true),
 			vim.api.nvim_win_get_cursor(0)[1],
-			{ is_prompt_supported = false }
+			{ is_in_execute_mode = false }
 		)
 		if parsed:has_diag() then
 			vim.diagnostic.set(ns_diagnostics, bufnr, parsed.diagnostics)

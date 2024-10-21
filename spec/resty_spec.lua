@@ -63,7 +63,7 @@ describe("resty:", function()
 	end)
 
 	it("run input", function()
-		resty.run("  GET http://dummy\n id = 7")
+		resty.run("GET http://dummy\n id = 7")
 		vim.wait(50, function()
 			return false
 		end)

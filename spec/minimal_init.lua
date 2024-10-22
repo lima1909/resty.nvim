@@ -26,7 +26,7 @@ end
 
 -- git checkout telescope
 local cmp_dir = "/tmp/nvim-cmp"
-if vim.fn.isdirectory(telescope_dir) == 0 then
+if vim.fn.isdirectory(cmp_dir) == 0 then
 	vim.fn.system({
 		"git",
 		"clone",
@@ -48,4 +48,4 @@ vim.cmd.runtime({ "plugin/nvim-cmp", bang = true })
 
 require("plenary.busted")
 require("telescope")
--- require("cmp")
+require("cmp")

@@ -26,10 +26,10 @@ end
 
 vim.opt.rtp:append(".")
 vim.opt.rtp:append(plenary_dir)
--- vim.opt.rtp:append(telescope_dir)
+vim.opt.rtp:append(telescope_dir)
 
 vim.cmd.runtime({ "plugin/plenary.vim", bang = true })
--- vim.cmd.runtime({ "plugin/telescope.vim", bang = true })
+vim.cmd.runtime({ "plugin/telescope.vim", bang = true })
 
 require("plenary.busted")
--- require("telescope")
+require("telescope")

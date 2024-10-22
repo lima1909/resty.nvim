@@ -12,17 +12,17 @@ if vim.fn.isdirectory(plenary_dir) == 0 then
 end
 
 -- git checkout telescope
--- local telescope_dir = "/tmp/telescope.nvim"
--- if vim.fn.isdirectory(telescope_dir) == 0 then
--- 	vim.fn.system({
--- 		"git",
--- 		"clone",
--- 		"--depth",
--- 		"1",
--- 		"https://github.com/nvim-telescope/telescope.nvim",
--- 		telescope_dir,
--- 	})
--- end
+local telescope_dir = "/tmp/telescope.nvim"
+if vim.fn.isdirectory(telescope_dir) == 0 then
+	vim.fn.system({
+		"git",
+		"clone",
+		"--depth",
+		"1",
+		"https://github.com/nvim-telescope/telescope.nvim",
+		telescope_dir,
+	})
+end
 
 vim.opt.rtp:append(".")
 vim.opt.rtp:append(plenary_dir)

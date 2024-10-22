@@ -48,4 +48,4 @@ vim.cmd.runtime({ "plugin/nvim-cmp", bang = true })
 
 require("plenary.busted")
 require("telescope")
-require("cmp")
+-- require("cmp")

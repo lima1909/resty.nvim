@@ -13,6 +13,17 @@ M.varcfg = {
 		},
 		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
 	},
+	{
+		label = "raw",
+		labelDetails = { detail = "string", description = "" },
+		insertText = "@cfg.raw = ",
+		filterText = "@cfg.raw",
+		documentation = {
+			kind = "markdown",
+			value = "any additonal curl args, it must be an comma seperated list.",
+		},
+		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+	},
 	-- {
 	-- 	label = "dry_run",
 	-- 	labelDetails = { detail = "boolean", description = "" },

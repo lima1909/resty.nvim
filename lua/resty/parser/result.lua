@@ -273,6 +273,8 @@ function M:to_cfg_value(key, value, lnum)
 		return self:to_number(key, value, lnum)
 	elseif key == "proxy" then
 		return value
+	elseif key == "raw" then
+		return vim.split(value, ",")
 	elseif key == "check_json_body" then
 		return self:to_boolean(key, value, lnum)
 	else

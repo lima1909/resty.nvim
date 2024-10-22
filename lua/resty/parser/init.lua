@@ -209,7 +209,7 @@ end
 local VKEY = "^@([%a][%w%-_%.]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
-local configures = { insecure = "", dry_run = "", timeout = "", proxy = "", check_json_body = "" }
+local configures = { insecure = "", raw = "", timeout = "", proxy = "", check_json_body = "" }
 
 function M:_parse_variables(_, is_gloabel)
 	for lnum = self.cursor, self.len do
@@ -244,6 +244,9 @@ function M:_parse_variables(_, is_gloabel)
 				local key = string.sub(k, 1, 4)
 				if key == "cfg." and #k > 4 then
 					key = string.sub(k, 5)
+					if configures[key] ~= "" then
+						self.r:add_diag(INF, "unknown configuration key", 0, #k, lnum)
+					end
 					self.r.request[key] = self.r:to_cfg_value(key, v, lnum)
 				else
 					v = self.r:replace_variable(v, lnum)

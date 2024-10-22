@@ -207,9 +207,16 @@ describe("parse:", function()
 		assert.is_false(r:has_diag())
 		assert.are.same({ insecure = true, method = "GET", url = "http://host", query = {}, headers = {} }, r.request)
 
-		--
-		-- errors
-		r = p.parse("@")
+		r = parse_var("@cfg.raw = --foo,--bar")
+		assert.is_false(r:has_diag())
+		assert.are.same(
+			{ raw = { "--foo", "--bar" }, method = "GET", url = "http://host", query = {}, headers = {} },
+			r.request
+		)
+	end)
+
+	it("parse variables errors", function()
+		local r = p.parse("@")
 		assert.is_true(r:has_diag())
 		local d = r.diagnostics[1]
 		assert.are.same("valid variable key is missing", d.message)
@@ -245,8 +252,8 @@ describe("parse:", function()
 		r = parse_var("@cfg.invalid = true")
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
-		assert.are.same("invalid config key", d.message)
-		assert.are.same(12, d.end_col)
+		assert.are.same("unknown configuration key", d.message)
+		assert.are.same(11, d.end_col)
 	end)
 
 	it("parse header", function()

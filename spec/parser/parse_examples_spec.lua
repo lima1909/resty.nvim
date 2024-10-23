@@ -58,8 +58,6 @@ filter = id = {{id}}
 				request = {
 					method = "GET",
 					url = "http://myhost:8080",
-					headers = {},
-					query = {},
 				},
 			})
 		end)
@@ -70,8 +68,6 @@ filter = id = {{id}}
 				request = {
 					method = "GET",
 					url = "http://myhost:9090",
-					headers = {},
-					query = {},
 				},
 			})
 		end)
@@ -82,8 +78,8 @@ filter = id = {{id}}
 				request = {
 					method = "POST",
 					url = "http://host",
-					headers = { accept = "application/json" },
 					query = { filter = 'id = "42"' },
+					headers = { accept = "application/json" },
 					body = '{	"name": "john",	"valid": true}',
 				},
 			})
@@ -95,7 +91,6 @@ filter = id = {{id}}
 				request = {
 					method = "GET",
 					url = "http://host",
-					headers = {},
 					query = { filter = 'id = "42"' },
 				},
 			})

@@ -1,6 +1,6 @@
 local assert = require("luassert")
 local p = require("resty.parser")
--- local result = require("resty.parser.result")
+local result = require("resty.parser.result")
 
 describe("valid variable row:", function()
 	it("only variable", function()
@@ -152,5 +152,56 @@ describe("valid headers row:", function()
 		assert.is_false(r:is_valid_headers_row(0))
 		assert.is_false(r:is_valid_headers_row(1))
 		assert.is_false(r:is_valid_headers_row(3))
+	end)
+end)
+
+describe("valid url + query:", function()
+	local function new(url, query)
+		local r = result.new()
+		r.request.url = url
+		r.request.query = query
+		return r
+	end
+
+	it("only url", function()
+		local r = new("http://host"):url_with_query_string()
+		assert.is_nil(r.request.query)
+		assert.are.same("http://host", r.request.url)
+	end)
+
+	it("url with query-str, without query", function()
+		local r = new("http://host?k=v"):url_with_query_string()
+		assert.is_nil(r.request.query)
+		assert.are.same("http://host?k=v", r.request.url)
+	end)
+
+	it("url with query-str two, without query", function()
+		local r = new("http://host?k=v&k2=v2"):url_with_query_string()
+		assert.is_nil(r.request.query)
+		assert.are.same("http://host?k=v&k2=v2", r.request.url)
+	end)
+
+	it("url with query-str and with query", function()
+		local r = new("http://host?k=v", { ["k2"] = "v2" }):url_with_query_string()
+		assert.is_nil(r.request.query)
+		assert.are.same("http://host?k=v&k2=v2", r.request.url)
+	end)
+
+	it("url without query-str, with query", function()
+		local r = new("http://host", { k = "v" }):url_with_query_string()
+		assert.are.same("http://host", r.request.url)
+		assert.are.same({ k = "v" }, r.request.query)
+	end)
+
+	it("url query-str, with query and same key", function()
+		local r = new("http://host?k=1", { k = "2" }):url_with_query_string()
+		assert.is_nil(r.request.query)
+		assert.are.same("http://host?k=1&k=2", r.request.url)
+	end)
+
+	it("url without query-str, with query, and always_append", function()
+		local r = new("http://host", { k = "v" }):url_with_query_string(true)
+		assert.are.same("http://host?k=v", r.request.url)
+		assert.is_nil(r.request.query)
 	end)
 end)

@@ -17,63 +17,63 @@ describe("parser:", function()
 	it("method url", function()
 		check("GEt http://host", 1, {
 			variables = {},
-			request = { method = "GEt", url = "http://host", headers = {}, query = {} },
+			request = { method = "GEt", url = "http://host" },
 		})
 	end)
 
 	it("only one variable and method and url", function()
 		check({ "@key=value # comment", "GET http://host" }, 0, {
 			variables = { key = "value" },
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("method url with comment in the same line", function()
 		check("GET http://host # with comment in the same line", 1, {
 			variables = {},
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("method url with variable", function()
 		check({ "@host=my-host # comment", "###", "GET http://{{host}}" }, 3, {
 			variables = { host = "my-host" },
-			request = { method = "GET", url = "http://my-host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://my-host" },
 		})
 	end)
 
 	it("one variable and method url", function()
 		check({ "@key=value", "###", "GET http://host" }, 3, {
 			variables = { key = "value" },
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("two variables and method url", function()
 		check({ "@key1=value1 #comment", " ", "# comment", "", "@key2=value2", "###", "GET http://host" }, 6, {
 			variables = { key1 = "value1", key2 = "value2" },
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("delimiter and method url", function()
 		check("###\nGET http://host", 1, {
 			variables = {},
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("delimiter and one variable and method url", function()
 		check({ "###", "@key=value", "# comment", "GET http://host" }, 2, {
 			variables = { key = "value" },
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
 	it("delimiter and two variable and method url", function()
 		check({ "@key=value", "# comment", "###", "@key2=value2", "GET http://host" }, 3, {
 			variables = { key = "value", key2 = "value2" },
-			request = { method = "GET", url = "http://host", headers = {}, query = {} },
+			request = { method = "GET", url = "http://host" },
 		})
 	end)
 
@@ -84,7 +84,6 @@ describe("parser:", function()
 				method = "GET",
 				url = "http://host",
 				headers = { accept = "application/json" },
-				query = {},
 			},
 		})
 	end)
@@ -96,7 +95,6 @@ describe("parser:", function()
 				method = "GET",
 				url = "http://host",
 				headers = { accept = "application/json" },
-				query = {},
 			},
 		})
 	end)
@@ -104,12 +102,7 @@ describe("parser:", function()
 	it("method url and query", function()
 		check({ "GET http://host", "", "id=42# comment", "" }, 2, {
 			variables = {},
-			request = {
-				method = "GET",
-				url = "http://host",
-				headers = {},
-				query = { ["id"] = "42" },
-			},
+			request = { method = "GET", url = "http://host", query = { id = "42" } },
 		})
 	end)
 
@@ -119,8 +112,8 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
+				query = { id = "42" },
 				headers = { accept = "application/json" },
-				query = { ["id"] = "42" },
 			},
 		})
 	end)
@@ -131,8 +124,6 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = {},
-				query = {},
 				body = "{\t'name': 'John'}",
 			},
 		})
@@ -144,8 +135,8 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
+				query = { id = "42" },
 				headers = { accept = "application/json" },
-				query = { ["id"] = "42" },
 				body = "{'name': 'John'}",
 			},
 		})
@@ -172,8 +163,8 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://host",
+					query = { id = "42" },
 					headers = { accept = "application/json" },
-					query = { ["id"] = "42" },
 					body = "{'name': 'John'}",
 				},
 			}
@@ -197,7 +188,6 @@ describe("parser:", function()
 					method = "GET",
 					url = "http://host",
 					headers = { accept = "application/json" },
-					query = {},
 				},
 			}
 		)
@@ -217,8 +207,8 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://host",
+					query = { user = os.getenv("USER") },
 					headers = { accept = "application/json" },
-					query = { ["user"] = os.getenv("USER") },
 				},
 			}
 		)
@@ -236,8 +226,6 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://" .. os.getenv("USER"),
-					headers = {},
-					query = {},
 				},
 			}
 		)
@@ -257,8 +245,8 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://echo-host",
+					query = { cmd = "my output" },
 					headers = { accept = "application/json" },
-					query = { ["cmd"] = "my output" },
 				},
 			}
 		)
@@ -276,8 +264,6 @@ describe("parser:", function()
 				request = {
 					method = "GET",
 					url = "http://my-host-from-var",
-					headers = {},
-					query = {},
 				},
 			}
 		)
@@ -294,8 +280,6 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = {},
-				query = {},
 				script = "-- comment",
 			},
 		})
@@ -321,8 +305,6 @@ describe("parser:", function()
 					method = "GET",
 					url = "http://host",
 					body = "{\t'name': 'John'}",
-					headers = {},
-					query = {},
 					script = "print('Hey ...')",
 				},
 			}
@@ -335,15 +317,13 @@ describe("parser:", function()
 			request = {
 				method = "GET",
 				url = "http://host",
-				headers = {},
-				query = {},
 			},
 		})
 	end)
 
 	it("empty", function()
 		local r = p.parse("", 1, { is_in_execute_mode = false })
-		assert.are.same({ headers = {}, query = {} }, r.request)
+		assert.are.same({}, r.request)
 	end)
 end)
 

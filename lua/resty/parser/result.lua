@@ -9,7 +9,7 @@ M.default_opts = {
 
 M.new = function(opts)
 	return setmetatable({
-		request = { query = {}, headers = {} },
+		request = {}, -- method, url, http_version, query = {}, headers = {}
 		variables = {},
 		replacements = {},
 		diagnostics = {},
@@ -169,29 +169,67 @@ function M:is_valid_headers_row(row)
 	return false
 end
 
-function M:write_to_buffer(bufnr)
-	local req = self.request
+function M:url_with_query_string(always_append)
+	-- no query, nothing to do
+	if not self.request.query then
+		return self
+	end
 
-	-- QUERY
-	local query_str = ""
-	for key, value in pairs(req.query) do
-		if query_str:len() == 0 then
-			query_str = "?" .. key .. "=" .. vim.trim(value)
+	-- no query in url, nothing to do
+	local qm = string.find(self.request.url, "?")
+	if not qm and not always_append then
+		return self
+	end
+
+	local new_url = { self.request.url }
+	for key, value in pairs(self.request.query) do
+		if not qm then
+			table.insert(new_url, table.concat({ "?", key, "=", vim.trim(value) }))
+			qm = nil
 		else
-			query_str = query_str .. "&" .. key .. "=" .. vim.trim(value)
+			table.insert(new_url, table.concat({ "&", key, "=", vim.trim(value) }))
 		end
 	end
 
+	self.request.query = nil
+	self.request.url = table.concat(new_url)
+	return self
+end
+
+-- function M.url_with_query_string(url, query)
+-- 	if not query or not url then
+-- 		return url
+-- 	end
+--
+-- 	local qm = string.find(url, "?")
+-- 	for key, value in pairs(query) do
+-- 		if not qm then
+-- 			url = url .. "?" .. key .. "=" .. vim.trim(value)
+-- 			qm = nil
+-- 		else
+-- 			url = url .. "&" .. key .. "=" .. vim.trim(value)
+-- 		end
+-- 	end
+--
+-- 	return url
+-- end
+--
+function M:write_to_buffer(bufnr)
+	local req = self.request
+
+	-- URL with QUERY-String
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
 		"## Request:",
 		"",
 		"```http",
-		req.method .. " " .. req.url .. query_str,
+		req.method .. " " .. self:url_with_query_string(true).request.url,
 	})
 
 	-- HEADERS
-	for key, value in pairs(req.headers) do
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { key .. ": " .. value })
+	if req.headers then
+		for key, value in pairs(req.headers) do
+			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { key .. ": " .. value })
+		end
 	end
 
 	-- BODY

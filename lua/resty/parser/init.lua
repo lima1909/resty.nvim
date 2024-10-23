@@ -119,7 +119,7 @@ function M:parse_definition(from, to)
 		self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
 	end
 
-	return self
+	return self.r:url_with_query_string()
 end
 
 local WS = "([%s]*)"
@@ -130,11 +130,10 @@ local VALUE = "([^#]*)"
 -- request
 -- -------
 local METHOD = "^([%a]+)"
-local URL = "([^%?=&#%s]*)"
-local URL_QUERY = "([^%s#]*)"
+local URL = "([^#%s]*)"
 local HTTP_VERSION = "([HTTP%/%.%d]*)"
 
-local REQUEST = METHOD .. WS .. URL .. URL_QUERY .. WS .. HTTP_VERSION .. WS .. REST
+local REQUEST = METHOD .. WS .. URL .. WS .. HTTP_VERSION .. WS .. REST
 
 local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
@@ -146,8 +145,8 @@ function M:_parse_request(line)
 
 	line = self.r:replace_variable(line, lnum)
 
-	local ws1, ws2, ws3, rest, q, hv
-	req.method, ws1, req.url, q, ws2, hv, ws3, rest = string.match(line, REQUEST)
+	local ws1, ws2, ws3, rest, hv
+	req.method, ws1, req.url, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
 	if not req.method then
 		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, lnum)
@@ -165,14 +164,14 @@ function M:_parse_request(line)
 		if methods[req.method] ~= "" then
 			msg = "unknown http method and missing url"
 		end
-		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url + #q, lnum)
+		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url, lnum)
 		return line
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		self.r:add_diag(
 			INF,
 			"invalid input after the request definition: '" .. rest .. "', maybe spaces?",
 			0,
-			#req.method + #ws1 + #req.url + #q + #ws2 + #hv + #ws3,
+			#req.method + #ws1 + #req.url + #ws2 + #hv + #ws3,
 			lnum
 		)
 	end
@@ -181,24 +180,15 @@ function M:_parse_request(line)
 		req.http_version = hv
 	end
 
-	self.r.meta.request = lnum
-
-	-- separate url and query, if exist
-	if q ~= "" then
-		if string.sub(q, 1, 1) ~= "?" then
-			self.r:add_diag(ERR, "invalid query in url, must start with a '?'", 0, #req.method + #ws1 + #req.url, lnum)
-			return line
-		end
-
-		q = string.sub(q, 2)
-		for k, v in string.gmatch(q, "([^=&]+)=([^&]+)") do
-			req.query[k] = v
-		end
-	end
-
 	if methods[req.method] ~= "" then
 		self.r:add_diag(INF, "unknown http method", 0, #req.method, lnum)
 	end
+
+	if string.sub(req.url, 1, 4) ~= "http" then
+		self.r:add_diag(ERR, "url must start with http", 0, #req.method, lnum)
+	end
+
+	self.r.meta.request = lnum
 
 	return line
 end
@@ -304,12 +294,16 @@ function M:_parse_headers_queries()
 				v = vim.trim(v)
 
 				if d == ":" then
+					self.r.request.headers = self.r.request.headers or {}
+
 					local val = self.r.request.headers[k]
 					if val then
 						self.r:add_diag(WRN, "overwrite header key: " .. k, 0, #k, lnum)
 					end
 					self.r.request.headers[k] = v
 				else
+					self.r.request.query = self.r.request.query or {}
+
 					local val = self.r.request.query[k]
 					if val then
 						self.r:add_diag(WRN, "overwrite query key: " .. k, 0, #k, lnum)

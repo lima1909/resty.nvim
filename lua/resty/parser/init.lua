@@ -119,7 +119,8 @@ function M:parse_definition(from, to)
 		self.r:add_diag(ERR, "no request URL found", 0, 0, from, to)
 	end
 
-	return self.r:url_with_query_string()
+	self.r:url_with_query_string()
+	return self
 end
 
 local WS = "([%s]*)"

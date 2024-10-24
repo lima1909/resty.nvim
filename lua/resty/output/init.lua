@@ -307,6 +307,15 @@ function M:show_dry_run(job, parser_result)
 		"",
 	})
 	parser_result:write_to_buffer(self.bufnr)
+
+	-- RESPONSE AND META
+	vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, {
+		"",
+		"## Meta:",
+		"",
+		"- call from buffer: '" .. self.meta.buffer_name .. "'",
+		"- duration parse-request: " .. format.duration(parser_result.duration),
+	})
 end
 
 function M:exec_and_show_response(parser_result)

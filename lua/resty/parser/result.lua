@@ -203,7 +203,7 @@ function M:write_to_buffer(bufnr)
 	local req = self.request
 
 	-- URL with QUERY-String
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
 		"## Request:",
 		"",
 		"```http",
@@ -290,8 +290,8 @@ function M:to_cfg_value(key, value, lnum)
 
 	if key == "insecure" then
 		return self:to_boolean(key, value, lnum)
-	-- elseif key == "dry_run" then
-	-- 	return self:to_boolean(key, value, lnum)
+	elseif key == "dry_run" then
+		return self:to_boolean(key, value, lnum)
 	elseif key == "timeout" then
 		return self:to_number(key, value, lnum)
 	elseif key == "proxy" then

@@ -1,5 +1,6 @@
 vim.filetype.add({ extension = { http = "http" } })
 
+--[[
 -- Reset diagnostic by changing the file
 vim.api.nvim_create_augroup("RestyDiagnostic", { clear = true })
 -- text change in Insert and Normal mode => diagnostic reset
@@ -24,3 +25,4 @@ vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 -- 		require("resty.diagnostic").show(ev.buf, r)
 -- 	end,
 -- })
+-- ]]

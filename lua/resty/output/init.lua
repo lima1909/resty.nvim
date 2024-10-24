@@ -61,7 +61,7 @@ local M = {
 					"## CURL command:",
 					"",
 					"```",
-					vim.inspect(slf.curl.args),
+					vim.inspect(slf.curl_job.args),
 					"```",
 				})
 			end,
@@ -240,9 +240,9 @@ function M:activate()
 	self.bufnr, self.winnr = create_buf_with_win(self.bufnr, self.bufname)
 	-- activate curl cancel
 	vim.keymap.set("n", "cc", function()
-		if M.curl then
-			M.curl:shutdown()
-			M.curl = nil
+		if M.curl_job then
+			M.curl_job:shutdown()
+			M.curl_job = nil
 
 			-- Delete buffer content
 			vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
@@ -294,6 +294,18 @@ function M:show_error(error)
 	})
 end
 
+function M:show_dry_run(job, parser_result)
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.bufnr })
+	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
+		"# Dry run:",
+		"",
+		vim.inspect(job),
+		"",
+		"",
+	})
+	parser_result:write_to_buffer(self.bufnr)
+end
+
 function M:exec_and_show_response(parser_result)
 	self.meta = { buffer_name = vim.fn.bufname("%") }
 	self:activate()
@@ -301,7 +313,7 @@ function M:exec_and_show_response(parser_result)
 	-- start the stop time
 	local start_time = os.clock()
 
-	self.curl = exec.curl(parser_result.request, function(result)
+	local curl_job = exec.curl(parser_result.request, function(result)
 		self.meta.duration = os.clock() - start_time
 
 		parser.set_global_variables(result.global_variables)
@@ -312,11 +324,17 @@ function M:exec_and_show_response(parser_result)
 	end, function(error)
 		vim.schedule(function()
 			-- if curl canceled, dont print an error
-			if M.curl then
+			if M.curl_job then
 				self:show_error(error)
 			end
 		end)
 	end)
+
+	if getmetatable(curl_job) then
+		self.curl_job = curl_job
+	else
+		self:show_dry_run(curl_job, parser_result)
+	end
 end
 
 return M

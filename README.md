@@ -27,6 +27,7 @@ These are the features that contribute to this goal:
 * further processing from json result with `jq`
 * create your own favorite list with `nvim-telescope/telescope.nvim` (if installed) for finding often used request in a large input file
 * write the request definition in which file you want (nearby to the code, where you have implement the rest service)
+* show information about duration of parsing and executing from the request
 
 ## Install
 
@@ -96,8 +97,9 @@ There are two supported filetypes:
 @hostname = {{>> ./myscript.sh}} # from script (start symbol: '>>'), the result will be cached
 @hostname = {{:hostname}}        # with input prompt (start symbol: ':')
 
-@cfg.timeout = 1000              # curl configuration for timeout (prefix: @cfg.)
-@cfg.check_json_body = true      # resty configuration for validate the json body before execute (prefix: @cfg.)
+# prefix: @cfg. means configuration from curl and/or resty
+@cfg.timeout = 1000              # curl configuration for timeout 
+@cfg.check_json_body = true      # resty configuration to validate the json body
 
 ###  #my favorite
 GET https://{{hostname}}/get?id=7

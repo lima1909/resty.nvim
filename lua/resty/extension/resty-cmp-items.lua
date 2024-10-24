@@ -24,17 +24,17 @@ M.varcfg = {
 		},
 		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
 	},
-	-- {
-	-- 	label = "dry_run",
-	-- 	labelDetails = { detail = "boolean", description = "" },
-	-- 	insertText = "@cfg.dry_run = true",
-	-- 	filterText = "@cfg.dry_run=true",
-	-- 	documentation = {
-	-- 		kind = "markdown",
-	-- 		value = "whether to return the args to be ran through curl",
-	-- 	},
-	-- 	cmp = { kind_hl_group = "Structure", kind_text = "curl" },
-	-- },
+	{
+		label = "dry_run",
+		labelDetails = { detail = "boolean", description = "" },
+		insertText = "@cfg.dry_run = true",
+		filterText = "@cfg.dry_run=true",
+		documentation = {
+			kind = "markdown",
+			value = "whether to return the args to be ran through curl",
+		},
+		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+	},
 	{
 		label = "timeout",
 		labelDetails = { detail = "number", description = "" },
@@ -137,6 +137,10 @@ M.headers = {
 }
 
 M.available_headers = function(headers)
+	if not headers then
+		return M.headers
+	end
+
 	local entries = {}
 	for _, h in ipairs(M.headers) do
 		local key = string.match(h.insertText, "([^:%s]+)")

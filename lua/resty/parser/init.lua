@@ -200,7 +200,7 @@ end
 local VKEY = "^@([%a][%w%-_%.]*)"
 local VARIABLE = VKEY .. WS .. "([=]?)" .. WS .. VALUE .. REST
 
-local configures = { insecure = "", raw = "", timeout = "", proxy = "", check_json_body = "" }
+local configures = { insecure = "", raw = "", timeout = "", proxy = "", dry_run = "", check_json_body = "" }
 
 function M:_parse_variables(_, is_gloabel)
 	for lnum = self.cursor, self.len do

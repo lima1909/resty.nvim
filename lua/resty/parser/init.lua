@@ -186,7 +186,7 @@ function M:_parse_request(line)
 	end
 
 	if string.sub(req.url, 1, 4) ~= "http" then
-		self.r:add_diag(ERR, "url must start with http", 0, #req.method, lnum)
+		self.r:add_diag(ERR, "url must start with http", 0, #req.method + #ws1 + #req.url, lnum)
 	end
 
 	self.r.meta.request = lnum

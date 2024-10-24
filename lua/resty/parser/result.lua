@@ -117,13 +117,16 @@ function M:replace_variable(line, lnum)
 	end
 
 	return string.gsub(line, "{{(.-)}}", function(key)
+		if key == "" then
+			self:add_diag(vim.diagnostic.severity.ERROR, "no key found", 0, 1000, lnum or 1)
+			return nil
+		end
+
 		local value, type = self:replace_variable_by_key(key)
 		if value then
 			table.insert(self.replacements, { from = key, to = value, type = type })
 		elseif type == "prompt" then
 			-- ignore prompt
-		elseif key == "" then
-			self:add_diag(vim.diagnostic.severity.ERROR, "no key found", 0, 1000, lnum or 1)
 		else
 			self:add_diag(vim.diagnostic.severity.ERROR, "no value found for key: " .. key, 0, 1000, lnum or 1)
 		end
@@ -196,24 +199,6 @@ function M:url_with_query_string(always_append)
 	return self
 end
 
--- function M.url_with_query_string(url, query)
--- 	if not query or not url then
--- 		return url
--- 	end
---
--- 	local qm = string.find(url, "?")
--- 	for key, value in pairs(query) do
--- 		if not qm then
--- 			url = url .. "?" .. key .. "=" .. vim.trim(value)
--- 			qm = nil
--- 		else
--- 			url = url .. "&" .. key .. "=" .. vim.trim(value)
--- 		end
--- 	end
---
--- 	return url
--- end
---
 function M:write_to_buffer(bufnr)
 	local req = self.request
 

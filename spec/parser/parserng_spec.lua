@@ -586,7 +586,7 @@ id = 3
 		assert.is_true(r:has_diag())
 		assert.are.same({
 			{ col = 0, end_col = 2, lnum = 11, message = "unknown http method", severity = 3 },
-			{ col = 0, end_col = 2, lnum = 11, message = "url must start with http", severity = 1 },
+			{ col = 0, end_col = 4, lnum = 11, message = "url must start with http", severity = 1 },
 		}, r.diagnostics)
 		assert.are.same({ host = "{{$HOST}}" }, r.variables)
 		assert.are.same({

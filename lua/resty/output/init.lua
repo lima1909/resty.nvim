@@ -295,6 +295,9 @@ function M:show_error(error)
 end
 
 function M:show_dry_run(job, parser_result)
+	-- format the output from the job
+	-- format.curl(job)
+
 	vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.bufnr })
 	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
 		"# Dry run:",

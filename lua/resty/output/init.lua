@@ -1,228 +1,162 @@
 local winbar = require("resty.output.winbar")
+local windows = require("resty.output.windows")
 local format = require("resty.output.format")
 local statuscode = require("resty.output.statuscode")
 local exec = require("resty.exec")
 local parser = require("resty.parser")
 
-local M = {
-	windows = {
-		{
-			id = 1,
-			keymap = "b",
-			name = "body",
-			show_window_content = function(slf)
-				vim.api.nvim_set_option_value("filetype", "json", { buf = slf.bufnr })
+local M = { bufnr = nil, winnr = nil }
 
-				if slf.cfg.output.body_pretty_print == true then
-					exec.jq_wait(1000, slf.current_body, function(json)
-						slf.current_body = json
-						return true
-					end)
-				end
+local default_bufname = "resty_response"
 
-				if type(slf.current_body) == "table" then
-					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.current_body)
-				else
-					vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, vim.split(slf.current_body, "\n"))
-				end
-			end,
-		},
-		{
-			id = 2,
-			keymap = "h",
-			name = "headers",
-			show_window_content = function(slf)
-				vim.api.nvim_set_option_value("filetype", "http", { buf = slf.bufnr })
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.response.headers)
-			end,
-		},
-		{
-			id = 3,
-			keymap = "i",
-			name = "info",
-			show_window_content = function(slf)
-				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
-
-				slf.parser_result:write_to_buffer(slf.bufnr)
-
-				-- RESPONSE AND META
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"",
-					"## Meta:",
-					"",
-					"- call from buffer: '" .. slf.meta.buffer_name .. "'",
-					"- duration rest-call: " .. slf.meta.duration_str,
-					"- duration parse-request: " .. slf.parser_result.duration_str,
-				})
-
-				-- CURL command
-				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
-					"",
-					"## CURL command:",
-					"",
-					"```",
-					vim.inspect(slf.curl_job.args),
-					"```",
-				})
-			end,
-		},
-		{
-			id = 4,
-			keymap = "?",
-			name = "?",
-			show_window_content = function(slf)
-				vim.api.nvim_set_option_value("filetype", "markdown", { buf = slf.bufnr })
-
-				vim.api.nvim_buf_set_lines(slf.bufnr, 0, -1, false, {
-					"## Key shortcuts:",
-					"",
-					"### Result view:",
-					"",
-					"| view      | short cut | description         |",
-					"|-----------|-----------|---------------------|",
-					"| `body`    |   `b`     | response body       |",
-					"| `headers` |   `h`     | response headers    |",
-					"| `info`    |   `i`     | request information |",
-					"| `?`       |   `?`     | help                |",
-					"",
-					"### Body view:",
-					"",
-					"| short cut | description                   | ",
-					"|-----------|-------------------------------|",
-					"| `p`       | json pretty print             |",
-					"| `q`       | jq query                      |",
-					"| `r`       | reset to the origininal json  |",
-					"",
-					"`jq` must be installed!",
-					"",
-					"__Hint:__ with `cc` can the curl call canceled.",
-				})
-			end,
-		},
-	},
-}
-
-local window_key_mappings = {
-	-- p: pretty print
-	["p"] = {
-		win_ids = { 1 },
-		rhs = function()
-			exec.jq(M.current_body, function(json)
-				M.current_body = json
-				M.cfg.output.body_pretty_print = true
-				M:select_window(1)
-			end)
-		end,
-		desc = "pretty print with jq",
-	},
-	-- q: jq query
-	q = {
-		win_ids = { 1 },
-		rhs = function()
-			local jq_filter = vim.fn.input("Filter: ")
-			if jq_filter == "" then
-				return
-			end
-			exec.jq(M.current_body, function(json)
-				local new_body = table.concat(json, "\n")
-				M.current_body = new_body
-				M:select_window(1)
-			end, jq_filter)
-		end,
-		desc = "querying with jq",
-	},
-	r = {
-		win_ids = { 1 },
-		rhs = function()
-			M.current_body = M.response.body
-			M.cfg.output.body_pretty_print = false
-			M:select_window(1)
-		end,
-		desc = "reset to the original responsne body",
-	},
-	zz = {
-
-		win_ids = { 1, nil, 3 },
-		rhs = function()
-			M.cfg.with_folding = not M.cfg.with_folding
-			M.set_folding(M.cfg.with_folding)
-		end,
-		desc = "toggle folding, if activated",
-	},
-	-- ["?"] = {
-	-- 	win_ids = { 1, 2, 3 },
-	-- 	rhs = function()
-	-- 		vim.lsp.util.open_floating_preview({
-	-- 			"# hello",
-	-- 		}, "markdown")
-	-- 	end,
-	-- 	desc = "show help for the current key shortcuts",
-	-- },
-}
-
-function M.new(config)
-	M.cfg = config or { output = { body_pretty_print = false } }
-	M.meta = {}
-	M.bufname = M.cfg.bufname or "resty_response"
-	M.current_window_id = 0
-
-	-- reset buffer
+function M._create_buf_with_win(bufname)
+	-- clear buffer, if exist
 	if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) and vim.api.nvim_buf_is_loaded(M.bufnr) then
 		vim.api.nvim_buf_delete(M.bufnr, { force = true })
-	end
-	M.bufnr = nil
-
-	return M
-end
-
-function M:activate_key_mapping_for_win(winid)
-	for key, def in pairs(window_key_mappings) do
-		if def.win_ids[winid] then
-			vim.keymap.set("n", key, def.rhs, { buffer = self.bufnr, silent = true, desc = def.desc })
-		else
-			vim.keymap.set("n", key, function() end, { buffer = self.bufnr, silent = true, desc = "NOT SET" })
-		end
-	end
-end
-
-local function create_buf_with_win(bufnr, bufname)
-	if bufnr and vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
-		vim.api.nvim_buf_delete(bufnr, { force = true })
+		-- return M.bufnr, M.winnr
 	end
 
 	-- create a new buffer
-	bufnr = vim.api.nvim_create_buf(false, false)
-	vim.api.nvim_buf_set_name(bufnr, bufname)
-	vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
-	vim.api.nvim_set_option_value("swapfile", false, { buf = bufnr })
-	vim.api.nvim_set_option_value("buflisted", false, { buf = bufnr })
+	M.bufnr = vim.api.nvim_create_buf(false, false)
+	vim.api.nvim_buf_set_name(M.bufnr, bufname)
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = M.bufnr })
+	vim.api.nvim_set_option_value("swapfile", false, { buf = M.bufnr })
+	vim.api.nvim_set_option_value("buflisted", false, { buf = M.bufnr })
 
 	-- create a new window
-	vim.api.nvim_open_win(bufnr, true, { split = "right" })
-	local winnr = vim.api.nvim_get_current_win()
-	return bufnr, winnr
+	vim.api.nvim_open_win(M.bufnr, true, { split = "right" })
+	M.winnr = vim.api.nvim_get_current_win()
+
+	-- activate the window
+	vim.api.nvim_set_current_win(M.winnr)
+
+	-- Delete buffer content
+	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
+	vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "please wait ..." })
+
+	return M.bufnr, M.winnr
 end
 
-function M.set_folding(with_folding)
-	if with_folding then
-		-- if M.config.with_folding then
-		vim.cmd("setlocal foldmethod=expr")
-		vim.cmd("setlocal foldexpr=v:lua.vim.treesitter.foldexpr()")
-		vim.cmd("setlocal foldlevel=2")
+function M.new(config)
+	local cfg = vim.tbl_deep_extend("force", { output = { body_pretty_print = false } }, config or {})
+
+	local out = setmetatable({
+		cfg = cfg,
+		bufname = cfg.bufname or default_bufname,
+		current_menu_id = 0,
+		curl = { duration = 0, job = nil },
+	}, { __index = M })
+
+	return out
+end
+
+function M:exec_and_show_response(parse_result)
+	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
+
+	self.call_from_buffer_name = vim.fn.bufname("%")
+	self.parse_result = parse_result
+	self.parse_result.duration_str = format.duration(self.parse_result.duration)
+	self.curl.canceled = false
+
+	local start_time = os.clock()
+
+	self.curl.job = exec.curl(parse_result.request, function(response)
+		parser.set_global_variables(response.global_variables)
+		self:stop_time(os.clock() - start_time)
+		vim.schedule(function()
+			self:show_response(response)
+		end)
+	end, function(error)
+		self:stop_time(os.clock() - start_time)
+		vim.schedule(function()
+			-- if curl canceled, dont print an error
+			if self.curl.canceled == false then
+				self:show_error(error)
+			end
+		end)
+	end)
+
+	-- is really a job, not a dry run
+	if getmetatable(self.curl.job) then
+		-- activate curl cancel
+		vim.keymap.set("n", "cc", function()
+			if self.curl.job and not self.curl.job.is_shutdown then
+				self.curl.canceled = true
+				self.curl.job:shutdown()
+
+				-- Delete buffer content
+				vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
+				vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, { "curl is canceled ..." })
+			end
+		end, { buffer = self.bufnr, silent = true, desc = "cancel curl request" })
+	-- is a dry run
 	else
-		vim.cmd("setlocal foldmethod=manual")
-		vim.cmd("normal zE")
+		self:stop_time(os.clock() - start_time)
+		self:show_dry_run(self.curl.job)
 	end
+end
+
+function M:show_response(response)
+	self.response = response
+	self.current_body = response.body
+
+	--  1 - body, 2 - header, 2 - info, 4 - help
+	self:create_and_select_window({ 1, 2, 3, 4 }, statuscode.get_status_def(response.status))
+end
+
+function M:show_error(error)
+	self.curl.error = error
+
+	-- 5 - error, 3 - info
+	self:create_and_select_window({ 5, 3 }, { code = "", text = "curl error", is_ok = false })
+end
+
+function M:show_dry_run(job)
+	self.curl.job = {}
+	self.curl.job.args = job
+
+	-- 6 - job, 3 - info
+	self:create_and_select_window({ 6, 3 }, { code = "", text = "curl dry run", is_ok = true })
+end
+
+function M:stop_time(duration)
+	self.curl.duration = duration
+	self.curl.duration_str = format.duration(self.curl.duration)
+end
+
+function M:create_and_select_window(menu_ids, status)
+	local menus = {}
+
+	for _, id in ipairs(menu_ids) do
+		-- convert window to winbar menu
+		local m = windows.menu[id]
+		table.insert(menus, m)
+
+		-- create keymaps for the given window
+		vim.keymap.set("n", m.keymap, function()
+			self:select_window(m.id)
+		end, { buffer = self.bufnr, silent = true })
+	end
+
+	-- create a new winbar
+	self.winbar = winbar.new(self.winnr, menus, status, self.curl.duration_str)
+
+	local menu_id = menu_ids[self.current_menu_id]
+	if not menu_id then
+		-- if not found, then select the first menu in the list
+		menu_id = menu_ids[1]
+	end
+	self:select_window(menu_id)
 end
 
 function M:select_window(selected_id)
-	self.current_window_id = selected_id
-	if not self.windows[self.current_window_id] then
+	self.current_menu_id = selected_id
+	if not windows.menu[self.current_menu_id] then
 		-- if selected_id out of range, set to window id = 1
-		self.current_window_id = 1
+		self.current_menu_id = 1
 	end
 
-	self.winbar:select(self.current_window_id, self.meta.statusdef, self.meta.duration_str)
+	self.winbar:select(self.current_menu_id)
 
 	-- Delete buffer content and write an empty line
 	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, { "" })
@@ -231,121 +165,20 @@ function M:select_window(selected_id)
 	vim.api.nvim_win_set_cursor(self.winnr, { 1, 0 })
 
 	-- show current window content
-	self.windows[self.current_window_id].show_window_content(self)
+	windows.menu[self.current_menu_id].show_window_content(self)
 	-- create keymaps only for the active window
-	self:activate_key_mapping_for_win(self.current_window_id)
+	self:activate_key_mapping_for_win()
 end
 
-function M:activate()
-	self.bufnr, self.winnr = create_buf_with_win(self.bufnr, self.bufname)
-	-- activate curl cancel
-	vim.keymap.set("n", "cc", function()
-		if M.curl_job then
-			M.curl_job:shutdown()
-			M.curl_job = nil
-
-			-- Delete buffer content
-			vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
-			vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "curl is canceled ..." })
+function M:activate_key_mapping_for_win()
+	for key, def in pairs(windows.key_mappings) do
+		if def.win_ids[self.current_menu_id] then
+			vim.keymap.set("n", key, function()
+				def.rhs(self)
+			end, { buffer = self.bufnr, silent = true, desc = def.desc })
+		else
+			vim.keymap.set("n", key, function() end, { buffer = self.bufnr, silent = true, desc = "NOT SET" })
 		end
-	end, { buffer = M.bufnr, silent = true, desc = "cancel curl request" })
-	-- set winbar
-	self.winbar = winbar.new(self)
-
-	self.set_folding(self.cfg.with_folding)
-
-	-- activate the window
-	vim.api.nvim_set_current_win(self.winnr)
-	-- Delete buffer content
-	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
-	vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, { "please wait ..." })
-
-	return self
-end
-
-function M:show(parser_result, response)
-	self.parser_result = parser_result
-	self.parser_result.duration_str = format.duration(self.parser_result.duration)
-	self.response = response
-	self.current_body = response.body
-
-	self.meta.statusdef = statuscode.get_status_def(self.response.status)
-	self.meta.status_str = self.meta.statusdef.code .. " " .. self.meta.statusdef.text
-	self.meta.duration_str = format.duration(self.meta.duration)
-
-	self:select_window(self.current_window_id)
-end
-
-function M:show_error(error)
-	local err_msg = error.message
-	local method_url_pos = err_msg:find("-")
-
-	local new_err_msg = ""
-	if method_url_pos then
-		new_err_msg = new_err_msg .. vim.trim(string.sub(err_msg, 1, method_url_pos - 1))
-	end
-
-	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
-		"ERROR:",
-		"",
-		new_err_msg:gsub("\n", " ;"),
-		"",
-		"" .. error.stderr:sub(4, -4):gsub("\n", " ;"),
-	})
-end
-
-function M:show_dry_run(job, parser_result)
-	-- format the output from the job
-	-- format.curl(job)
-
-	vim.api.nvim_set_option_value("filetype", "markdown", { buf = self.bufnr })
-	vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {
-		"# Dry run:",
-		"",
-		vim.inspect(job),
-		"",
-		"",
-	})
-	parser_result:write_to_buffer(self.bufnr)
-
-	-- RESPONSE AND META
-	vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, {
-		"",
-		"## Meta:",
-		"",
-		"- call from buffer: '" .. self.meta.buffer_name .. "'",
-		"- duration parse-request: " .. format.duration(parser_result.duration),
-	})
-end
-
-function M:exec_and_show_response(parser_result)
-	self.meta = { buffer_name = vim.fn.bufname("%") }
-	self:activate()
-
-	-- start the stop time
-	local start_time = os.clock()
-
-	local curl_job = exec.curl(parser_result.request, function(result)
-		self.meta.duration = os.clock() - start_time
-
-		parser.set_global_variables(result.global_variables)
-
-		vim.schedule(function()
-			self:show(parser_result, result)
-		end)
-	end, function(error)
-		vim.schedule(function()
-			-- if curl canceled, dont print an error
-			if M.curl_job then
-				self:show_error(error)
-			end
-		end)
-	end)
-
-	if getmetatable(curl_job) then
-		self.curl_job = curl_job
-	else
-		self:show_dry_run(curl_job, parser_result)
 	end
 end
 

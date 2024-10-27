@@ -1,4 +1,6 @@
+---@diagnostic disable: param-type-mismatch
 local output = require("resty.output")
+local windows = require("resty.output.windows")
 local parser = require("resty.parser")
 local assert = require("luassert")
 local stub = require("luassert.stub")
@@ -11,11 +13,18 @@ describe("output:", function()
 		end)
 	end
 
+	local function new_output(cfg)
+		local o = output.new(cfg)
+		o.bufnr, o.winnr = output._create_buf_with_win(o.bufname)
+		o.curl.duration_str = "1s"
+		return o
+	end
+
 	it("new", function()
 		local o = output.new()
 
 		assert.are.same("resty_response", o.bufname)
-		assert.are.same(0, o.current_window_id)
+		assert.are.same(0, o.current_menu_id)
 		assert.is_nil(o.cfg.with_folding)
 		assert.is_nil(o.bufnr)
 		assert.is_nil(o.winnr)
@@ -26,7 +35,7 @@ describe("output:", function()
 		local o = output.new({ with_folding = true, bufname = "test" })
 
 		assert.are.same("test", o.bufname)
-		assert.are.same(0, o.current_window_id)
+		assert.are.same(0, o.current_menu_id)
 		assert.is_true(o.cfg.with_folding)
 		assert.is_nil(o.bufnr)
 		assert.is_nil(o.winnr)
@@ -34,59 +43,100 @@ describe("output:", function()
 	end)
 
 	it("bufname and bufnr by win", function()
-		local o = output.new():activate()
+		local bufname = "test_new"
+		local bufnr, winnr = output._create_buf_with_win(bufname)
 
-		local bufname = vim.api.nvim_buf_get_name(o.bufnr)
-		assert(bufname:find(o.bufname), bufname .. " != " .. o.bufname)
+		local bufname2 = vim.api.nvim_buf_get_name(bufnr)
+		assert(bufname2:find(bufname), bufname .. " != " .. bufname2)
 
-		local bufnr = vim.api.nvim_win_get_buf(o.winnr)
-		assert.are.same(o.bufnr, bufnr)
+		local cbufnr = vim.api.nvim_win_get_buf(winnr)
+		assert.are.same(cbufnr, bufnr)
 
 		vim.api.nvim_buf_delete(bufnr, { force = true })
 	end)
 
 	it("activate twice", function()
-		local o = output.new()
-		o:activate()
+		local o = new_output()
 
 		local bufname = vim.api.nvim_buf_get_name(o.bufnr)
 		assert(bufname:find(o.bufname), bufname .. " != " .. o.bufname)
 		local bufnr1 = o.bufnr
 		assert.are.same({ "", "please wait ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 
-		o:activate()
+		o = new_output()
 		bufname = vim.api.nvim_buf_get_name(o.bufnr)
 		assert(bufname:find(o.bufname), bufname .. " != " .. o.bufname)
 		assert.are.not_same(o.bufnr, bufnr1)
 		assert.are.same({ "", "please wait ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 	end)
 
-	it("new and activate", function()
-		local o = output.new({ with_folding = true, bufname = "test" })
-		o:activate()
+	it("show response", function()
+		local o = new_output({ with_folding = true, bufname = "test" })
+		o:show_response({ body = '{"name": "foo", "valid": true}', status = 200 })
 
 		assert.are.same("test", o.bufname)
-		assert.are.same(0, o.current_window_id)
+		assert.are.same(1, o.current_menu_id)
 		assert.is_not_nil(o.bufnr)
 		assert.is_not_nil(o.winnr)
 		assert.is_not_nil(o.winbar)
 
 		-- menu for winbar is correct
-		assert.are.same("body", vim.tbl_get(o.winbar.menu_entries[1], "text"))
-		assert.are.same("headers", vim.tbl_get(o.winbar.menu_entries[2], "text"))
-		assert.are.same("info", vim.tbl_get(o.winbar.menu_entries[3], "text"))
-
-		-- folding is default on
-		assert.are.same("expr", vim.api.nvim_get_option_value("foldmethod", {}))
+		assert.are.same("body", vim.tbl_get(o.winbar.menu_entries[1], "name"))
+		assert.are.same("headers", vim.tbl_get(o.winbar.menu_entries[2], "name"))
+		assert.are.same("info", vim.tbl_get(o.winbar.menu_entries[3], "name"))
 	end)
 
-	it("seleclt window", function()
-		local o = output.new()
-		assert.is_nil(o.bufnr)
-		o:activate()
+	it("show error", function()
+		local o = new_output()
+
+		local error = {
+			exit = 1,
+			message = 'GET http://host - curl error exit_code=6 stderr={ "curl: (6) Could not resolve host: host" }',
+			stderr = "{  and \n so on  }",
+		}
+
+		o:show_error(error)
+
+		assert.are.same("error", vim.tbl_get(o.winbar.menu_entries[1], "name"))
+		assert.are.same("info", vim.tbl_get(o.winbar.menu_entries[2], "name"))
+
+		assert.are.same({ "", "# curl error", "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
+	end)
+
+	it("show dry run", function()
+		local o = new_output()
+		local job = {
+			"-sSL",
+			"-D",
+			"/run/user/1000//plenary_curl_4f6b47cf.headers",
+			"--compressed",
+			"-X",
+			"GET",
+			"-H",
+			"Accept: application/json",
+			"http://host",
+		}
+
+		o:show_dry_run(job)
+
+		assert.are.same(6, o.current_menu_id)
+		assert.is_not_nil(o.bufnr)
+		assert.is_not_nil(o.winnr)
+		assert.is_not_nil(o.winbar)
+
+		-- winbar
+		assert.are.same("dry_run", vim.tbl_get(o.winbar.menu_entries[1], "name"))
+		assert.are.same("info", vim.tbl_get(o.winbar.menu_entries[2], "name"))
+
+		assert.are.same({ "", "# curl dry run", "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
+	end)
+
+	it("select window", function()
+		local o = new_output()
+		-- assert.is_nil(o.bufnr)
 
 		local check_show_window_content
-		o.windows[99] = {
+		windows.menu[99] = {
 			keymap = "x",
 			name = "test",
 			show_window_content = function(slf)
@@ -94,40 +144,34 @@ describe("output:", function()
 			end,
 		}
 
-		o:show({}, { body = "{}", status = 200, headers = {} })
+		o:show_response({ body = "{}", status = 200, headers = {} })
 
 		o:select_window(1)
-		assert.are.same(1, o.current_window_id)
+		assert.are.same(1, o.current_menu_id)
 
 		o:select_window(2)
-		assert.are.same(2, o.current_window_id)
+		assert.are.same(2, o.current_menu_id)
 
-		-- 5 is not a valid window id -> fallback to id = 1
-		o:select_window(5)
-		assert.are.same(1, o.current_window_id)
+		-- 100 is not a valid window id -> fallback to id = 1
+		o:select_window(100)
+		assert.are.same(1, o.current_menu_id)
 
 		o:select_window(99)
-		assert.are.same(99, o.current_window_id)
-		assert.are.same(99, check_show_window_content.current_window_id)
+		assert.are.same(99, o.current_menu_id)
+		assert.are.same(99, check_show_window_content.current_menu_id)
 
 		local c = vim.api.nvim_win_get_cursor(o.winnr)
 		assert.are.same({ 1, 0 }, c)
 	end)
 
 	it("show and select window", function()
-		local o = output.new()
-		o:activate()
-
-		local req_def = {}
 		local response = { body = '{"name": "foo"}', headers = { "accept: application/json" }, status = 200 }
-		o.meta.duration = 10
-		o:show(req_def, response)
 
-		assert.are.same("200 OK", o.meta.status_str)
-		assert.are.same("10.00 s", o.meta.duration_str)
+		local o = new_output()
+		o:show_response(response)
 
 		-- show response body
-		assert.are.same(1, o.current_window_id)
+		assert.are.same(1, o.current_menu_id)
 		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 
 		local s = vim.wo[o.winnr].winbar
@@ -135,20 +179,20 @@ describe("output:", function()
 
 		-- show response headers
 		o:select_window(2)
-		assert.are.same(2, o.current_window_id)
+		assert.are.same(2, o.current_menu_id)
 		assert.are.same({ "", "accept: application/json" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 		s = vim.wo[o.winnr].winbar
 		assert(s:find("ActiveWin#headers"))
 	end)
 
 	it("show and pretty print with jq", function()
-		local o = output.new():activate()
+		local o = new_output()
 
 		local response = { body = '{"name": "foo", "valid": true}', status = 200 }
-		o:show({}, response)
+		o:show_response(response)
 
 		-- show response body
-		assert.are.same(1, o.current_window_id)
+		assert.are.same(1, o.current_menu_id)
 		assert.are.same({ "", '{"name": "foo", "valid": true}' }, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 
 		-- format json with jq
@@ -165,9 +209,10 @@ describe("output:", function()
 			return ".name"
 		end)
 
-		local o = output.new():activate()
+		local o = new_output()
+
 		local response = { body = '{"name": "foo", "valid": true}', status = 200 }
-		o:show({}, response)
+		o:show_response(response)
 
 		-- query jq
 		press_key("q")
@@ -179,7 +224,7 @@ describe("output:", function()
 	end)
 
 	it("show error", function()
-		local o = output.new():activate()
+		local o = new_output()
 
 		local error = {
 			exit = 1,
@@ -189,16 +234,23 @@ describe("output:", function()
 
 		o:show_error(error)
 		assert.are.same({
-			"ERROR:",
 			"",
+			"# curl error",
+			"",
+			"",
+			"```sh",
 			"GET ttps://jsonplaceholder.typicode.com/comments",
 			"",
-			'curl: (1) Protocol "ttps" not supported',
+			"stderr={ 'curl: (1) Protocol \"ttps\" not supported' }",
+			"exit_code=1 ",
+			"```",
+			"",
 		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
 	end)
 
-	it("show error with", function()
-		local o = output.new():activate()
+	it("show invalid error message", function()
+		local o = new_output()
+
 		local error = {
 			exit = 1,
 			message = "GET error message \n and more -",
@@ -206,13 +258,7 @@ describe("output:", function()
 		}
 
 		o:show_error(error)
-		assert.are.same({
-			"ERROR:",
-			"",
-			"GET error message  ; and more",
-			"",
-			"and  ; so on",
-		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, -1, false))
+		assert.are.same({ "", "# curl error", "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
 	end)
 
 	it("integration: exec_and_show_response", function()
@@ -228,26 +274,25 @@ GET https://reqres.in/api/users?page=5
 
 		-- wait of curl response
 		vim.wait(7000, function()
-			return 1 == o.current_window_id
+			return 1 == o.current_menu_id
 		end)
 
-		assert.is_true(o.meta.duration > 0, o.meta.duration)
-		assert.are.same(o.meta.status_str, "200 OK")
+		assert.is_true(o.curl.duration > 0, o.curl.duration)
 
 		-- show response body
-		assert.are.same(1, o.current_window_id)
+		assert.are.same(1, o.current_menu_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 
 		-- headers window
 		press_key("h")
-		assert.are.same(2, o.current_window_id)
+		assert.are.same(2, o.current_menu_id)
 
 		assert.are.same("http", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 		assert.are.same({ "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 1, false))
 
 		-- info window
 		press_key("i")
-		assert.are.same(3, o.current_window_id)
+		assert.are.same(3, o.current_menu_id)
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
 		assert.are.same(
 			{ "", "## Request:", "", "```http", "GET https://reqres.in/api/users?page=5", "```" },
@@ -276,7 +321,7 @@ ctx.set("email", email)
 
 		-- wait of curl response
 		vim.wait(7000, function()
-			return 1 == o.current_window_id
+			return 1 == o.current_menu_id
 		end)
 
 		assert.are.same({ ["email"] = "janet.weaver@reqres.in" }, r.global_variables)

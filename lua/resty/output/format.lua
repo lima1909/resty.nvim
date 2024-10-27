@@ -62,7 +62,6 @@ M.curl = function(cmd)
 		end
 	end
 
-	print(vim.inspect(result))
 	return result
 end
 

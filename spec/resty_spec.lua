@@ -18,6 +18,8 @@ describe("resty:", function()
 
 	-- create an curl stub
 	local curl = stub.new(exec, "curl")
+
+	-- mock the curl call
 	curl.invokes(function(_, callback, _)
 		callback({
 			body = '{"name": "foo"}',
@@ -25,10 +27,13 @@ describe("resty:", function()
 			headers = {},
 			global_variables = {},
 		})
+
+		-- returns a dummy metatable, else the exec function interpreted the call as dry-run
+		return setmetatable({}, { __index = {} })
 	end)
 
 	it("_run and run_last", function()
-		assert.are.same(0, resty.output.current_window_id)
+		assert.are.same(0, resty.output.current_menu_id)
 
 		-- call resty command RUN
 		resty._run({
@@ -41,10 +46,10 @@ describe("resty:", function()
 			return false
 		end)
 
-		assert.is_true(resty.output.meta.duration > 0)
+		assert.is_true(resty.output.curl.duration > 0)
 
 		-- show response body
-		assert.are.same(1, resty.output.current_window_id)
+		assert.are.same(1, resty.output.current_menu_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
 		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
 
@@ -54,10 +59,10 @@ describe("resty:", function()
 			return false
 		end)
 
-		assert.is_true(resty.output.meta.duration > 0)
+		assert.is_true(resty.output.curl.duration > 0)
 
 		-- show response body
-		assert.are.same(1, resty.output.current_window_id)
+		assert.are.same(1, resty.output.current_menu_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
 		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
 	end)
@@ -69,12 +74,12 @@ describe("resty:", function()
 		end)
 
 		-- no parse errors
-		assert.are.same({}, resty.output.parser_result.diagnostics)
+		assert.are.same({}, resty.output.parse_result.diagnostics)
 
-		assert.is_true(resty.output.meta.duration > 0)
+		assert.is_true(resty.output.curl.duration > 0)
 
 		-- show response body
-		assert.are.same(1, resty.output.current_window_id)
+		assert.are.same(1, resty.output.current_menu_id)
 		assert.are.same("json", vim.api.nvim_get_option_value("filetype", { buf = resty.output.bufnr }))
 		assert.are.same({ "", '{"name": "foo"}' }, vim.api.nvim_buf_get_lines(resty.output.bufnr, 0, -1, false))
 	end)

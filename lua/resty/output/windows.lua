@@ -43,14 +43,18 @@ M.menu = {
 
 			slf.parse_result:write_to_buffer(slf.bufnr)
 
+			local buffer_name = slf.call_from_buffer_name or "no buffer found"
+			local curl_duration_str = slf.curl.duration_str or ""
+			local duration_str = slf.parse_result.duration_str or ""
+
 			-- RESPONSE AND META
 			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 				"",
 				"## Meta:",
 				"",
-				"- call from buffer: '" .. slf.call_from_buffer_name .. "'",
-				"- duration rest-call: " .. slf.curl.duration_str,
-				"- duration parse-request: " .. slf.parse_result.duration_str,
+				"- call from buffer: '" .. buffer_name .. "'",
+				"- duration rest-call: " .. curl_duration_str,
+				"- duration parse-request: " .. duration_str,
 			})
 
 			-- CURL command
@@ -138,10 +142,19 @@ M.menu = {
 				"",
 				"## args",
 			})
-			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, curl.args)
 
-			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "", "```http", curl.method .. " " .. curl.url })
-			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, curl.headers)
+			if curl.args then
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, curl.args)
+			end
+
+			local m = curl.method or "no method found"
+			local url = curl.url or "no url found"
+			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "", "```http", m .. " " .. url })
+
+			if curl.headers then
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, curl.headers)
+			end
+
 			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "```" })
 		end,
 	},

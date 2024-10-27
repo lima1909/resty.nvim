@@ -125,12 +125,12 @@ function M:stop_time(duration)
 end
 
 function M:create_and_select_window(menu_ids, status)
-	local menus = {}
+	self.menus = {}
 
 	for _, id in ipairs(menu_ids) do
 		-- convert window to winbar menu
 		local m = windows.menu[id]
-		table.insert(menus, m)
+		table.insert(self.menus, m)
 
 		-- create keymaps for the given window
 		vim.keymap.set("n", m.keymap, function()
@@ -139,21 +139,23 @@ function M:create_and_select_window(menu_ids, status)
 	end
 
 	-- create a new winbar
-	self.winbar = winbar.new(self.winnr, menus, status, self.curl.duration_str)
+	self.winbar = winbar.new(self.winnr, self.menus, status, self.curl.duration_str)
 
-	local menu_id = menu_ids[self.current_menu_id]
-	if not menu_id then
-		-- if not found, then select the first menu in the list
-		menu_id = menu_ids[1]
+	local menu_id = self.current_menu_id
+	if menu_id == 0 then
+		--if no id set, then start with first id
+		menu_id = self.menus[1].id
 	end
 	self:select_window(menu_id)
 end
 
 function M:select_window(selected_id)
-	self.current_menu_id = selected_id
-	if not windows.menu[self.current_menu_id] then
-		-- if selected_id out of range, set to window id = 1
-		self.current_menu_id = 1
+	self.current_menu_id = self.menus[1].id
+	for _, m in ipairs(self.menus) do
+		if selected_id == m.id then
+			self.current_menu_id = selected_id
+			break
+		end
 	end
 
 	self.winbar:select(self.current_menu_id)

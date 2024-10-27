@@ -202,12 +202,13 @@ end
 function M:write_to_buffer(bufnr)
 	local req = self.request
 
+	local m = req.method or "no method found"
 	-- URL with QUERY-String
 	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
 		"## Request:",
 		"",
 		"```http",
-		req.method .. " " .. self:url_with_query_string(true).request.url,
+		m .. " " .. self:url_with_query_string(true).request.url,
 	})
 
 	-- HEADERS

@@ -1,6 +1,6 @@
 ---@diagnostic disable: param-type-mismatch
 local output = require("resty.output")
-local windows = require("resty.output.windows")
+local result = require("resty.parser.result")
 local parser = require("resty.parser")
 local assert = require("luassert")
 local stub = require("luassert.stub")
@@ -131,24 +131,26 @@ describe("output:", function()
 		assert.are.same({ "", "# curl dry run", "" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
 	end)
 
-	it("select window", function()
+	it("select different windows", function()
 		local o = new_output()
-		-- assert.is_nil(o.bufnr)
+		o.parse_result = result.new()
+		o.parse_result.request.url = "http://host"
+		o:show_dry_run({ "-X", "GET", "http://host" })
 
-		local check_show_window_content
-		windows.menu[99] = {
-			keymap = "x",
-			name = "test",
-			show_window_content = function(slf)
-				check_show_window_content = slf
-			end,
-		}
+		o:select_window(3)
+		assert.are.same(3, o.current_menu_id)
+		o:select_window(6)
+		assert.are.same(6, o.current_menu_id)
 
+		-- 100 is not a valid window id -> fallback to id = 1
+		o:select_window(100)
+		assert.are.same(6, o.current_menu_id)
+
+		-- new show with new menu-ids
 		o:show_response({ body = "{}", status = 200, headers = {} })
 
 		o:select_window(1)
 		assert.are.same(1, o.current_menu_id)
-
 		o:select_window(2)
 		assert.are.same(2, o.current_menu_id)
 
@@ -156,10 +158,7 @@ describe("output:", function()
 		o:select_window(100)
 		assert.are.same(1, o.current_menu_id)
 
-		o:select_window(99)
-		assert.are.same(99, o.current_menu_id)
-		assert.are.same(99, check_show_window_content.current_menu_id)
-
+		-- window exits
 		local c = vim.api.nvim_win_get_cursor(o.winnr)
 		assert.are.same({ 1, 0 }, c)
 	end)

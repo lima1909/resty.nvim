@@ -57,6 +57,11 @@ function M:complete(r, callback)
 	end
 end
 
+-- completion only for http and resty files
+function M:is_available()
+	return vim.bo.filetype == "resty" or vim.bo.filetype == "http"
+end
+
 -- M.get_trigger_characters = function()
 -- 	-- c is the trigger for 'cfg'
 -- 	return { "c" }

@@ -174,7 +174,7 @@ end
 
 function M:url_with_query_string(always_append)
 	-- no query, nothing to do
-	if not self.request.query then
+	if not self.request.query or not self.request.url then
 		return self
 	end
 

@@ -26,7 +26,7 @@ describe("exec:", function()
 
 		it("error in json", function()
 			exec.jq_wait(2000, '{"value":', callback)
-			assert(output[1]:find("ERROR:"), output[1])
+			assert(output[1]:find("ERROR in parsing json with jq:"), output[1])
 			assert(output[2]:find(""), output[2])
 			assert(output[3]:find("Unfinished JSON term at EOF at line 1, column 9"), output[3])
 			assert.is_true(0 ~= code, code)
@@ -142,8 +142,12 @@ GET https://reqres.in/api/users/3
 
 		it("command fail", function()
 			local output = exec.cmd('ech "test output"')
+
 			assert.is_true(output:find("ech") > 0)
-			assert.is_true(output:find("not found") > 0)
+
+			local pos_found = string.find(output, "not found") or 0
+			local pos_found_de = string.find(output, "nicht gefunden") or 0
+			assert.is_true(pos_found > 0 or pos_found_de > 0)
 		end)
 	end)
 

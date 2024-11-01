@@ -9,9 +9,9 @@ M.varcfg = {
 		filterText = "@cfg.insecure=true",
 		documentation = {
 			kind = "markdown",
-			value = "allow insecure server connections",
+			value = "allow insecure server connections\nset value to: *true*",
 		},
-		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+		cmp = { kind_hl_group = "Structure", kind_text = "Curl" },
 	},
 	{
 		label = "raw",
@@ -20,9 +20,9 @@ M.varcfg = {
 		filterText = "@cfg.raw",
 		documentation = {
 			kind = "markdown",
-			value = "any additonal curl args, it must be an comma seperated list.",
+			value = "any additonal curl args, it must be an comma seperated list\nfor example: *--insecure,--verbose,--fail*",
 		},
-		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+		cmp = { kind_hl_group = "Structure", kind_text = "Curl" },
 	},
 	{
 		label = "dry_run",
@@ -31,9 +31,9 @@ M.varcfg = {
 		filterText = "@cfg.dry_run=true",
 		documentation = {
 			kind = "markdown",
-			value = "whether to return the args to be ran through curl",
+			value = "whether to return the args to be ran through curl\nset value to: *true*",
 		},
-		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+		cmp = { kind_hl_group = "Structure", kind_text = "Curl" },
 	},
 	{
 		label = "timeout",
@@ -42,9 +42,9 @@ M.varcfg = {
 		filterText = "@cfg.timeout",
 		documentation = {
 			kind = "markdown",
-			value = "request timeout in mseconds",
+			value = "request timeout in mseconds\nset value to: *1000* (1 second)",
 		},
-		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+		cmp = { kind_hl_group = "Structure", kind_text = "Curl" },
 	},
 	{
 		label = "proxy",
@@ -55,7 +55,7 @@ M.varcfg = {
 			kind = "markdown",
 			value = "use this proxy: '[protocol://]host[:port]'",
 		},
-		cmp = { kind_hl_group = "Structure", kind_text = "curl" },
+		cmp = { kind_hl_group = "Structure", kind_text = "Curl" },
 	},
 	-- resty request configuration
 	{
@@ -65,9 +65,9 @@ M.varcfg = {
 		filterText = "@cfg.check_json_body=true",
 		documentation = {
 			kind = "markdown",
-			value = "check the reques body if it is a valid JSON",
+			value = "check the reques body if it is a valid JSON\nset value to: *true*",
 		},
-		cmp = { kind_hl_group = "Function", kind_text = "resty" },
+		cmp = { kind_hl_group = "Function", kind_text = "Resty" },
 	},
 }
 
@@ -75,64 +75,64 @@ M.headers = {
 	{
 		label = "accept: */*",
 		insertText = "Accept: */*",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "accept: application/json",
 		insertText = "Accept: application/json",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "accept: text/html",
 		insertText = "Accept: text/html",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 
 	{
 		label = "accept-charset: utf-8",
 		insertText = "Accept-Charset: utf-8",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 
 	{
 		label = "authorization: basic",
 		insertText = "Authorization: Basic ",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "authorization: Bearer",
 		insertText = "Authorization: Bearer ",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "content-type: text/plain",
 		insertText = "Content-Type: text/plain",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "content-type: application/json ",
 		insertText = "Content-Type: application/json",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "cache-control: no-cache",
 		insertText = "Cache-Control: no-cache",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "connection: keep-alive",
 		insertText = "Connection: keep-alive",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "content-length: ",
 		insertText = "Content-Length: ",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 	{
 		label = "accept-encoding: gzip",
 		insertText = "Accept-Encoding: gzip",
-		cmp = { kind_hl_group = "Function", kind_text = "headers" },
+		cmp = { kind_hl_group = "Function", kind_text = "Headers" },
 	},
 }
 

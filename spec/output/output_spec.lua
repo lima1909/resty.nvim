@@ -356,7 +356,7 @@ GET https://reqres.in/api/users?page=5
 		local o = output.new()
 		o:exec_and_show_response(r)
 
-		assert.are.same({ "", "curl is timed out after: 3ms" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+		assert.are.same({ "", "curl is timed out after: 3 ms" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 
 	it("integration: with timeout longer then the call", function()

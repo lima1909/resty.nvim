@@ -103,7 +103,7 @@ function M:exec_and_show_response(parse_result)
 					-1,
 					-1,
 					false,
-					{ "curl is timed out after: " .. timeout .. "ms" }
+					{ "curl is timed out after: " .. timeout .. " ms" }
 				)
 			end
 		end

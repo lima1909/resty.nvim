@@ -58,12 +58,10 @@ function M:exec_and_show_response(parse_result)
 	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
 
 	self.curl.canceled = false
-	local curl_is_done = false
 
 	local start_time = vim.loop.hrtime()
 
 	self.curl.job = exec.curl(parse_result.request, function(response)
-		curl_is_done = true
 		self:stop_time(start_time)
 
 		parser.set_global_variables(response.global_variables)
@@ -72,7 +70,6 @@ function M:exec_and_show_response(parse_result)
 			self:show_response(response)
 		end)
 	end, function(error)
-		curl_is_done = true
 		self:stop_time(start_time)
 
 		vim.schedule(function()
@@ -89,10 +86,10 @@ function M:exec_and_show_response(parse_result)
 		local timeout = self.parse_result.request.timeout
 		if timeout then
 			vim.wait(timeout, function()
-				return curl_is_done
+				return self.curl.job.is_finished
 			end)
 
-			if curl_is_done == false then
+			if self.curl.job.is_finished == false then
 				self.curl.canceled = true
 				self.curl.job:shutdown()
 

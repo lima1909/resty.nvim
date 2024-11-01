@@ -80,6 +80,8 @@ M._create_curl_job = function(request, callback, error)
 	-- return the created job
 	-- Note: the job is already stated
 	job = curl.request(request.url, request)
+	job.is_finished = false
+
 	return job
 end
 

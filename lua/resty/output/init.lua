@@ -13,7 +13,6 @@ function M._create_buf_with_win(bufname)
 	-- clear buffer, if exist
 	if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) and vim.api.nvim_buf_is_loaded(M.bufnr) then
 		vim.api.nvim_buf_delete(M.bufnr, { force = true })
-		-- return M.bufnr, M.winnr
 	end
 
 	-- create a new buffer
@@ -29,9 +28,6 @@ function M._create_buf_with_win(bufname)
 
 	-- activate the window
 	vim.api.nvim_set_current_win(M.winnr)
-
-	-- Delete buffer content
-	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, {})
 	vim.api.nvim_buf_set_lines(M.bufnr, -1, -1, false, { "please wait ..." })
 
 	return M.bufnr, M.winnr
@@ -56,14 +52,12 @@ function M:exec_and_show_response(parse_result)
 	self.call_from_buffer_name = vim.fn.bufname("%")
 	self.parse_result = parse_result
 	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
-
 	self.curl.canceled = false
 
 	local start_time = vim.loop.hrtime()
 
 	self.curl.job = exec.curl(parse_result.request, function(response)
 		self:stop_time(start_time)
-
 		parser.set_global_variables(response.global_variables)
 
 		vim.schedule(function()
@@ -85,6 +79,8 @@ function M:exec_and_show_response(parse_result)
 		-- add timeout check
 		local timeout = self.parse_result.request.timeout
 		if timeout then
+			vim.cmd("redraw")
+
 			vim.wait(timeout, function()
 				return self.curl.job.is_finished
 			end)

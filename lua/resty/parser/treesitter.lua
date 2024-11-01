@@ -5,7 +5,7 @@ local M = {}
 M.parse = function(bufnr)
 	bufnr = bufnr or 0
 
-	local start = os.clock()
+	local start = vim.loop.hrtime()
 
 	local parser = vim.treesitter.get_parser(bufnr, "http")
 	local tree = parser:parse()[1] -- Parse the current buffer and get the syntax tree
@@ -30,14 +30,14 @@ M.parse = function(bufnr)
 		-- end
 	end
 
-	local time = format.duration(os.clock() - start)
+	local time = format.duration_to_str(vim.loop.hrtime() - start)
 	print("Time: " .. time)
 end
 
 M.query = function(bufnr)
 	bufnr = bufnr or 0
 
-	local start = os.clock()
+	local start = vim.loop.hrtime()
 
 	local parser = vim.treesitter.get_parser(bufnr, "http")
 	local tree = parser:parse()[1] -- Parse the current buffer and get the syntax tree
@@ -59,7 +59,7 @@ M.query = function(bufnr)
 		end
 	end
 
-	local time = format.duration(os.clock() - start)
+	local time = format.duration_to_str(vim.loop.hrtime() - start)
 	print("Time: " .. time)
 end
 

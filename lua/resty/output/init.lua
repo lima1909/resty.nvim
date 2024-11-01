@@ -55,19 +55,26 @@ function M:exec_and_show_response(parse_result)
 
 	self.call_from_buffer_name = vim.fn.bufname("%")
 	self.parse_result = parse_result
-	self.parse_result.duration_str = format.duration(self.parse_result.duration)
-	self.curl.canceled = false
+	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
 
-	local start_time = os.clock()
+	self.curl.canceled = false
+	local curl_is_done = false
+
+	local start_time = vim.loop.hrtime()
 
 	self.curl.job = exec.curl(parse_result.request, function(response)
+		curl_is_done = true
+		self:stop_time(start_time)
+
 		parser.set_global_variables(response.global_variables)
-		self:stop_time(os.clock() - start_time)
+
 		vim.schedule(function()
 			self:show_response(response)
 		end)
 	end, function(error)
-		self:stop_time(os.clock() - start_time)
+		curl_is_done = true
+		self:stop_time(start_time)
+
 		vim.schedule(function()
 			-- if curl canceled, dont print an error
 			if self.curl.canceled == false then
@@ -78,6 +85,29 @@ function M:exec_and_show_response(parse_result)
 
 	-- is really a job, not a dry run
 	if getmetatable(self.curl.job) then
+		-- add timeout check
+		local timeout = self.parse_result.request.timeout
+		if timeout then
+			vim.wait(timeout, function()
+				return curl_is_done
+			end)
+
+			if curl_is_done == false then
+				self.curl.canceled = true
+				self.curl.job:shutdown()
+
+				-- Delete buffer content
+				vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
+				vim.api.nvim_buf_set_lines(
+					self.bufnr,
+					-1,
+					-1,
+					false,
+					{ "curl is timed out after: " .. timeout .. "ms" }
+				)
+			end
+		end
+
 		-- activate curl cancel
 		vim.keymap.set("n", "cc", function()
 			if self.curl.job and not self.curl.job.is_shutdown then
@@ -91,7 +121,7 @@ function M:exec_and_show_response(parse_result)
 		end, { buffer = self.bufnr, silent = true, desc = "cancel curl request" })
 	-- is a dry run
 	else
-		self:stop_time(os.clock() - start_time)
+		self:stop_time(start_time)
 		self:show_dry_run(self.curl.job)
 	end
 end
@@ -119,9 +149,9 @@ function M:show_dry_run(job)
 	self:create_and_select_window({ 6, 3 }, { code = "", text = "curl dry run", is_ok = true })
 end
 
-function M:stop_time(duration)
-	self.curl.duration = duration
-	self.curl.duration_str = format.duration(self.curl.duration)
+function M:stop_time(start_time)
+	self.curl.duration = vim.loop.hrtime() - start_time
+	self.curl.duration_str = format.duration_to_str(self.curl.duration)
 end
 
 function M:create_and_select_window(menu_ids, status)

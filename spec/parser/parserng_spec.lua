@@ -15,10 +15,10 @@ describe("parse:", function()
 	end
 
 	it("json", function()
-		local s = os.clock()
+		local s = vim.loop.hrtime()
 		local _ = vim.json.decode('{"name": "Pe{ter", "boy": true, "age": 34}')
-		local e = os.clock() - s
-		print("time json decode: " .. format.duration(e))
+		local e = vim.loop.hrtime() - s
+		print("time json decode: " .. format.duration_to_str(e))
 	end)
 
 	it("replace variables", function()
@@ -463,7 +463,7 @@ describe("parse:", function()
 		}, r.request)
 		assert.are.same({}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.duration))
+		print("time parse request: " .. format.duration_to_str(r.duration))
 
 		-- with replace variables
 		r = p.parse(input)
@@ -473,7 +473,7 @@ describe("parse:", function()
 			{ from = "id", to = "42", type = "var" },
 		}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.duration))
+		print("time parse request: " .. format.duration_to_str(r.duration))
 	end)
 
 	it("with global variables", function()
@@ -526,7 +526,7 @@ describe("parse:", function()
 		}, r.request)
 		assert.are.same({}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.duration))
+		print("time parse request: " .. format.duration_to_str(r.duration))
 
 		-- with replace variables
 		r = p.parse(input, 10)
@@ -535,7 +535,7 @@ describe("parse:", function()
 			{ from = "baz", to = "bar", type = "var" },
 		}, r.replacements)
 
-		print("time parse request: " .. format.duration(r.duration))
+		print("time parse request: " .. format.duration_to_str(r.duration))
 	end)
 
 	it("with check json body", function()

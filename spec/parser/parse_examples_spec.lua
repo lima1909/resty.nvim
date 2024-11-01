@@ -45,7 +45,7 @@ filter = id = {{id}}
 ]]
 		local function check(selected, expected)
 			local r = p.parse(input, selected)
-			print("-- " .. f.duration(r.duration))
+			print("-- " .. f.duration_to_str(r.duration))
 
 			assert.is_false(r:has_diag(), "has error")
 			assert.are.same(r.variables, expected.variables, "compare global_variables")

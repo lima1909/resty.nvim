@@ -108,9 +108,9 @@ M.curl_wait = function(timeout, request, callback, error)
 end
 
 M.exec_with_stop_time = function(fn, ...)
-	local start_time = os.clock()
+	local start_time = vim.loop.hrtime()
 	local results = { fn(...) }
-	table.insert(results, os.clock() - start_time)
+	table.insert(results, vim.loop.hrtime() - start_time)
 	---@diagnostic disable-next-line: deprecated
 	return unpack(results)
 end

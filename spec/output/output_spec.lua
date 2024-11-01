@@ -329,7 +329,7 @@ ctx.set("email", email)
 	it("integration: cancel exec_and_show_response", function()
 		local input = [[
 ### simple get 
-get https://reqres.in/api/users?page=5
+GET https://reqres.in/api/users?page=5
 
 ]]
 
@@ -341,5 +341,37 @@ get https://reqres.in/api/users?page=5
 		-- cancel curl call
 		press_key("cc")
 		assert.are.same({ "", "curl is canceled ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 3, false))
+	end)
+
+	it("integration: with timeout", function()
+		local input = [[
+### simple get with timeout
+@cfg.timeout = 3 
+
+GET https://reqres.in/api/users?page=5
+
+]]
+
+		local r = parser.parse(input, 2)
+		local o = output.new()
+		o:exec_and_show_response(r)
+
+		assert.are.same({ "", "curl is timed out after: 3ms" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+	end)
+
+	it("integration: with timeout longer then the call", function()
+		local input = [[
+### simple get with timeout
+@cfg.timeout = 5000 # 5second 
+
+GET https://reqres.in/api/users?page=5
+
+]]
+
+		local r = parser.parse(input, 2)
+		local o = output.new()
+		o:exec_and_show_response(r)
+
+		assert.are.same({ "", "please wait ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 end)

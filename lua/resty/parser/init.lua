@@ -58,7 +58,7 @@ function M:find_area()
 end
 
 M.parse = function(input, selected, opts)
-	local start = os.clock()
+	local start = vim.loop.hrtime()
 
 	local parser = M.new(input, selected, opts)
 	local s, e = parser:find_area()
@@ -72,7 +72,7 @@ M.parse = function(input, selected, opts)
 
 	parser:parse_definition(s, e)
 
-	parser.r.duration = os.clock() - start
+	parser.r.duration = vim.loop.hrtime() - start
 	return parser.r
 end
 

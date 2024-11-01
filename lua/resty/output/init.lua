@@ -47,13 +47,12 @@ function M.new(config)
 end
 
 function M:exec_and_show_response(parse_result)
-	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
-
 	self.call_from_buffer_name = vim.fn.bufname("%")
 	self.parse_result = parse_result
 	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
 	self.curl.canceled = false
 
+	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
 	local start_time = vim.loop.hrtime()
 
 	self.curl.job = exec.curl(parse_result.request, function(response)

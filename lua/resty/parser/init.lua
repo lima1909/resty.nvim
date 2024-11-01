@@ -356,10 +356,8 @@ end
 function M:_parse_script()
 	local line, _ = self:_ignore_lines()
 
-	-- or > {% (tree-sitter-http) %}
-	if not line or not string.match(line, "^--{%%%s*$") then
-		return line
-	else
+	-- resty: '--{%' and '--%}' or treesitter-http: '> {%' and  '%}'
+	if line and (string.match(line, "^--{%%%s*$") or string.match(line, "^>%s{%%%s*$")) then
 		-- ignore this line
 		self.cursor = self.cursor + 1
 		local start = self.cursor
@@ -368,7 +366,7 @@ function M:_parse_script()
 			line = self.lines[i]
 			self.cursor = i
 
-			if string.match(line, "^--%%}%s*$") then
+			if string.match(line, "^--%%}%s*$") or string.match(line, "^%%}%s*$") then
 				-- ignore this line
 				self.r.meta.script = { starts = start, ends = i - 1 }
 				self.r.request.script = table.concat(self.lines, "\n", start, i - 1)
@@ -380,6 +378,8 @@ function M:_parse_script()
 		self.r:add_diag(ERR, "missing end of script", 0, 0, self.cursor)
 		return line
 	end
+
+	return line
 end
 
 function M:_parse_after_last()

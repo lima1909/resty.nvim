@@ -420,6 +420,33 @@ describe("parse:", function()
 		assert.are.same(3, d.lnum)
 	end)
 
+	it("parse script body for treesitter-http post script", function()
+		local r = parse("\n> {%\n%}")
+		assert.is_false(r:has_diag())
+		assert.are.same("", r.request.script)
+
+		r = parse([[
+> {%
+  local json = ctx.json_body()
+  ctx.set("id", json.data.id)
+%}
+
+]])
+		assert.is_false(r:has_diag())
+		assert.are.same('  local json = ctx.json_body()\n  ctx.set("id", json.data.id)', r.request.script)
+
+		-- error
+		r = parse([[
+> {%
+  local json = ctx.json_body()
+]])
+		assert.is_true(r:has_diag())
+		local d = r.diagnostics[1]
+		assert.are.same("missing end of script", d.message)
+		assert.are.same(0, d.col)
+		assert.are.same(3, d.lnum)
+	end)
+
 	it("parse ng", function()
 		local input = {
 			"",

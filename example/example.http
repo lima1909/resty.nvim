@@ -5,11 +5,12 @@ Accept: application/vnd.github+json
 
 ### #Users ID=2
 GET https://reqres.in/api/users/2
-
---{%
+  
+# @lang lua
+> {%
   local json = ctx.json_body()
   ctx.set("id", json.data.id)
---%}
+%}
 
 ### #GET to jsonplaceholder 
 GET https://jsonplaceholder.typicode.com/comments

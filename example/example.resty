@@ -1,6 +1,6 @@
 # define global variables (valid for every request) 
-@user={{$USER}}      #  '$' mean: environment variable and save the value in the variable: 'user'
-@id = 42
+@user={{$USER}}   #  '$' mean: environment variable and save the value in the variable: 'user'
+@my-token = abc-42
 
 @cfg.insecure = true # configure the curl command with the option 'insecure=true'
 
@@ -11,19 +11,15 @@ Accept: application/vnd.github+json
 
 # starts a new request definition with a name (starts with '#'), so you can use it as favorite
 ### #name of this request
-@host = myhost # define a local variable (only valid for this request)
-@port = 4455
+@host = reqres.in # define a local variable (only valid for this request)
+@header_json = application/json
 
-GET http://{{host}}:{{port}}/users HTTP/1.1 # GET request with URL and (optional) HTTP-Version
+GET https://{{host}}/api/users/2 HTTP/1.1 # GET request with URL and (optional) HTTP-Version
 
 # headers
-Accept: application/json 
+Accept: {{header_json}} # header with a replacement
 Content-Type: text/html
-example: {{my-var}} # header with a replacement
 
-# query parameter
-id = {{id}} # replacement for 'id'
-count=1   # 'static' query parameter
 
 # another request definition without name (no favorite)
 ###
@@ -31,22 +27,38 @@ count=1   # 'static' query parameter
 GET http://127.0.0.1.1:8080
 
 ### 
-@id=7
+@cfg.timeout = 2000 # set timeout to 2 second
 
 # URL with query parameter
-POST  https://my-host?key=val&id={{id}} 
+GET https://api.restful-api.dev/objects?id=1&id=6
+# headers
+Accept: application/json 
+
+# query parameter
+id=7
+
+### #POST objects
+POST https://api.restful-api.dev/objects
+Accept: application/json
+Content-type: application/json ; charset=UTF-8
 
 # a json body
 {
-  "name" : "blub",
-  "yes": true,
-  "number": 4,
-  "foo": null
+   "name": "MY Apple MacBook Pro 16",
+   "data": {
+      "year": 2019,
+      "price": 1849.99,
+      "CPU model": "Intel Core i9",
+      "Hard disk size": "1 TB"
+   }
 }
+
+### #Users ID=2
+GET https://reqres.in/api/users/3
 
 # a lua script body
 --{%
-  local h = 5
+  local json = ctx.json_body()
+  ctx.set("id", json.data.id)
 --%}
-
-
+  

@@ -48,10 +48,10 @@ end
 
 function M:exec_and_show_response(parse_result)
 	self.call_from_buffer_name = vim.fn.bufname("%")
+
 	self.parse_result = parse_result
 	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
 	self.curl.canceled = false
-
 	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
 	local start_time = vim.loop.hrtime()
 
@@ -75,31 +75,6 @@ function M:exec_and_show_response(parse_result)
 
 	-- is really a job, not a dry run
 	if getmetatable(self.curl.job) then
-		-- add timeout check
-		local timeout = self.parse_result.request.timeout
-		if timeout then
-			vim.cmd("redraw")
-
-			vim.wait(timeout, function()
-				return self.curl.job.is_finished
-			end)
-
-			if self.curl.job.is_finished == false then
-				self.curl.canceled = true
-				self.curl.job:shutdown()
-
-				-- Delete buffer content
-				vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
-				vim.api.nvim_buf_set_lines(
-					self.bufnr,
-					-1,
-					-1,
-					false,
-					{ "curl is timed out after: " .. timeout .. " ms" }
-				)
-			end
-		end
-
 		-- activate curl cancel
 		vim.keymap.set("n", "cc", function()
 			if self.curl.job and not self.curl.job.is_shutdown then
@@ -111,6 +86,9 @@ function M:exec_and_show_response(parse_result)
 				vim.api.nvim_buf_set_lines(self.bufnr, -1, -1, false, { "curl is canceled ..." })
 			end
 		end, { buffer = self.bufnr, silent = true, desc = "cancel curl request" })
+
+		-- show timeout, if timeout is set
+		self:show_timeout(self.parse_result.request.timeout)
 	-- is a dry run
 	else
 		self:stop_time(start_time)
@@ -139,6 +117,25 @@ function M:show_dry_run(job)
 
 	-- 6 - job, 3 - info
 	self:create_and_select_window({ 6, 3 }, { code = "", text = "curl dry run", is_ok = true })
+end
+
+function M:show_timeout(timeout)
+	if timeout then
+		vim.cmd("redraw")
+
+		vim.wait(timeout, function()
+			return self.curl.job.is_finished
+		end)
+
+		if self.curl.job.is_finished == false then
+			self.curl.canceled = true
+			self.curl.job:shutdown()
+
+			self.curl.timeout = timeout
+			-- 7 - timeout, 3 - info
+			self:create_and_select_window({ 7, 3 }, { code = "", text = "curl timeout", is_ok = true })
+		end
+	end
 end
 
 function M:stop_time(start_time)

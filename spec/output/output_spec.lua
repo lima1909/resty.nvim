@@ -356,6 +356,11 @@ GET https://reqres.in/api/users?page=5
 		local o = output.new()
 		o:exec_and_show_response(r)
 
+		-- wait of curl response
+		vim.wait(1000, function()
+			return 7 == o.current_menu_id
+		end)
+
 		assert.are.same({ "", "curl is timed out after: 3 ms" }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 
@@ -373,5 +378,15 @@ GET https://reqres.in/api/users?page=5
 		o:exec_and_show_response(r)
 
 		assert.are.same({ "", "please wait ..." }, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+
+		-- wait of curl response
+		vim.wait(7000, function()
+			return 1 == o.current_menu_id
+		end)
+
+		assert.are.same({
+			"",
+			'{"page":5,"per_page":6,"total":12,"total_pages":2,"data":[],"support":{"url":"https://reqres.in/#support-heading","text":"To keep ReqRes free, contributions towards server costs are appreciated!"}}',
+		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 end)

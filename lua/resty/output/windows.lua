@@ -158,6 +158,21 @@ M.menu = {
 			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "```" })
 		end,
 	},
+	{
+		id = 7,
+		keymap = "t",
+		name = "timeout",
+		show_window_content = function(slf)
+			vim.api.nvim_set_option_value("filetype", "text", { buf = slf.bufnr })
+			vim.api.nvim_buf_set_lines(
+				slf.bufnr,
+				-1,
+				-1,
+				false,
+				{ "curl is timed out after: " .. slf.curl.timeout .. " ms" }
+			)
+		end,
+	},
 }
 
 M.key_mappings = {

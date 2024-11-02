@@ -57,6 +57,10 @@ M.menu = {
 				"- duration parse-request: " .. duration_str,
 			})
 
+			if exec.is_jq_installed == false then
+				vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, { "", "#  jq is not installed!" })
+			end
+
 			-- CURL command
 			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, {
 				"",

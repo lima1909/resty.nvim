@@ -1,7 +1,9 @@
 local curl = require("plenary.curl")
 local pjob = require("plenary.job")
 
-local M = {}
+local M = {
+	is_jq_installed = true,
+}
 
 -- --------- JQ -------------------
 M._create_jq_job = function(json, callback, jq_filter)
@@ -38,7 +40,17 @@ end
 ---@param callback function callback function where to get the result
 ---@param jq_filter? string a jq filter, default is '.'
 M.jq = function(json, callback, jq_filter)
-	M._create_jq_job(json, callback, jq_filter):start()
+	if M.is_jq_installed == true then
+		local ok, job = pcall(M._create_jq_job, json, callback, jq_filter)
+		if ok then
+			job:start()
+		else
+			M.is_jq_installed = false
+			vim.notify("jq is not installed")
+		end
+	end
+
+	return M.is_jq_installed
 end
 
 ---  Create an sync job for the jq commend.
@@ -48,14 +60,23 @@ end
 ---@param callback function callback function where to get the result
 ---@param jq_filter? string a jq filter, default is '.'
 M.jq_wait = function(timeout, json, callback, jq_filter)
-	local job = M._create_jq_job(json, callback, jq_filter)
-	job:start()
+	if M.is_jq_installed == true then
+		local ok, job = pcall(M._create_jq_job, json, callback, jq_filter)
+		if ok then
+			job:start()
 
-	vim.wait(timeout, function()
-		return job.is_finished
-	end)
+			vim.wait(timeout, function()
+				return job.is_finished
+			end)
 
-	job:shutdown()
+			job:shutdown()
+		else
+			M.is_jq_installed = false
+			vim.notify("jq is not installed")
+		end
+	end
+
+	return M.is_jq_installed
 end
 
 -- --------- CURL -------------------

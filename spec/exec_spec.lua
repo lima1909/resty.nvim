@@ -13,7 +13,8 @@ describe("exec:", function()
 		end
 
 		it("with default filter", function()
-			exec.jq_wait(2000, '{"value":true}', callback)
+			local found_jq = exec.jq_wait(2000, '{"value":true}', callback)
+			assert.is_true(found_jq)
 			assert.are.same({ "{", '  "value": true', "}" }, output)
 			assert.are.same(0, code)
 		end)

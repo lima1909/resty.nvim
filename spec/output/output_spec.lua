@@ -386,7 +386,7 @@ GET https://reqres.in/api/users?page=5
 
 		assert.are.same({
 			"",
-			'{"page":5,"per_page":6,"total":12,"total_pages":2,"data":[],"support":{"url":"https://reqres.in/#support-heading","text":"To keep ReqRes free, contributions towards server costs are appreciated!"}}',
+			'{"page":5,"per_page":6,"total":12,"total_pages":2,"data":[],"support":{"url":"https://contentcaddy.io?utm_source=reqres&utm_medium=json&utm_campaign=referral","text":"Tired of writing endless social media content? Let Content Caddy generate it for you."}}',
 		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
 	end)
 end)

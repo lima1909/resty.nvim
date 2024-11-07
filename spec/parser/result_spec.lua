@@ -204,4 +204,13 @@ describe("valid url + query:", function()
 		assert.are.same("http://host?k=v", r.request.url)
 		assert.is_nil(r.request.query)
 	end)
+
+	it("with two query keys and values", function()
+		local r = new("http://host", { k1 = "v1", k2 = "v2" }):url_with_query_string(true)
+		local u1 = "http://host?k1=v1&k2=v2" == r.request.url
+		local u2 = "http://host?k2=v2&k1=v1" == r.request.url
+		-- print(r.request.url .. " " .. tostring(u1) .. " " .. tostring(u2) .. " " .. tostring(u1 or u2))
+		assert.is_true((u1 or u2))
+		assert.is_nil(r.request.query)
+	end)
 end)

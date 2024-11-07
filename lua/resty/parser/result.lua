@@ -188,7 +188,7 @@ function M:url_with_query_string(always_append)
 	for key, value in pairs(self.request.query) do
 		if not qm then
 			table.insert(new_url, table.concat({ "?", key, "=", vim.trim(value) }))
-			qm = nil
+			qm = 0
 		else
 			table.insert(new_url, table.concat({ "&", key, "=", vim.trim(value) }))
 		end

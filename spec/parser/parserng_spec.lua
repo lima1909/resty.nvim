@@ -89,14 +89,14 @@ describe("parse:", function()
 		local d = r.diagnostics[1]
 		assert.are.same(d.message, "white space after http method is missing")
 		assert.are.same(3, d.end_col)
-		assert.are.same({ method = "GET", url = "" }, r.request)
+		assert.are.same({}, r.request)
 
 		r = p.parse("GET ")
 		assert.is_true(r:has_diag())
 		d = r.diagnostics[1]
 		assert.are.same(d.message, "url is missing")
 		assert.are.same(4, d.end_col)
-		assert.are.same({ method = "GET", url = "" }, r.request)
+		assert.are.same({}, r.request)
 
 		r = p.parse(":")
 		assert.is_true(r:has_diag())

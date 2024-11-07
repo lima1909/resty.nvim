@@ -146,33 +146,32 @@ function M:_parse_request(line)
 
 	line = self.r:replace_variable(line, lnum)
 
-	local ws1, ws2, ws3, rest, hv
-	req.method, ws1, req.url, ws2, hv, ws3, rest = string.match(line, REQUEST)
+	local method, ws1, url, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
-	if not req.method then
+	if not method then
 		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, lnum)
 		return line
 	elseif ws1 == "" then
 		local _, no_letter = string.match(line, "([%a]+)([^%s]?)")
 		if no_letter and no_letter ~= "" then
-			self.r:add_diag(ERR, "this is not a valid http method", 0, #req.method, lnum)
+			self.r:add_diag(ERR, "this is not a valid http method", 0, #method, lnum)
 		else
-			self.r:add_diag(ERR, "white space after http method is missing", 0, #req.method, lnum)
+			self.r:add_diag(ERR, "white space after http method is missing", 0, #method, lnum)
 		end
 		return line
-	elseif req.url == "" then
+	elseif url == "" then
 		local msg = "url is missing"
-		if methods[req.method] ~= "" then
+		if methods[method] ~= "" then
 			msg = "unknown http method and missing url"
 		end
-		self.r:add_diag(ERR, msg, 0, #req.method + #ws1 + #req.url, lnum)
+		self.r:add_diag(ERR, msg, 0, #method + #ws1 + #url, lnum)
 		return line
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		self.r:add_diag(
 			INF,
 			"invalid input after the request definition: '" .. rest .. "', maybe spaces?",
 			0,
-			#req.method + #ws1 + #req.url + #ws2 + #hv + #ws3,
+			#method + #ws1 + #url + #ws2 + #hv + #ws3,
 			lnum
 		)
 	end
@@ -181,14 +180,16 @@ function M:_parse_request(line)
 		req.http_version = hv
 	end
 
-	if methods[req.method] ~= "" then
-		self.r:add_diag(INF, "unknown http method", 0, #req.method, lnum)
+	if methods[method] ~= "" then
+		self.r:add_diag(INF, "unknown http method", 0, #method, lnum)
 	end
 
-	if string.sub(req.url, 1, 4) ~= "http" then
-		self.r:add_diag(ERR, "url must start with http", 0, #req.method + #ws1 + #req.url, lnum)
+	if string.sub(url, 1, 4) ~= "http" then
+		self.r:add_diag(ERR, "url must start with http", 0, #method + #ws1 + #url, lnum)
 	end
 
+	req.method = method
+	req.url = url
 	self.r.meta.request = lnum
 
 	return line

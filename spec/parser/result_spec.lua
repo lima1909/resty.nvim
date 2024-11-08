@@ -214,3 +214,19 @@ describe("valid url + query:", function()
 		assert.is_nil(r.request.query)
 	end)
 end)
+
+describe("write to buffer", function()
+	it("replace variable", function()
+		local r = result.new()
+		r.request.method = "GET"
+		r.request.url = "http://host"
+		r.request.query = {}
+		r.replacements = { { from = "echo foo", to = "echo \n", type = "cmd" } }
+
+		local bufnr = vim.api.nvim_create_buf(false, false)
+		r:write_to_buffer(bufnr)
+
+		local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
+		assert.are.same("- 'echo foo': 'echo ' (cmd)", lines[10])
+	end)
+end)

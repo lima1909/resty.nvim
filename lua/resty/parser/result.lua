@@ -242,8 +242,9 @@ function M:write_to_buffer(bufnr)
 			"",
 		})
 		for _, typ in ipairs(self.replacements) do
+			local typ_to = string.gsub(typ.to, "%c", "")
 			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
-				"- '" .. typ.from .. "': '" .. typ.to .. "' (" .. typ.type .. ")",
+				"- '" .. typ.from .. "': '" .. typ_to .. "' (" .. typ.type .. ")",
 			})
 		end
 	end

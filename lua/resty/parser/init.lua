@@ -244,6 +244,13 @@ function M:_parse_variables(_, is_gloabel)
 					v = self.r:replace_variable(v, lnum)
 					self.r.variables[k] = vim.trim(v)
 					self.r.meta.variables[k] = lnum
+
+					if not self.r.meta.variables.starts then
+						self.r.meta.variables.starts = lnum
+						self.r.meta.variables.ends = lnum
+					else
+						self.r.meta.variables.ends = lnum
+					end
 				end
 			end
 		end

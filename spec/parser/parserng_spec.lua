@@ -622,7 +622,11 @@ id = 3
 			http_version = "3",
 		}, r.request)
 		assert.are.same({}, r.replacements)
-		assert.are.same({ ["area"] = { starts = 12, ends = 14 }, request = 12, variables = { host = 1 } }, r.meta)
+		assert.are.same({
+			["area"] = { starts = 12, ends = 14 },
+			request = 12,
+			variables = { host = 1, starts = 1, ends = 1 },
+		}, r.meta)
 	end)
 
 	it("only (global) variables", function()

@@ -8,58 +8,62 @@ M.new = function()
 	return setmetatable({}, { __index = M })
 end
 
--- matches any keyword character (alphanumeric or underscore).
-function M:get_keyword_pattern()
-	return [[\k\+]]
+function M.get_debug_name()
+	return "resty"
 end
 
-function M:complete(r, callback)
-	if not vim.g.resty.completion then
-		return
-	end
-
-	local line = r.context.cursor_before_line
-	local row = r.context.cursor.row
-
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-	local parsed = parser.parse_area(lines, row, { replace_variables = false })
-
-	-- completion for variables
-	if (line == "" or string.match(line, "^@([^=]*)")) and parsed:is_valid_variable_row(row) then
-		-- add not used configs
-		local entries = {}
-		for _, item in ipairs(items.varcfg) do
-			if not parsed.request[item.label] then
-				table.insert(entries, item)
-			end
-		end
-
-		-- add not used global variables
-		local parsed_req = parser.parse(lines, row, { replace_variables = false })
-		for k, v in pairs(parsed_req.variables) do
-			if not parsed.variables[k] then
-				table.insert(entries, {
-					label = k,
-					labelDetails = { detail = "string", description = "" },
-					insertText = k .. " = ",
-					filterText = k .. v,
-					cmp = { kind_hl_group = "String", kind_text = "variable" },
-				})
-			end
-		end
-
-		callback(entries)
-	-- completion for headers
-	-- start on the first column, no spaces
-	elseif (line == "" or string.match(line, "^([%a]+)$")) and parsed:is_valid_headers_row(row) then
-		local entries = items.available_headers(parsed.request.headers)
-		callback(entries)
-	end
+-- matches any keyword character (alphanumeric or underscore).
+function M:get_keyword_pattern()
+	return [=[[a-zA-Z0-9_@]*]=]
 end
 
 -- completion only for http and resty files
 function M:is_available()
-	return vim.bo.filetype == "resty" or vim.bo.filetype == "http"
+	return (vim.bo.filetype == "resty" or vim.bo.filetype == "http") and vim.g.resty.completion
+end
+
+function M.get_varcfg_entries(lines, row, request)
+	local entries = items.available_varcfg(request)
+
+	-- add not used global variables
+	local parsed = parser.parse(lines, row, { replace_variables = false })
+	for k, v in pairs(parsed.variables) do
+		if not parsed.variables[k] then
+			table.insert(entries, {
+				label = k,
+				labelDetails = { detail = "string", description = "" },
+				insertText = k .. " = ",
+				filterText = k .. v,
+				cmp = { kind_hl_group = "String", kind_text = "variable" },
+			})
+		end
+	end
+
+	return entries
+end
+
+function M.entries(lines, crrent_line, row)
+	local completion_variables = string.match(crrent_line, "^@([^=]*)")
+	local completion_headers = string.match(crrent_line, "^([%a]+)$")
+
+	local entries = {}
+
+	if crrent_line == "" or completion_variables or completion_headers then
+		local parsed = parser.parse_area(lines, row, { replace_variables = false })
+
+		if parsed:get_possible_types(row).is_variable then
+			entries = M.get_varcfg_entries(lines, row, parsed.request)
+		elseif parsed:get_possible_types(row).is_headers then
+			entries = items.available_headers(parsed.request.headers)
+		end
+	end
+
+	return entries
+end
+
+function M:complete(r, callback)
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	callback(M.entries(lines, r.context.cursor_before_line, r.context.cursor.row))
 end
 
 -- M.get_trigger_characters = function()

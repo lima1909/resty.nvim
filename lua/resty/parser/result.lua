@@ -135,41 +135,56 @@ function M:replace_variable(line, lnum)
 	end)
 end
 
-function M:is_valid_variable_row(row)
-	if row >= self.meta.area.starts and row <= self.meta.area.ends then
-		if self.meta.request then
-			return self.meta.request > row
-		elseif self.meta.body then
-			return self.meta.body.starts > row
-		elseif self.meta.script then
-			return self.meta.script.starts > row
+--
+-- returns the type like, variable, headers, ... by the giving row
+--
+function M:get_possible_types(row)
+	local r = { is_variable = false, is_headers = false }
+	local m = self.meta
+
+	if row < m.area.starts or row > m.area.ends then
+		-- is not in the range of the parsed area
+		return r
+	end
+
+	local before_body = not m.body or row < m.body.starts
+	local before_script = not m.script or row < m.script.starts - 1 -- --{%
+	local before_body_script = before_body and before_script
+
+	if m.request then
+		local before_request = row < m.request
+		local after_request = row > m.request
+
+		if before_request then
+			r.is_variable = true
+		elseif after_request and before_body_script then
+			r.is_headers = true
 		end
 
-		-- NOTE: maybe check start of headers and query too?
-		return true
+		return r
 	end
 
-	return false
-end
+	--
+	-- NO REQUEST --
+	--
+	-- NOTE: maybe check start of headers and query too?
+	--
 
-function M:is_valid_headers_row(row)
-	if not self.meta.request then
-		return false
-	end
+	if before_body_script then
+		r.is_variable = true
+		r.is_headers = true
 
-	if self.meta.request < row and row <= self.meta.area.ends then
-		if self.meta.body then
-			return self.meta.body.starts > row
-		elseif self.meta.script then
-			-- starts - 1 is position of '--{%'
-			return self.meta.script.starts - 1 > row
+		local s = m.variables.starts or 1000000000
+		local e = m.variables.ends or 0
+		local is_variable_area = s <= row and e >= row
+		local is_global_variables = m.area.starts == 1
+
+		if is_global_variables or is_variable_area then
+			r.is_headers = false
 		end
-
-		-- NOTE: maybe check start of headers and query too?
-		return true
 	end
 
-	return false
+	return r
 end
 
 function M:url_with_query_string(always_append)

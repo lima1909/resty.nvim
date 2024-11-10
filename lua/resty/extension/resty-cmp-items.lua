@@ -152,4 +152,22 @@ M.available_headers = function(headers)
 	return entries
 end
 
+-- compute the available configurations: M.varcfg - request.cfg
+M.available_varcfg = function(request)
+	if not request then
+		return M.varcfg
+	end
+
+	-- add not used configs
+	local entries = {}
+
+	for _, varcfg in ipairs(M.varcfg) do
+		if not request[varcfg.label] then
+			table.insert(entries, varcfg)
+		end
+	end
+
+	return entries
+end
+
 return M

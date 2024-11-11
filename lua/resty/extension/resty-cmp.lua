@@ -22,19 +22,19 @@ function M:is_available()
 	return (vim.bo.filetype == "resty" or vim.bo.filetype == "http") and vim.g.resty.completion
 end
 
-function M.get_varcfg_entries(lines, row, request)
+function M.get_varcfg_entries(lines, row, request, variables)
 	local entries = items.available_varcfg(request)
 
 	-- add not used global variables
 	local parsed = parser.parse(lines, row, { replace_variables = false })
 	for k, v in pairs(parsed.variables) do
-		if not parsed.variables[k] then
+		if not variables[k] then
 			table.insert(entries, {
 				label = k,
 				labelDetails = { detail = "string", description = "" },
-				insertText = k .. " = ",
-				filterText = k .. v,
-				cmp = { kind_hl_group = "String", kind_text = "variable" },
+				insertText = "@" .. k .. " = ",
+				filterText = "@" .. k .. v,
+				cmp = { kind_hl_group = "String", kind_text = "Variable" },
 			})
 		end
 	end
@@ -52,7 +52,7 @@ function M.entries(lines, crrent_line, row)
 		local parsed = parser.parse_area(lines, row, { replace_variables = false })
 
 		if parsed:get_possible_types(row).is_variable then
-			entries = M.get_varcfg_entries(lines, row, parsed.request)
+			entries = M.get_varcfg_entries(lines, row, parsed.request, parsed.variables)
 		elseif parsed:get_possible_types(row).is_headers then
 			entries = items.available_headers(parsed.request.headers)
 		end

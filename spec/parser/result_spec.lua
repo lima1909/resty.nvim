@@ -111,6 +111,51 @@ describe("possible type for given row:", function()
 		assert.is_true(t.is_headers)
 	end)
 
+	it("no request", function()
+		local r = p.parse({ "", "###", "" }, 3)
+
+		local t = r:get_possible_types(3)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_request)
+		assert.is_true(t.is_headers)
+	end)
+
+	it("no request after var", function()
+		local r = p.parse({ "", "###", "@key = 42", "" }, 3)
+
+		local t = r:get_possible_types(4)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_request)
+		assert.is_true(t.is_headers)
+	end)
+
+	it("no request before header", function()
+		local r = p.parse({ "", "###", "", "Accept: application/json" }, 3)
+
+		local t = r:get_possible_types(3)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_request)
+		assert.is_true(t.is_headers)
+	end)
+
+	it("no request between variable and header", function()
+		local r = p.parse({ "", "###", "@key = 42", "", "Accept: application/json" }, 3)
+
+		local t = r:get_possible_types(4)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_request)
+		assert.is_true(t.is_headers)
+	end)
+
+	it("no request after header", function()
+		local r = p.parse({ "###", "@key = 42", "", "Accept: application/json", "" }, 3)
+
+		local t = r:get_possible_types(5)
+		assert.is_false(t.is_variable)
+		assert.is_false(t.is_request)
+		assert.is_true(t.is_headers)
+	end)
+
 	it("only request", function()
 		local r = p.parse({ "", "GET http://host", "" }, 1)
 

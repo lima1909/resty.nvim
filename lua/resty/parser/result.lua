@@ -165,6 +165,9 @@ function M:get_possible_types(row)
 		r.is_variable = row < (m.headers_query.starts or m.area.ends + 1)
 		-- headers comes after the end of variables
 		r.is_headers = row > (m.variables.ends or 0)
+
+		-- request is between variables and headers_query
+		r.is_request = r.is_variable and r.is_headers
 	end
 
 	return r

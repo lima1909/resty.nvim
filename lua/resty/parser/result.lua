@@ -13,7 +13,7 @@ M.new = function(opts)
 		variables = {},
 		replacements = {},
 		diagnostics = {},
-		meta = { area = {}, variables = {} },
+		meta = { area = {}, variables = {}, headers_query = {} },
 		opts = vim.tbl_deep_extend("force", M.default_opts, opts or {}),
 	}, { __index = M })
 end
@@ -139,9 +139,9 @@ end
 -- returns the type like, variable, headers, ... by the giving row
 --
 function M:get_possible_types(row)
-	local r = { is_variable = false, is_headers = false }
-	local m = self.meta
+	local r = { is_variable = false, is_headers = false, is_request = false }
 
+	local m = self.meta
 	if row < m.area.starts or row > m.area.ends then
 		-- is not in the range of the parsed area
 		return r
@@ -152,36 +152,19 @@ function M:get_possible_types(row)
 	local before_body_script = before_body and before_script
 
 	if m.request then
-		local before_request = row < m.request
-		local after_request = row > m.request
-
-		if before_request then
-			r.is_variable = true
-		elseif after_request and before_body_script then
-			r.is_headers = true
-		end
-
+		r.is_variable = row < m.request
+		r.is_headers = row > m.request and before_body_script
 		return r
-	end
-
-	--
-	-- NO REQUEST --
-	--
-	-- NOTE: maybe check start of headers and query too?
-	--
-
-	if before_body_script then
+	-- no request found
+	-- is global, only variables are supported
+	elseif m.area.starts == 1 then
 		r.is_variable = true
-		r.is_headers = true
-
-		local s = m.variables.starts or 1000000000
-		local e = m.variables.ends or 0
-		local is_variable_area = s <= row and e >= row
-		local is_global_variables = m.area.starts == 1
-
-		if is_global_variables or is_variable_area then
-			r.is_headers = false
-		end
+		return r
+	elseif before_body_script then
+		-- variables comes before headers
+		r.is_variable = row < (m.headers_query.starts or m.area.ends + 1)
+		-- headers comes after the end of variables
+		r.is_headers = row > (m.variables.ends or 0)
 	end
 
 	return r

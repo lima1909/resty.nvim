@@ -626,6 +626,7 @@ id = 3
 			["area"] = { starts = 12, ends = 14 },
 			request = 12,
 			variables = { host = 1, starts = 1, ends = 1 },
+			headers_query = {},
 		}, r.meta)
 	end)
 

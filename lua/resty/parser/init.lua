@@ -140,23 +140,21 @@ local methods =
 	{ GET = "", HEAD = "", OPTIONS = "", TRACE = "", PUT = "", DELETE = "", POST = "", PATCH = "", CONNECT = "" }
 
 function M:_parse_request(line)
-	local lnum = self.cursor
-	self.cursor = self.cursor + 1
 	local req = self.r.request
 
-	line = self.r:replace_variable(line, lnum)
+	line = self.r:replace_variable(line, self.cursor)
 
 	local method, ws1, url, ws2, hv, ws3, rest = string.match(line, REQUEST)
 
 	if not method then
-		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, lnum)
+		self.r:add_diag(ERR, "http method is missing or doesn't start with a letter", 0, 0, self.cursor)
 		return line
 	elseif ws1 == "" then
 		local _, no_letter = string.match(line, "([%a]+)([^%s]?)")
 		if no_letter and no_letter ~= "" then
-			self.r:add_diag(ERR, "this is not a valid http method", 0, #method, lnum)
+			self.r:add_diag(ERR, "this is not a valid http method", 0, #method, self.cursor)
 		else
-			self.r:add_diag(ERR, "white space after http method is missing", 0, #method, lnum)
+			self.r:add_diag(ERR, "white space after http method is missing", 0, #method, self.cursor)
 		end
 		return line
 	elseif url == "" then
@@ -164,7 +162,7 @@ function M:_parse_request(line)
 		if methods[method] ~= "" then
 			msg = "unknown http method and missing url"
 		end
-		self.r:add_diag(ERR, msg, 0, #method + #ws1 + #url, lnum)
+		self.r:add_diag(ERR, msg, 0, #method + #ws1 + #url, self.cursor)
 		return line
 	elseif #rest > 0 and not string.match(rest, "[%s]*#") then
 		self.r:add_diag(
@@ -172,7 +170,7 @@ function M:_parse_request(line)
 			"invalid input after the request definition: '" .. rest .. "', maybe spaces?",
 			0,
 			#method + #ws1 + #url + #ws2 + #hv + #ws3,
-			lnum
+			self.cursor
 		)
 	end
 
@@ -181,16 +179,17 @@ function M:_parse_request(line)
 	end
 
 	if methods[method] ~= "" then
-		self.r:add_diag(INF, "unknown http method", 0, #method, lnum)
+		self.r:add_diag(INF, "unknown http method", 0, #method, self.cursor)
 	end
 
 	if string.sub(url, 1, 4) ~= "http" then
-		self.r:add_diag(ERR, "url must start with http", 0, #method + #ws1 + #url, lnum)
+		self.r:add_diag(ERR, "url must start with http", 0, #method + #ws1 + #url, self.cursor)
 	end
 
 	req.method = method
 	req.url = url
-	self.r.meta.request = lnum
+	self.r.meta.request = self.cursor
+	self.cursor = self.cursor + 1
 
 	return line
 end
@@ -318,6 +317,14 @@ function M:_parse_headers_queries()
 						self.r:add_diag(WRN, "overwrite query key: " .. k, 0, #k, lnum)
 					end
 					self.r.request.query[k] = v
+				end
+
+				-- add meta for headers and query
+				if not self.r.meta.headers_query.starts then
+					self.r.meta.headers_query.starts = lnum
+					self.r.meta.headers_query.ends = lnum
+				else
+					self.r.meta.headers_query.ends = lnum
 				end
 			end
 		end

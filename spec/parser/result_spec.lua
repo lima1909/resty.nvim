@@ -63,33 +63,53 @@ describe("possible type for given row:", function()
 		assert.is_false(t.is_headers)
 	end)
 
-	-- it("no request with headers", function()
-	-- 	local r = p.parse({ "", "Accept: application/json", "" }, 1)
-	--
-	-- 	local t = r:get_possible_types(1)
-	-- 	assert.is_true(t.is_variable)
-	-- 	assert.is_false(t.is_headers)
-	--
-	-- 	t = r:get_possible_types(2)
-	-- 	assert.is_false(t.is_variable)
-	-- 	assert.is_false(t.is_headers)
-	--
-	-- 	t = r:get_possible_types(3)
-	-- 	assert.is_false(t.is_variable)
-	-- 	assert.is_false(t.is_headers)
-	-- end)
-	--
-	-- it("no request with headers, no variables", function()
-	-- 	local r = p.parse({ "Accept: application/json", "" }, 1)
-	--
-	-- 	local t = r:get_possible_types(1)
-	-- 	assert.is_false(t.is_variable)
-	-- 	assert.is_false(t.is_headers)
-	--
-	-- 	t = r:get_possible_types(2)
-	-- 	assert.is_false(t.is_variable)
-	-- 	assert.is_false(t.is_headers)
-	-- end)
+	it("no request with headers", function()
+		local r = p.parse({ "", "###", "", "Accept: application/json", "" }, 3)
+
+		local t = r:get_possible_types(1)
+		assert.is_false(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(2)
+		assert.is_false(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(3)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_headers)
+
+		t = r:get_possible_types(4)
+		assert.is_false(t.is_variable)
+		assert.is_true(t.is_headers)
+
+		t = r:get_possible_types(5)
+		assert.is_false(t.is_variable)
+		assert.is_true(t.is_headers)
+	end)
+
+	it("no request with variables", function()
+		local r = p.parse({ "", "###", "", "@key = 42", "" }, 3)
+
+		local t = r:get_possible_types(1)
+		assert.is_false(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(2)
+		assert.is_false(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(3)
+		assert.is_true(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(4)
+		assert.is_true(t.is_variable)
+		assert.is_false(t.is_headers)
+
+		t = r:get_possible_types(5)
+		assert.is_true(t.is_variable)
+		assert.is_true(t.is_headers)
+	end)
 
 	it("only request", function()
 		local r = p.parse({ "", "GET http://host", "" }, 1)
@@ -336,7 +356,6 @@ describe("valid url + query:", function()
 		local r = new("http://host", { k1 = "v1", k2 = "v2" }):url_with_query_string(true)
 		local u1 = "http://host?k1=v1&k2=v2" == r.request.url
 		local u2 = "http://host?k2=v2&k1=v1" == r.request.url
-		-- print(r.request.url .. " " .. tostring(u1) .. " " .. tostring(u2) .. " " .. tostring(u1 or u2))
 		assert.is_true((u1 or u2))
 		assert.is_nil(r.request.query)
 	end)

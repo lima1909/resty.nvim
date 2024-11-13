@@ -83,12 +83,14 @@ highlight link restyUrl       WarningMsg
 " syn include @JSON syntax/json.vim
 " syn region rJson start=+{+ end=+}+ contains=@JSON fold transparent 
 
-syntax region restyJsonBody start=+{+ end=+}+ 
+syntax region restyJsonBody  start=+{+ end=+}+     contains=restyJsonBody
 highlight link restyJsonBody String
 
 syntax region restyScript start=+--{%+ end=+--%}+ 
 highlight link restyScript Tag
 
+syntax region restyScriptHttp start=+> {%+ end=+%}+ 
+highlight link restyScriptHttp Tag
 
 " syntax for resty
 let b:current_syntax = "resty"

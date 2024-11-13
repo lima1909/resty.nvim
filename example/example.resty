@@ -56,9 +56,9 @@ Content-type: application/json ; charset=UTF-8
 ### #Users ID=2
 GET https://reqres.in/api/users/3
 
-# a lua script body
---{%
+# a lua script body: --{%  --%} or > {%  %}
+> {%
   local json = ctx.json_body()
   ctx.set("id", json.data.id)
---%}
+%}
   

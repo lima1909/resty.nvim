@@ -22,8 +22,8 @@ function M:is_available()
 	return (vim.bo.filetype == "resty" or vim.bo.filetype == "http") and vim.g.resty.completion
 end
 
-function M.get_varcfg_entries(lines, row, request, variables)
-	local entries = items.available_varcfg(request)
+function M.get_varcfg_entries(lines, row, variables)
+	local entries = items.available_varcfg(variables)
 
 	-- add not used global variables
 	local parsed = parser.parse(lines, row, { replace_variables = false })
@@ -50,11 +50,18 @@ function M.entries(lines, crrent_line, row)
 
 	if crrent_line == "" or completion_variables or completion_headers then
 		local parsed = parser.parse_area(lines, row, { replace_variables = false })
+		local parsed_type = parsed:get_possible_types(row)
 
-		if parsed:get_possible_types(row).is_variable then
-			entries = M.get_varcfg_entries(lines, row, parsed.request, parsed.variables)
-		elseif parsed:get_possible_types(row).is_headers then
+		if parsed_type.is_variable then
+			entries = M.get_varcfg_entries(lines, row, parsed.variables)
+		elseif parsed_type.is_headers then
 			entries = items.available_headers(parsed.request.headers)
+		end
+
+		if parsed_type.is_request then
+			for _, req in ipairs(items.request) do
+				table.insert(entries, req)
+			end
 		end
 	end
 

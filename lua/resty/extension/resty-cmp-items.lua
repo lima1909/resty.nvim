@@ -136,6 +136,13 @@ M.headers = {
 	},
 }
 
+M.request = {
+	{ label = "GET http://", cmp = { kind_hl_group = "Constant", kind_text = "Request" } },
+	{ label = "GET https://", cmp = { kind_hl_group = "Constant", kind_text = "Request" } },
+	{ label = "POST http://", cmp = { kind_hl_group = "Constant", kind_text = "Request" } },
+	{ label = "POST https://", cmp = { kind_hl_group = "Constant", kind_text = "Request" } },
+}
+
 M.available_headers = function(headers)
 	if not headers then
 		return M.headers
@@ -152,9 +159,9 @@ M.available_headers = function(headers)
 	return entries
 end
 
--- compute the available configurations: M.varcfg - request.cfg
-M.available_varcfg = function(request)
-	if not request then
+-- compute the available configurations: M.varcfg - variables
+M.available_varcfg = function(variables)
+	if not variables then
 		return M.varcfg
 	end
 
@@ -162,7 +169,7 @@ M.available_varcfg = function(request)
 	local entries = {}
 
 	for _, varcfg in ipairs(M.varcfg) do
-		if not request[varcfg.label] then
+		if not variables[varcfg.label] then
 			table.insert(entries, varcfg)
 		end
 	end

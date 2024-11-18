@@ -10,4 +10,16 @@ M.input_to_lines = function(input)
 	end
 end
 
+M.read_file = function(path)
+	local fd = vim.loop.fs_open(path, "r", 438)
+	if not fd then
+		error("File not found: " .. path, 0)
+	end
+	local stat = vim.loop.fs_fstat(fd)
+	local content = vim.loop.fs_read(fd, stat.size, 0)
+	vim.loop.fs_close(fd)
+
+	return content
+end
+
 return M

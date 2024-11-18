@@ -86,6 +86,9 @@ highlight link restyUrl       WarningMsg
 syntax region restyJsonBody  start=+{+ end=+}+     contains=restyJsonBody
 highlight link restyJsonBody String
 
+syntax match restyJsonBodyFile   /\v^\<.*/ 
+highlight link restyJsonBodyFile String
+
 syntax region restyScript start=+--{%+ end=+--%}+ 
 highlight link restyScript Tag
 

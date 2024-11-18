@@ -7,6 +7,7 @@ if ok then
 			{ name = "resty" },
 			{ name = "buffer" },
 			{ name = "text" },
+			{ name = "path" },
 		}),
 	})
 end

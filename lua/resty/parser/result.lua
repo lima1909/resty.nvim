@@ -222,7 +222,11 @@ function M:write_to_buffer(bufnr)
 	-- BODY
 	if req.body then
 		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.body, "\n"))
+		if req.body:sub(1, 1) == "{" then
+			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(req.body, "\n"))
+		else
+			vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "< " .. req.body })
+		end
 	end
 
 	-- SCRIPT

@@ -377,6 +377,18 @@ describe("parse:", function()
 		assert.are.same('{  "name": "me" }', r.request.body)
 	end)
 
+	it("parse json body from file", function()
+		local r = parse("<  ./spec/parser/test.json")
+		assert.is_false(r:has_diag())
+		assert.are.same("./spec/parser/test.json", r.request.body)
+		assert.are.same("./spec/parser/test.json", p._file_path_buffer)
+
+		r = parse("<  ./spec/parser/not-exist.json")
+		assert.is_true(r:has_diag())
+		assert.is_nil(r.request.body)
+		assert.are.same("./spec/parser/test.json", p._file_path_buffer)
+	end)
+
 	it("parse script body", function()
 		local r = parse("--{%\n--%}")
 		assert.is_false(r:has_diag())

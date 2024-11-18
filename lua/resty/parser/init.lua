@@ -89,7 +89,7 @@ function M:parse_definition(from, to)
 	local parsers = {
 		M._parse_request,
 		M._parse_headers_queries,
-		M._parse_json,
+		M._parse_json_body,
 		M._parse_script,
 		M._parse_after_last,
 	}
@@ -331,11 +331,25 @@ function M:_parse_headers_queries()
 	end
 end
 
-function M:_parse_json()
+M._file_path_buffer = ""
+
+function M:_parse_json_body()
 	local line, first_char = self:_ignore_lines()
 
-	if not line or first_char ~= "{" then
+	if not line or (first_char ~= "{" and first_char ~= "<") then
 		return line
+	elseif first_char == "<" then
+		local fp = vim.trim(line:sub(2))
+		if fp == M._file_path_buffer or vim.loop.fs_stat(fp) then
+			M._file_path_buffer = fp
+			self.r.meta.body = { starts = self.cursor, ends = self.cursor }
+			self.r.request.body = fp
+		else
+			self.r:add_diag(ERR, "file not found: " .. fp, 0, #line, self.cursor)
+		end
+
+		self.cursor = self.cursor + 1
+		return self.lines[self.cursor]
 	else
 		local json_start = self.cursor
 		local with_break = false

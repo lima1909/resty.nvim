@@ -45,10 +45,34 @@ describe("exec:", function()
 			error = e
 		end
 
+		it("json from file", function()
+			local input = {
+				"POST https://api.restful-api.dev/objects",
+				"Accept: application/json",
+				"Content-type: application/json ; charset=utf-8",
+				"",
+				"< ./spec/parser/test.json",
+			}
+
+			local r = parser.parse(input, 1)
+			assert.is_false(r:has_diag())
+
+			exec.curl_wait(7000, r.request, callback, error_fn)
+
+			assert.is_nil(error)
+
+			local resp = vim.json.decode(response.body)
+			assert.are.same("MY Apple MacBook Pro 4", resp.name)
+			assert.are.same(2019, resp.data.year)
+		end)
+
 		it("simple GET request", function()
 			local input = [[
 ### simple get 
 GET https://reqres.in/api/users?page=5
+
+Accept: application/json
+Content-type: application/json ; charset=utf-8
 
 ]]
 

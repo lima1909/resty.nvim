@@ -338,11 +338,12 @@ function M:_parse_json_body()
 
 	if not line or (first_char ~= "{" and first_char ~= "<") then
 		return line
+	-- json comes from a file
 	elseif first_char == "<" then
 		local fp = vim.trim(line:sub(2))
 		if fp == M._file_path_buffer or vim.loop.fs_stat(fp) then
 			M._file_path_buffer = fp
-			self.r.meta.body = { starts = self.cursor, ends = self.cursor }
+			self.r.meta.body = { starts = self.cursor, ends = self.cursor, from_file = true }
 			self.r.request.body = fp
 		else
 			self.r:add_diag(ERR, "file not found: " .. fp, 0, #line, self.cursor)
@@ -350,6 +351,7 @@ function M:_parse_json_body()
 
 		self.cursor = self.cursor + 1
 		return self.lines[self.cursor]
+	-- json comes as json-string
 	else
 		local json_start = self.cursor
 		local with_break = false
@@ -373,7 +375,7 @@ function M:_parse_json_body()
 			self.cursor = self.cursor + 1
 		end
 
-		self.r.meta.body = { starts = json_start, ends = json_end }
+		self.r.meta.body = { starts = json_start, ends = json_end, from_file = false }
 		self.r.request.body = table.concat(self.lines, "", json_start, json_end)
 
 		self.r:check_json_body_if_enabled(json_start, json_end)

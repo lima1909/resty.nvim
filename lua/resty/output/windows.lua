@@ -67,7 +67,7 @@ M.menu = {
 				"## CURL command:",
 				"",
 				"```",
-				vim.inspect(slf.curl.job.args),
+				"curl " .. table.concat(slf.curl.job.args or {}, " "),
 				"```",
 			})
 		end,

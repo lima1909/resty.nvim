@@ -160,31 +160,4 @@ GET https://reqres.in/api/users/2
 			assert.are.same({ ["id"] = "42" }, r.global_variables)
 		end)
 	end)
-
-	-- 	describe("load json from file for post", function()
-	-- 		it("json from file", function()
-	-- 			local input = [[
-	-- POST https://api.restful-api.dev/objects
-	-- Accept: application/json
-	-- Content-type: application/json ; charset=utf-8
-	--
-	-- < ./spec/parser/test.json
-	-- ]]
-	--
-	-- 			local r = p.parse(input, 1)
-	--
-	-- 			local response, err
-	-- 			exec.curl_wait(7000, r.request, function(resp)
-	-- 				response = resp
-	-- 			end, function(e)
-	-- 				err = e
-	-- 			end)
-	--
-	-- 			assert.is_nil(err)
-	--
-	-- 			local resp = vim.json.decode(response.body)
-	-- 			assert.are.same("MY Apple MacBook Pro 4", resp.name)
-	-- 			assert.are.same(2019, resp.data.year)
-	-- 		end)
-	-- 	end)
 end)

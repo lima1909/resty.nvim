@@ -5,6 +5,7 @@ end
 local parser = require("resty.parser")
 local output = require("resty.output")
 local diagnostic = require("resty.diagnostic")
+local util = require("resty.util")
 
 local default_config = {
 	output = {
@@ -49,22 +50,8 @@ M.run = function(input)
 		return
 	end
 
-	local start_line = vim.fn.getpos("'<")[2] -- 2 = line number, 3 = columns number
-	vim.fn.setpos("'<", { 0, 0, 0, 0 }) -- reset the start pos
-
-	-- VISUAL mode
-	if start_line > 0 then
-		local end_line = vim.fn.getpos("'>")[2]
-		vim.fn.setpos("'>", { 0, 0, 0, 0 }) -- reset
-		local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-		M._run(lines, 1, 0)
-	-- NORMAL mode
-	else
-		local winnr = vim.api.nvim_get_current_win()
-		local row = vim.api.nvim_win_get_cursor(winnr)[1]
-		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-		M._run(lines, row, 0)
-	end
+	local lines, row = util.get_lines_and_row_from_current_buf()
+	M._run(lines, row, 0)
 end
 
 -- check, is telescope installed for viewing favorites
@@ -102,6 +89,13 @@ M._run = function(lines, row, bufnr)
 	-- save the last result
 	M.last_parser_result = result
 	M.output:exec_and_show_response(M.last_parser_result)
+end
+
+M.show_debug_info = function()
+	local lines, row = util.get_lines_and_row_from_current_buf()
+	local result = parser.parse(lines, row)
+
+	M.output:show_debug_info(result)
 end
 
 --[[

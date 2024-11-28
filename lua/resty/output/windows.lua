@@ -177,6 +177,15 @@ M.menu = {
 			)
 		end,
 	},
+	{
+		id = 8,
+		keymap = "z",
+		name = "debug infos",
+		show_window_content = function(slf)
+			vim.api.nvim_set_option_value("filetype", "lua", { buf = slf.bufnr })
+			vim.api.nvim_buf_set_lines(slf.bufnr, -1, -1, false, slf.lines)
+		end,
+	},
 }
 
 M.key_mappings = {

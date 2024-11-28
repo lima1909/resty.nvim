@@ -1,5 +1,6 @@
 local resty = require("resty")
 local cmd = require("resty.commands")
+-- local util = require("resty.util")
 
 vim.api.nvim_create_user_command("Resty", function(args)
 	if args and #args.fargs > 0 then
@@ -11,6 +12,9 @@ vim.api.nvim_create_user_command("Resty", function(args)
 			local sel_favorite = args.args:sub(9) -- cut the command
 			sel_favorite = string.gsub(sel_favorite, "^%s+", "") -- cut the spaces
 			resty.favorite(sel_favorite)
+			return
+		elseif args.fargs[1] == "debug" then
+			resty.show_debug_info()
 			return
 		end
 	end

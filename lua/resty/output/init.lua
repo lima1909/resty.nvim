@@ -4,6 +4,7 @@ local format = require("resty.output.format")
 local statuscode = require("resty.output.statuscode")
 local exec = require("resty.exec")
 local parser = require("resty.parser")
+local util = require("resty.util")
 
 local M = { bufnr = nil, winnr = nil }
 
@@ -136,6 +137,17 @@ function M:show_timeout(timeout)
 			self:create_and_select_window({ 7, 3 }, { code = "", text = "curl timeout", is_ok = true })
 		end
 	end
+end
+
+function M:show_debug_info(parse_result)
+	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
+
+	self.parse_result = parse_result
+	self.curl.duration_str = format.duration_to_str(parse_result.duration)
+	self.lines = util.split_string_into_lines(vim.inspect(parse_result))
+
+	-- 8 - debug infos
+	self:create_and_select_window({ 8 }, { code = "", text = "show debug informations", is_ok = true })
 end
 
 function M:stop_time(start_time)

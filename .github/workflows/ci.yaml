@@ -26,4 +26,5 @@ jobs:
           curl --version
       - name: run tests
         run: |
-          nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {minimal_init = 'spec/minimal_init.lua'}"
+          nvim --headless --noplugin -u spec/minimal_init.lua -c "PlenaryBustedDirectory spec/ {sequential = true, minimal_init = 'spec/minimal_init.lua'}"
+          

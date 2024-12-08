@@ -5,91 +5,72 @@ local ERR = vim.diagnostic.severity.ERROR
 
 local M = {}
 
-M.parse_curl_cmd = function(curl_cmd_lines, start_line, r)
-	return M.new(curl_cmd_lines, start_line, r):parse_cmd()
+M.parse_curl_cmd = function(line)
+	local parser = M.new()
+	-- start by 5: after '>curl'
+	parser.c = 5
+	return parser:parse_line(line)
 end
 
-M.new = function(curl_cmd_lines, start_line, r)
-	start_line = start_line or 1
+M.new = function(r)
 	r = r or result.new({})
-	r.meta = { curl = { starts = start_line } }
-
-	local lines = util.input_to_lines(curl_cmd_lines)
 
 	local p = setmetatable({
 		c = 1, -- cursor
-		lines = lines,
-		current_line_nr = start_line,
-		current_line = lines[start_line],
 		r = r,
 	}, { __index = M })
 
 	return p
 end
 
-function M:parse_cmd()
-	if self.current_line:sub(1, 4) ~= "curl" then
-		self.r:add_diag(ERR, "command starts not with 'curl'", 1, 4, self.current_line_nr)
-		return self.r
-	end
+function M:parse_line(line)
+	self.current_line = line
 
-	-- start by 5: after 'curl'
-	self.c = 4
+	while self.c <= #self.current_line do
+		local c = self:next()
 
-	-- while not on the end or not blank line
-	while self.current_line and not string.match(self.current_line, "^%s*$") do
-		self.r.meta.curl.ends = self.current_line_nr
+		-- find options (args)
+		if c == "-" then
+			c = self:next()
 
-		while self.c <= #self.current_line do
-			local c = self:next()
-
-			-- find options (args)
-			if c == "-" then
-				c = self:next()
-
-				-- METHOD
-				if c == "X" then
+			-- METHOD
+			if c == "X" then
+				self:ignore_whitspace()
+				self.r.request.method = self:next_until(" "):upper()
+				-- HEADERS
+			elseif c == "H" then
+				self.r.request.headers = self:header()
+				-- BODY
+			elseif c == "d" then
+				self.r.request.body = self:body()
+				-- arguments with two dashes
+			elseif c == "-" then
+				local arg = self:next_until(" ")
+				-- RAW arguments
+				if arg == "insecure" then
+					self.r.request.insecure = true
+				elseif arg == "header" then
+					self.r.request.headers = self:header()
+				elseif arg == "request" then
 					self:ignore_whitspace()
 					self.r.request.method = self:next_until(" "):upper()
-				-- HEADERS
-				elseif c == "H" then
-					self.r.request.headers = self:header()
-				-- BODY
-				elseif c == "d" then
-					self.r.request.body = self:body()
-				-- arguments with two dashes
-				elseif c == "-" then
-					local arg = self:next_until(" ")
-					-- RAW arguments
-					if arg == "insecure" then
-						self.r.request.insecure = true
-					elseif arg == "header" then
-						self.r.request.headers = self:header()
-					elseif arg == "request" then
-						self:ignore_whitspace()
-						self.r.request.method = self:next_until(" "):upper()
 					-- BODY
-					elseif arg == "data-raw" or arg == "data" or arg == "json" then
-						self.r.request.body = self:body()
-					end
+				elseif arg == "data-raw" or arg == "data" or arg == "json" then
+					self.r.request.body = self:body()
 				end
-			-- find URL http or https
-			elseif (c == "'" or c == "h") and self:peek(9):match("ttp[s]?://") then
-				self:one_step_back()
-				self.r.request.url = self:between()
 			end
+			-- find URL http or https
+		elseif (c == "'" or c == "h") and self:peek(9):match("ttp[s]?://") then
+			self:one_step_back()
+			self.r.request.url = self:between()
 		end
-
-		self.current_line_nr = self.current_line_nr + 1
-		self.current_line = self.lines[self.current_line_nr]
-		self.c = 1
-	end -- not blank line
+	end
 
 	self.r.request.method = self.r.request.method or "GET"
 
-	if not self.r.url then
-		self.r:add_diag(ERR, "no url found", 0, self.c, self.r.meta.curl.starts, self.r.meta.curl.ends)
-	end
+	-- if not self.r.url then
+	-- 	self.r:add_diag(ERR, "no url found", 0, self.c, self.r.meta.curl.starts, self.r.meta.curl.ends)
+	-- end
 
 	return self.r
 end

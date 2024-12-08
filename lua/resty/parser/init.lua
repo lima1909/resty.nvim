@@ -1,5 +1,6 @@
 local util = require("resty.util")
 local result = require("resty.parser.result")
+local curl_cmd = require("resty.parser.curl")
 
 local INF = vim.diagnostic.severity.INFO
 local WRN = vim.diagnostic.severity.WARN
@@ -86,14 +87,6 @@ function M:parse_definition(from, to)
 	self.cursor = from
 	self.len = to
 
-	local parsers = {
-		M._parse_request,
-		M._parse_headers_queries,
-		M._parse_json_body,
-		M._parse_script,
-		M._parse_after_last,
-	}
-
 	local line = self:_parse_variables()
 	-- no more lines available
 	-- only variables are ok for global area
@@ -106,6 +99,25 @@ function M:parse_definition(from, to)
 			self.r:add_diag(ERR, "no request URL found. please set the cursor to an valid request", 0, 0, from, to)
 		end
 		return self
+	end
+
+	local parsers = nil
+
+	-- check, the current line: a request or a curl command
+	if line:sub(1, 5) == ">curl" then
+		parsers = {
+			M._parse_curl_command,
+			M._parse_script,
+			M._parse_after_last,
+		}
+	else
+		parsers = {
+			M._parse_request,
+			M._parse_headers_queries,
+			M._parse_json_body,
+			M._parse_script,
+			M._parse_after_last,
+		}
 	end
 
 	for _, parse in ipairs(parsers) do
@@ -121,6 +133,30 @@ function M:parse_definition(from, to)
 
 	self.r:url_with_query_string()
 	return self
+end
+
+function M:_parse_curl_command(line)
+	local curl = curl_cmd.new(self.r)
+	self.r.meta.curl = { starts = self.cursor, ends = self.cursor }
+
+	curl.c = 5 -- cut: '>curl'
+	curl:parse_line(line)
+	self.cursor = self.cursor + 1
+
+	for lnum = self.cursor, self.len do
+		line = self.lines[lnum]
+
+		-- an empty line, then stop
+		if string.match(line, "^%s*$") then
+			self.cursor = lnum
+			return line
+		else
+			self.r.meta.curl.ends = lnum
+			self.cursor = lnum
+			curl.c = 1
+			curl:parse_line(line)
+		end
+	end
 end
 
 local WS = "([%s]*)"

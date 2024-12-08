@@ -1,19 +1,19 @@
 local assert = require("luassert")
 local p = require("resty.parser")
 
-describe("parser:", function()
-	local function check(input, selected, expected)
-		local r = p.parse(input, selected)
+local function check(input, selected, expected)
+	local r = p.parse(input, selected)
 
-		if r:has_error() then
-			print(vim.inspect(r))
-		end
-		assert.is_false(r:has_error())
-		assert.are.same(r.variables, expected.variables)
-		assert.are.same(r.request, expected.request or {})
-		assert.are.same(r.script, expected.script)
+	if r:has_error() then
+		print(vim.inspect(r))
 	end
+	assert.is_false(r:has_error())
+	assert.are.same(r.variables, expected.variables)
+	assert.are.same(r.request, expected.request or {})
+	assert.are.same(r.script, expected.script)
+end
 
+describe("parser:", function()
 	it("method url", function()
 		check("GEt http://host", 1, {
 			variables = {},
@@ -417,5 +417,73 @@ describe("errors:", function()
 			message = "invalid input, this and the following lines are ignored",
 			lnum = 5,
 		})
+	end)
+end)
+
+describe("curl requests:", function()
+	it("simpelst curl", function()
+		check(">curl http://host", 1, {
+			variables = {},
+			request = { method = "GET", url = "http://host" },
+		})
+	end)
+
+	it("simple curl with variables", function()
+		check({ "@key=value # comment", ">curl -X get http://host" }, 1, {
+			variables = { key = "value" },
+			request = { method = "GET", url = "http://host" },
+		})
+	end)
+
+	it("method url and header", function()
+		check({ ">curl  http://host -H 'accept: application/json' ", "" }, 4, {
+			variables = {},
+			request = {
+				method = "GET",
+				url = "http://host",
+				headers = { accept = "application/json" },
+			},
+		})
+	end)
+
+	it("method url with body and script", function()
+		check(
+			{
+				">curl  http://host",
+				[[--data "{	'name': 'John'}" ]],
+				"",
+				"--{%",
+				"print('Hey ...')",
+				"--%}",
+			},
+			1,
+			{
+				variables = {},
+				request = {
+					method = "GET",
+					url = "http://host",
+					body = "{\t'name': 'John'}",
+					script = "print('Hey ...')",
+				},
+			}
+		)
+	end)
+
+	it("method url with json-body from file", function()
+		check(
+			{
+				">curl  http://host",
+				"-d @/from/file.json",
+			},
+			1,
+			{
+				variables = {},
+				request = {
+					method = "GET",
+					url = "http://host",
+					body = "@/from/file.json",
+				},
+			}
+		)
 	end)
 end)

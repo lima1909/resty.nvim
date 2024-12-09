@@ -23,8 +23,9 @@ M.new = function(r)
 	return p
 end
 
-function M:parse_line(line)
+function M:parse_line(line, line_nr)
 	self.current_line = line
+	self.current_line_nr = line_nr
 
 	while self.c <= #self.current_line do
 		local c = self:next()
@@ -37,12 +38,16 @@ function M:parse_line(line)
 			if c == "X" then
 				self:ignore_whitspace()
 				self.r.request.method = self:next_until(" "):upper()
+				self.r.meta.request = self.current_line_nr
 				-- HEADERS
 			elseif c == "H" then
 				self.r.request.headers = self:header()
+				self.r.meta.headers_query = { starts = self.current_line_nr, ends = self.current_line_nr }
 				-- BODY
 			elseif c == "d" then
 				self.r.request.body = self:body()
+				-- from_file = true
+				self.r.meta.body = { starts = self.current_line_nr, ends = self.current_line_nr }
 				-- arguments with two dashes
 			elseif c == "-" then
 				local arg = self:next_until(" ")
@@ -51,12 +56,16 @@ function M:parse_line(line)
 					self.r.request.insecure = true
 				elseif arg == "header" then
 					self.r.request.headers = self:header()
+					self.r.meta.headers_query = { starts = self.current_line_nr, ends = self.current_line_nr }
 				elseif arg == "request" then
 					self:ignore_whitspace()
 					self.r.request.method = self:next_until(" "):upper()
+					self.r.meta.request = self.current_line_nr
 					-- BODY
 				elseif arg == "data-raw" or arg == "data" or arg == "json" then
 					self.r.request.body = self:body()
+					-- from_file = true
+					self.r.meta.body = { starts = self.current_line_nr, ends = self.current_line_nr }
 				end
 			end
 			-- find URL http or https
@@ -156,10 +165,12 @@ function M:header()
 	local header = self:between()
 	if header then
 		local pos = header:find(":")
-		local k, v = header:sub(1, pos - 1), header:sub(pos + 1)
-		self.r.request.headers = self.r.request.headers or {}
-		self.r.request.headers[vim.trim(k)] = vim.trim(v)
-		return self.r.request.headers
+		if pos then
+			local k, v = header:sub(1, pos - 1), header:sub(pos + 1)
+			self.r.request.headers = self.r.request.headers or {}
+			self.r.request.headers[vim.trim(k)] = vim.trim(v)
+			return self.r.request.headers
+		end
 	else
 		self.r:add_diag(ERR, "missing header", 0, self.c, self.current_line_nr)
 	end

@@ -15,6 +15,18 @@ endif
 " Error Define Operator Label Character 
 " Directory " WarningMsg
 
+" --- CURL command syntax highlighting
+syntax match restyCurlStart    ">curl"                contained
+syntax match restyCurlMethod   /\v\-X\s+[\'A-Za-z]+/  contained 
+syntax region restyCurlCmd 
+    \ start=+>curl+ 
+    \ end=/\v^(\s)*$/
+    \ contains=restyCurlStart,restyUrl,restyCurlMethod
+
+highlight link restyCurlStart        Constant
+highlight link restyCurlMethod       Function
+highlight link restyCurlCmd     Delimiter
+
 
 " --- define basic syntax comment and section ---
 syntax match   restyComment "#.*$" 
@@ -50,11 +62,11 @@ highlight link restyVarKeyCfg    Delimiter
 
 
 " --- section, headers, query and variable ---
-syntax region restySectionFavorite  start=/\v^###(\s#)?.*/                       end=/\n/  contains=restySection,restyFavorite
-syntax region restyHeader           start=/\v^([A-Za-z-_])+\s*:\s*.+/            end=/\n/  contains=restyKey,restyColon,restyValue
-syntax region restyQuery            start=/\v^([A-Za-z-_])+\s*\=\s*.+/           end=/\n/  contains=restyKey,restyEqual,restyValue
-syntax region restyVariable         start=/\v^\@([A-Za-z-_])+\s*\=\s*.+/         end=/\n/  contains=restyVarChar,restyVarKey,restyEqual,restyValue
-syntax region restyVariableCfg      start=/\v^\@cfg\.([A-Za-z-_])+\s*\=\s*.+/    end=/\n/  contains=restyVarCharCfg,restyVarKeyCfg,restyEqual,restyValue
+syntax region restySectionFavorite  start=/\v^###(\s#)?.*/                     end=/\n/  contains=restySection,restyFavorite
+syntax region restyHeader           start=/\v^[A-Za-z-_]+\s*:\s*.+/            end=/\n/  contains=restyKey,restyColon,restyValue
+syntax region restyQuery            start=/\v^[A-Za-z-_]+\s*\=\s*.+/           end=/\n/  contains=restyKey,restyEqual,restyValue
+syntax region restyVariable         start=/\v^\@([A-Za-z-_])+\s*\=\s*.+/       end=/\n/  contains=restyVarChar,restyVarKey,restyEqual,restyValue
+syntax region restyVariableCfg      start=/\v^\@cfg\.([A-Za-z-_])+\s*\=\s*.+/  end=/\n/  contains=restyVarCharCfg,restyVarKeyCfg,restyEqual,restyValue
 
 
 " --- define the request: method URL HTTP-Version ---
@@ -71,6 +83,8 @@ highlight link restyRequest   Function
 highlight link restyUrlQuery  Error 
 highlight link restyVersion   Delimiter
 highlight link restyUrl       WarningMsg 
+
+
 
 
 " syntax match restyHeader /\v^([A-Za-z-])+:\s*.+/       contains=restyReplace,restyComment 

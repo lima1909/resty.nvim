@@ -240,7 +240,7 @@ function M:write_to_buffer(bufnr)
 	vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "```" })
 
 	-- VARIABLES and REPLACEMENTS
-	if #self.replacements > 0 then
+	if #self.replacements and #self.replacements > 0 then
 		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {
 			"",
 			"## Variables:",

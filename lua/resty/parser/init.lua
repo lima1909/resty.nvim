@@ -140,7 +140,7 @@ function M:_parse_curl_command(line)
 	self.r.meta.curl = { starts = self.cursor, ends = self.cursor }
 
 	curl.c = 5 -- cut: '>curl'
-	curl:parse_line(line)
+	curl:parse_line(line, self.cursor)
 	self.cursor = self.cursor + 1
 
 	for lnum = self.cursor, self.len do
@@ -154,7 +154,7 @@ function M:_parse_curl_command(line)
 			self.r.meta.curl.ends = lnum
 			self.cursor = lnum
 			curl.c = 1
-			curl:parse_line(line)
+			curl:parse_line(line, lnum)
 		end
 	end
 end

@@ -36,36 +36,26 @@ function M:parse_line(line, line_nr)
 
 			-- METHOD
 			if c == "X" then
-				self:ignore_whitspace()
-				self.r.request.method = self:next_until(" "):upper()
-				self.r.meta.request = self.current_line_nr
-				-- HEADERS
+				self:request()
+			-- HEADERS
 			elseif c == "H" then
-				self.r.request.headers = self:header()
-				self.r.meta.headers_query = { starts = self.current_line_nr, ends = self.current_line_nr }
-				-- BODY
+				self:header()
+			-- BODY
 			elseif c == "d" then
-				self.r.request.body = self:body()
-				-- from_file = true
-				self.r.meta.body = { starts = self.current_line_nr, ends = self.current_line_nr }
-				-- arguments with two dashes
+				self:body()
+			-- arguments with two dashes
 			elseif c == "-" then
 				local arg = self:next_until(" ")
 				-- RAW arguments
 				if arg == "insecure" then
 					self.r.request.insecure = true
 				elseif arg == "header" then
-					self.r.request.headers = self:header()
-					self.r.meta.headers_query = { starts = self.current_line_nr, ends = self.current_line_nr }
+					self:header()
 				elseif arg == "request" then
-					self:ignore_whitspace()
-					self.r.request.method = self:next_until(" "):upper()
-					self.r.meta.request = self.current_line_nr
-					-- BODY
+					self:request()
+				-- BODY
 				elseif arg == "data-raw" or arg == "data" or arg == "json" then
-					self.r.request.body = self:body()
-					-- from_file = true
-					self.r.meta.body = { starts = self.current_line_nr, ends = self.current_line_nr }
+					self:body()
 				end
 			end
 			-- find URL http or https
@@ -161,6 +151,17 @@ function M:between()
 	return r
 end
 
+function M:request()
+	self:ignore_whitspace()
+	-- self.r.request.method = self:next_until(" "):upper()
+	local method = self:between()
+	if method then
+		self.r.request.method = method:upper()
+		self.r.meta.request = self.current_line_nr
+		return self.r.request.method
+	end
+end
+
 function M:header()
 	local header = self:between()
 	if header then
@@ -169,6 +170,7 @@ function M:header()
 			local k, v = header:sub(1, pos - 1), header:sub(pos + 1)
 			self.r.request.headers = self.r.request.headers or {}
 			self.r.request.headers[vim.trim(k)] = vim.trim(v)
+			self.r.meta.headers_query = { starts = self.current_line_nr, ends = self.current_line_nr }
 			return self.r.request.headers
 		end
 	else
@@ -180,6 +182,9 @@ function M:body()
 	self:ignore_whitspace()
 	local body = self:between()
 	if body then
+		self.r.request.body = body
+		-- from_file = true
+		self.r.meta.body = { starts = self.current_line_nr, ends = self.current_line_nr }
 		return body
 	else
 		self.r:add_diag(ERR, "missing body", 0, self.c, self.current_line_nr)

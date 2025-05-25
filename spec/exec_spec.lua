@@ -70,6 +70,7 @@ describe("exec:", function()
 			local input = [[
 ### simple get 
 GET https://reqres.in/api/users?page=5
+x-api-key: reqres-free-v1
 
 Accept: application/json
 Content-type: application/json ; charset=utf-8
@@ -109,6 +110,7 @@ GET https://.org/get
 		it("with script, json body", function()
 			local input = [[
 GET https://reqres.in/api/users/2
+x-api-key: reqres-free-v1
 
 --{%
   local json = ctx.json_body()
@@ -128,6 +130,7 @@ GET https://reqres.in/api/users/2
 		it("with script, jq body", function()
 			local input = [[
 GET https://reqres.in/api/users/3
+x-api-key: reqres-free-v1
 
 --{%
   local id = ctx.jq_body('.data.id')

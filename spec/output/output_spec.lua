@@ -264,6 +264,7 @@ describe("output:", function()
 		local input = [[
 ### simple get 
 GET https://reqres.in/api/users?page=5
+x-api-key: reqres-free-v1
 
 ]]
 
@@ -293,15 +294,22 @@ GET https://reqres.in/api/users?page=5
 		press_key("i")
 		assert.are.same(3, o.current_menu_id)
 		assert.are.same("markdown", vim.api.nvim_get_option_value("filetype", { buf = o.bufnr }))
-		assert.are.same(
-			{ "", "## Request:", "", "```http", "GET https://reqres.in/api/users?page=5", "```" },
-			vim.api.nvim_buf_get_lines(o.bufnr, 0, 6, false)
-		)
+		assert.are.same({
+			"",
+			"## Request:",
+			"",
+			"```http",
+			"GET https://reqres.in/api/users?page=5",
+			"x-api-key: reqres-free-v1",
+			"```",
+			"",
+		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, 8, false))
 	end)
 
 	it("integration: with script", function()
 		local input = [[
 GET https://reqres.in/api/users/2
+x-api-key: reqres-free-v1
 
 --{%
 
@@ -330,6 +338,7 @@ ctx.set("email", email)
 		local input = [[
 ### simple get 
 GET https://reqres.in/api/users?page=5
+x-api-key: reqres-free-v1
 
 ]]
 
@@ -370,6 +379,7 @@ GET https://api.restful-api.dev/objects?id=1&id=6
 @cfg.timeout = 5000 # 5second 
 
 GET https://reqres.in/api/users?page=5
+x-api-key: reqres-free-v1
 
 ]]
 

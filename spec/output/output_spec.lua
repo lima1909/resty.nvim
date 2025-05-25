@@ -348,7 +348,7 @@ GET https://reqres.in/api/users?page=5
 ### simple get with timeout
 @cfg.timeout = 3 
 
-GET https://reqres.in/api/users?page=5
+GET https://api.restful-api.dev/objects?id=1&id=6
 
 ]]
 

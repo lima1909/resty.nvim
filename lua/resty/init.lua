@@ -14,6 +14,7 @@ local default_config = {
 	response = {
 		with_folding = true,
 		bufname = "resty_response",
+		output_window_split = "right", -- Split direction: "left", "right", "above", "below".
 	},
 }
 

@@ -10,7 +10,7 @@ local M = { bufnr = nil, winnr = nil }
 
 local default_bufname = "resty_response"
 
-function M._create_buf_with_win(bufname)
+function M._create_buf_with_win(bufname, output_window_split)
 	-- clear buffer, if exist
 	if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) and vim.api.nvim_buf_is_loaded(M.bufnr) then
 		vim.api.nvim_buf_delete(M.bufnr, { force = true })
@@ -24,7 +24,7 @@ function M._create_buf_with_win(bufname)
 	vim.api.nvim_set_option_value("buflisted", false, { buf = M.bufnr })
 
 	-- create a new window
-	vim.api.nvim_open_win(M.bufnr, true, { split = "right" })
+	vim.api.nvim_open_win(M.bufnr, true, { split = output_window_split or "right" })
 	M.winnr = vim.api.nvim_get_current_win()
 
 	-- activate the window
@@ -35,11 +35,15 @@ function M._create_buf_with_win(bufname)
 end
 
 function M.new(config)
-	local cfg = vim.tbl_deep_extend("force", { output = { body_pretty_print = false } }, config or {})
+	local cfg = vim.tbl_deep_extend("force", {
+		output = { body_pretty_print = false },
+		response = { output_window_split = "right" },
+	}, config or {})
 
 	local out = setmetatable({
 		cfg = cfg,
 		bufname = cfg.bufname or default_bufname,
+		output_window_split = cfg.response.output_window_split,
 		current_menu_id = 0,
 		curl = { duration = 0, job = nil },
 	}, { __index = M })
@@ -53,7 +57,7 @@ function M:exec_and_show_response(parse_result)
 	self.parse_result = parse_result
 	self.parse_result.duration_str = format.duration_to_str(self.parse_result.duration)
 	self.curl.canceled = false
-	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
+	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname, self.output_window_split)
 	local start_time = vim.loop.hrtime()
 
 	self.curl.job = exec.curl(parse_result.request, function(response)
@@ -140,7 +144,7 @@ function M:show_timeout(timeout)
 end
 
 function M:show_debug_info(parse_result)
-	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname)
+	self.bufnr, self.winnr = M._create_buf_with_win(self.bufname, self.output_window_split)
 
 	self.parse_result = parse_result
 	self.curl.duration_str = format.duration_to_str(parse_result.duration)

@@ -16,6 +16,9 @@ local default_config = {
 		bufname = "resty_response",
 		output_window_split = "right", -- Split direction: "left", "right", "above", "below".
 	},
+	highlight = {
+		hint_replace = "LightYellow",
+	},
 }
 
 -- change with: ':let g:resty.diagnostics = v:false'

@@ -1,3 +1,6 @@
+@user={{$USER}}   #  '$' mean: environment variable and save the value in the variable: 'user'
+@my-token = abc-42
+
 ### #give a star for this great project ;-)
 PUT https://api.github.com/user/starred/lima1909/resty.nvim
 Authorization: Bearer {{my-token}}

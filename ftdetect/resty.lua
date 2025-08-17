@@ -1,3 +1,5 @@
+local config = require("resty").config
+
 vim.filetype.add({ extension = { resty = "resty" } })
 vim.diagnostic.config({ update_in_insert = true })
 
@@ -25,7 +27,7 @@ vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
 	end,
 })
 
-vim.api.nvim_set_hl(0, "HintReplace", { fg = "LightYellow" })
+vim.api.nvim_set_hl(0, "HintReplace", { fg = config.highlight.hint_replace or "LightYellow" })
 vim.fn.sign_define("HintMarker", { text = "→", texthl = "WarningMsg", numhl = "WarningMsg" })
 
 local hintID = 7

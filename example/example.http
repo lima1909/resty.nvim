@@ -1,6 +1,7 @@
 @user={{$USER}}   #  '$' mean: environment variable and save the value in the variable: 'user'
 @my-token = abc-42
 @id=1
+@year = 2019
 
 ### #give a star for this great project ;-)
 PUT https://api.github.com/user/starred/lima1909/resty.nvim
@@ -47,7 +48,7 @@ Content-type: application/json ; charset=UTF-8
 {
    "name": "MY Apple MacBook Pro 16",
    "data": {
-      "year": 2019,
+      "year": {{year}},
       "price": 1849.99,
       "CPU model": "Intel Core i9",
       "Hard disk size": "1 TB"

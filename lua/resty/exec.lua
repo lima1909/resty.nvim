@@ -170,9 +170,8 @@ function M.script(code, result)
 		end,
 		-- jq to the body
 		jq_body = function(filter)
-			local b = string.gsub(result.body, "\n", " ")
-			local c = "echo '" .. b .. "' | jq '" .. filter .. "'"
-			local r = M.cmd(c)
+			local cmd = "printf %s " .. vim.fn.shellescape(result.body) .. " | jq " .. vim.fn.shellescape(filter)
+			local r = M.cmd(cmd)
 			return string.gsub(r, "\n", "")
 		end,
 	}

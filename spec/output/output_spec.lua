@@ -308,13 +308,16 @@ x-api-key: reqres-free-v1
 
 	it("integration: with script", function()
 		local input = [[
-GET https://reqres.in/api/users/2
-x-api-key: reqres-free-v1
+GET https://jsonplaceholder.typicode.com/comments
+accept: application/json  
+
+postId = 1
+id = 1
 
 --{%
 
 local json = ctx.result.body
-local email = vim.json.decode(json).data.email
+local email = vim.json.decode(json)[1].email
 
 ctx.set("email", email)
 
@@ -331,7 +334,7 @@ ctx.set("email", email)
 			return 1 == o.current_menu_id
 		end)
 
-		assert.are.same({ ["email"] = "janet.weaver@reqres.in" }, r.global_variables)
+		assert.are.same({ ["email"] = "Eliseo@gardner.biz" }, r.global_variables)
 	end)
 
 	it("integration: cancel exec_and_show_response", function()
@@ -378,8 +381,11 @@ GET https://api.restful-api.dev/objects?id=1&id=6
 ### simple get with timeout
 @cfg.timeout = 5000 # 5second 
 
-GET https://reqres.in/api/users?page=5
-x-api-key: reqres-free-v1
+GET https://jsonplaceholder.typicode.com/comments
+accept: application/json  
+
+postId = 1
+id = 1
 
 ]]
 
@@ -396,7 +402,9 @@ x-api-key: reqres-free-v1
 
 		assert.are.same({
 			"",
-			'{"page":5,"per_page":6,"total":12,"total_pages":2,"data":[],"support":{"url":"https://contentcaddy.io?utm_source=reqres&utm_medium=json&utm_campaign=referral","text":"Tired of writing endless social media content? Let Content Caddy generate it for you."}}',
-		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, 2, false))
+			"[",
+			"  {",
+			'    "postId": 1,',
+		}, vim.api.nvim_buf_get_lines(o.bufnr, 0, 4, false))
 	end)
 end)

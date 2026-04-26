@@ -69,12 +69,12 @@ describe("exec:", function()
 		it("simple GET request", function()
 			local input = [[
 ### simple get 
-GET https://reqres.in/api/users?page=5
-x-api-key: reqres-free-v1
+GET https://jsonplaceholder.typicode.com/comments
+# headers
+accept: application/json  
 
-Accept: application/json
-Content-type: application/json ; charset=utf-8
-
+# query values
+postId = 1
 ]]
 
 			local r = parser.parse(input, 2)
@@ -109,12 +109,15 @@ GET https://.org/get
 
 		it("with script, json body", function()
 			local input = [[
-GET https://reqres.in/api/users/2
-x-api-key: reqres-free-v1
+GET https://jsonplaceholder.typicode.com/comments
+accept: application/json  
+
+postId = 1
+id = 1
 
 --{%
   local json = ctx.json_body()
-  ctx.set("id", json.data.id)
+  ctx.set("id", json[1].id)
 --%}
 ]]
 
@@ -124,16 +127,19 @@ x-api-key: reqres-free-v1
 			exec.curl_wait(7000, r.request, callback, error_fn)
 
 			assert.are.same(200, response.status)
-			assert.are.same("2", response.global_variables["id"])
+			assert.are.same("1", response.global_variables["id"])
 		end)
 
 		it("with script, jq body", function()
 			local input = [[
-GET https://reqres.in/api/users/3
-x-api-key: reqres-free-v1
+GET https://jsonplaceholder.typicode.com/comments
+accept: application/json  
+
+postId = 1
+id = 1
 
 --{%
-  local id = ctx.jq_body('.data.id')
+  local id = ctx.jq_body('.[0].id')
   ctx.set("id", id)
 --%}
 ]]
@@ -144,7 +150,7 @@ x-api-key: reqres-free-v1
 			exec.curl_wait(7000, r.request, callback, error_fn)
 
 			assert.are.same(200, response.status)
-			assert.are.same("3", response.global_variables["id"])
+			assert.are.same("1", response.global_variables["id"])
 		end)
 	end)
 

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        neovim_version: ['nightly', 'v0.11.0']
+        neovim_version: ['nightly', 'v0.11.0', 'v0.12.2']
 
     steps:
       - name: git checkout

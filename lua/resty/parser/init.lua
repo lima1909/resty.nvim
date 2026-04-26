@@ -412,7 +412,12 @@ function M:_parse_json_body()
 		end
 
 		self.r.meta.body = { starts = json_start, ends = json_end, from_file = false }
-		self.r.request.body = table.concat(self.lines, "", json_start, json_end)
+
+		local replaced_lines = {}
+		for i = json_start, json_end do
+			replaced_lines[#replaced_lines + 1] = self.r:replace_variable(self.lines[i], i)
+		end
+		self.r.request.body = table.concat(replaced_lines, "")
 
 		self.r:check_json_body_if_enabled(json_start, json_end)
 	end

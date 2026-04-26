@@ -469,6 +469,54 @@ describe("curl requests:", function()
 		)
 	end)
 
+	it("method url with body and variable replacement", function()
+		check(
+			{
+				"@name=John",
+				"###",
+				"POST http://host",
+				"",
+				"{",
+				'"name": "{{name}}"',
+				"}",
+			},
+			3,
+			{
+				variables = { name = "John" },
+				request = {
+					method = "POST",
+					url = "http://host",
+					body = '{"name": "John"}',
+				},
+			}
+		)
+	end)
+
+	it("method url with body and multiple variable replacements", function()
+		check(
+			{
+				"@id=42",
+				"@value=hello",
+				"###",
+				"POST http://host",
+				"",
+				"{",
+				'"id": {{id}},',
+				'"value": "{{value}}"',
+				"}",
+			},
+			4,
+			{
+				variables = { id = "42", value = "hello" },
+				request = {
+					method = "POST",
+					url = "http://host",
+					body = '{"id": 42,"value": "hello"}',
+				},
+			}
+		)
+	end)
+
 	it("method url with json-body from file", function()
 		check(
 			{

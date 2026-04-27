@@ -19,11 +19,22 @@ M._create_jq_job = function(json, callback, jq_filter)
 				output = job:result()
 			else
 				output = job:stderr_result()
+
 				table.insert(output, 1, "ERROR in parsing json with jq:")
 				table.insert(output, 2, "")
 				table.insert(output, "")
 				table.insert(output, "")
 				table.insert(output, ">>> you can press key: 'r' to [r]eset the view")
+				table.insert(output, "")
+				table.insert(output, "")
+				table.insert(output, "Result with jq filter: '" .. filter .. "':")
+				table.insert(output, "")
+
+				for _, line in ipairs(vim.split(json, "\n", { plain = true })) do
+					table.insert(output, line)
+				end
+
+				table.insert(output, "")
 			end
 
 			vim.schedule(function()
